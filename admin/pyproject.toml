@@ -18,6 +18,10 @@ packages = [{include = "web", from = "src"}]
 [tool.poetry.group.test.dependencies]
 pytest = "^8.4.2"
 
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
