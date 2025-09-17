@@ -1,39 +1,70 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>{% block title %}Mi Aplicación{% endblock %}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  {% block head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-  {% endblock %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicación - Layout Base</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="../../../static/styles.css" rel="stylesheet">
 </head>
 <body>
+    <div class="topbar">
+        <div class="topbar-logo">
+            <span>A</span> Aplicación
+        </div>
+        <div class="user-dropdown">
+            <button class="user-dropdown-toggle">
+                Cuenta ▼
+            </button>
+            <div class="user-dropdown-menu">
+                <a href="#perfil">Ver perfil</a>.  <!-- temporal hasta crear los templates -->
+                <a href="#cerrar-sesion">Cerrar sesión</a>  <!-- temporal hasta crear los templates -->  
+            </div>
+        </div>
+    </div>
 
-  <header>
-    {% block header %}
-      <h1>Mi Aplicación</h1>
-    {% endblock %}
-  </header>
+    <div class="sidebar">
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="#sitios-historicos" class="active">Gestión de sitios históricos</a></li>. <!-- temporal hasta crear los templates -->
+                <li><a href="#validar-propuestas">Validación de propuestas</a></li>. <!-- temporal hasta crear los templates -->
+                <li><a href="#moderacion-reseñas">Moderación de reseñas</a></li>. <!-- temporal hasta crear los templates -->
+                <li><a href="#gestion-usuarios">Gestión de usuarios</a></li>. <!-- temporal hasta crear los templates -->
+            </ul>
+        </nav>
+    </div>
 
-  <nav>
-    {% block nav %}
-      <!-- Menú de navegación -->
-      <a href="/">Inicio</a>
-    {% endblock %}
-  </nav>
+    <div class="main-content">
+        <div class="content-placeholder">
+            <h1>Bienvenido al Contenido Principal</h1>
+            <p>Aquí se cargará el contenido específico de cada módulo.</p>
+        </div>
+    </div>
 
-  <main>
-    {% block content %}
-      <!-- Contenido principal -->
-    {% endblock %}
-  </main>
+    <script>
+        document.querySelectorAll('.sidebar-nav a').forEach(item => {
+            item.addEventListener('click', event => {
+                document.querySelectorAll('.sidebar-nav a').forEach(link => {
+                    link.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                // Se eliminó "Módulo:" de la siguiente línea
+                document.querySelector('.content-placeholder h1').textContent = event.target.textContent;
+                document.querySelector('.content-placeholder p').textContent = `Contenido detallado para ${event.target.textContent}.`;
+            });
+        });
 
-  <footer>
-    {% block footer %}
-      &copy; {{ current_year }} - Mi Aplicación
-    {% endblock %}
-  </footer>
+        document.querySelector('.user-dropdown-toggle').addEventListener('click', function() {
+            this.nextElementSibling.style.display =
+                this.nextElementSibling.style.display === 'block' ? 'none' : 'block';
+        });
 
+        window.addEventListener('click', function(e) {
+            const dropdown = document.querySelector('.user-dropdown');
+            if (!dropdown.contains(e.target)) {
+                document.querySelector('.user-dropdown-menu').style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
