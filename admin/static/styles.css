@@ -164,15 +164,19 @@ body {
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
   }
   
-  body.sidebar-open::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 999;
+  #sidebar-overlay {
+    display: none;
+  }
+  body.sidebar-open #sidebar-overlay {
+    display: block;
+  }
+  @media (min-width: 769px) {
+    #sidebar-overlay {
+      display: none !important;
+    }
+  }
+  .sidebar {
+    z-index: 1001;
   }
 }
 
