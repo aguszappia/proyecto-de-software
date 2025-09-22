@@ -1,8 +1,9 @@
 from flask import Flask, request, url_for
 from flask import render_template
-from src.web.config import config
-from src.web.handlers import error
 from src.core import database
+from src.web.config import config
+from src.web.controllers import register_controllers
+from src.web.handlers import error
 
 def create_app(env="development", static_folder="../../static"):
     app = Flask(__name__, static_folder=static_folder)
@@ -54,5 +55,7 @@ def create_app(env="development", static_folder="../../static"):
     @app.cli.command("reset-db")
     def reset_db():
         database.reset_db(app)
+
+    register_controllers(app)
 
     return app
