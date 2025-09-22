@@ -1,116 +1,39 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplicación - Layout Base</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>{% block title %}Mi Aplicación{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  {% endblock %}
 </head>
 <body>
-    <div class="topbar">
-        <!-- 3 lineas del menu hamburguesa -->
-        <div class="menu-toggle" id="menu-toggle">
-            <span></span>
-            <span></span>
-            <span></span>
-        </div>
-        <div class="topbar-logo">
-            <span>A</span> Aplicación
-        </div>
-        <div class="user-dropdown">
-            <button class="user-dropdown-toggle">
-                Cuenta ▼
-            </button>
-            <div class="user-dropdown-menu">
-                <a href="#perfil">Ver perfil</a>  
-                <a href="#cerrar-sesion">Cerrar sesión</a>
-            </div>
-        </div>
-    </div>
 
-    <!-- Overlay para cerrar sidebar en móvil -->
-    <div id="sidebar-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:999;"></div>
-    <div class="sidebar" id="sidebar">
-        <nav class="sidebar-nav">
-            <ul>
-                <li><a href="#sitios-historicos" class="active">Gestión de sitios históricos</a></li> <!-- temporal hasta crear los templates -->
-                <li><a href="#validar-propuestas">Validación de propuestas</a></li> <!-- temporal hasta crear los templates -->
-                <li><a href="#moderacion-reseñas">Moderación de reseñas</a></li> <!-- temporal hasta crear los templates -->
-                <li><a href="{{ url_for('users.index') }}">Gestión de usuarios</a></li>
-            </ul>
-        </nav>
-    </div>
+  <header>
+    {% block header %}
+      <h1>Mi Aplicación</h1>
+    {% endblock %}
+  </header>
 
-    <div class="main-content">
-        {% with messages = get_flashed_messages(with_categories=True) %} <!-- Funcion de flask para mostrar mensajes -->
-            {% if messages %}
-                <div class="flash-container">
-                    {% for category, message in messages %}
-                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+  <nav>
+    {% block nav %}
+      <!-- Menú de navegación -->
+      <a href="/">Inicio</a>
+    {% endblock %}
+  </nav>
 
-        {% block content %}
-        <div class="content-placeholder">
-            <h1>Bienvenido al Contenido Principal</h1>
-            <p>Aquí se cargará el contenido específico de cada módulo.</p>
-        </div>
-        {% endblock %}
-    </div>
+  <main>
+    {% block content %}
+      <!-- Contenido principal -->
+    {% endblock %}
+  </main>
 
-    <script>
+  <footer>
+    {% block footer %}
+      &copy; {{ current_year }} - Mi Aplicación
+    {% endblock %}
+  </footer>
 
-        // Scripts para telefono 
-        const menuToggle = document.getElementById('menu-toggle');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-
-        function setSidebarOpen(open) {
-            if (open) {
-                document.body.classList.add('sidebar-open');
-                sidebarOverlay.style.display = 'block';
-            } else {
-                document.body.classList.remove('sidebar-open');
-                sidebarOverlay.style.display = 'none';
-            }
-        }
-
-        menuToggle.addEventListener('click', function() {
-            setSidebarOpen(!document.body.classList.contains('sidebar-open'));
-        });
-
-        sidebarOverlay.addEventListener('click', function() {
-            setSidebarOpen(false);
-        });
-
-        document.querySelectorAll('.sidebar-nav a').forEach(item => {
-            item.addEventListener('click', event => {
-                document.querySelectorAll('.sidebar-nav a').forEach(link => {
-                    link.classList.remove('active');
-                });
-                event.target.classList.add('active');
-                document.querySelector('.content-placeholder h1').textContent = event.target.textContent;
-                document.querySelector('.content-placeholder p').textContent = `Contenido detallado para ${event.target.textContent}.`;
-                // Cerrar sidebar después de seleccionar una opción
-                if (window.innerWidth <= 768) {
-                    setSidebarOpen(false);
-                }
-            });
-        });
-
-        document.querySelector('.user-dropdown-toggle').addEventListener('click', function() {
-            this.nextElementSibling.style.display =
-                this.nextElementSibling.style.display === 'block' ? 'none' : 'block';
-        });
-
-        window.addEventListener('click', function(e) {
-            const dropdown = document.querySelector('.user-dropdown');
-            if (!dropdown.contains(e.target)) {
-                document.querySelector('.user-dropdown-menu').style.display = 'none';
-            }
-        });
-    </script>
 </body>
 </html>
