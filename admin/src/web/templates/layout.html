@@ -9,47 +9,39 @@
 </head>
 <body>
     <div class="topbar">
-        <!-- 3 lineas del menu hamburguesa -->
         <div class="menu-toggle" id="menu-toggle">
             <span></span>
             <span></span>
             <span></span>
         </div>
         <div class="topbar-logo">
-            <a href="{{ url_for('home') }}" class="topbar-logo-link" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+            <a href="{{ url_for('home') }}" class="topbar-logo-link" style="display:flex;align-items:center;text-decoration:none;color:inherit;">
                 <span>A</span> Aplicación
             </a>
         </div>
         <div class="user-dropdown">
-            <button class="user-dropdown-toggle">
-                Cuenta ▼
-            </button>
+            <button class="user-dropdown-toggle">Cuenta ▼</button>
             <div class="user-dropdown-menu">
-                <a href="{{ url_for('perfil_usuario') }}">Ver perfil</a>  
-                <a href="#cerrar-sesion">Cerrar sesión</a>
+                <a href="{{ url_for('perfil_usuario') }}">Ver perfil</a>
+                <a href="#">Cerrar sesión</a>
             </div>
         </div>
     </div>
 
-    <!-- Overlay para cerrar sidebar en móvil -->
-    <div id="sidebar-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:999;"></div>
+    <div id="sidebar-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999;"></div>
     <div class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <ul>
                 <li><a href="{{ url_for('gestion_sitios') }}">Gestión de sitios históricos</a></li>
                 <li><a href="{{ url_for('validacion_propuestas') }}">Validación de propuestas</a></li>
-                <li><a href="{{ url_for('moderacion_reseñas') }}">Moderación de reseñas</a></li> 
-                <li><a href="{{ url_for('gestion_usuarios') }}">Gestión de usuarios</a></li> 
-                <li><a href="#sitios-historicos" class="active">Gestión de sitios históricos</a></li> <!-- temporal hasta crear los templates -->
-                <li><a href="#validar-propuestas">Validación de propuestas</a></li> <!-- temporal hasta crear los templates -->
-                <li><a href="#moderacion-reseñas">Moderación de reseñas</a></li> <!-- temporal hasta crear los templates -->
+                <li><a href="{{ url_for('moderacion_reseñas') }}">Moderación de reseñas</a></li>
                 <li><a href="{{ url_for('users.index') }}">Gestión de usuarios</a></li>
             </ul>
         </nav>
     </div>
 
     <div class="main-content">
-        {% with messages = get_flashed_messages(with_categories=True) %} <!-- Funcion de flask para mostrar mensajes -->
+        {% with messages = get_flashed_messages(with_categories=True) %}
             {% if messages %}
                 <div class="flash-container">
                     {% for category, message in messages %}
@@ -61,15 +53,13 @@
 
         {% block content %}
         <div class="content-placeholder">
-            {% block content %}
-            <!-- contenido específico de cada plantilla -->
-            {% endblock %}
+            <h1>Bienvenido al Contenido Principal</h1>
+            <p>Aquí se cargará el contenido específico de cada módulo.</p>
         </div>
         {% endblock %}
     </div>
 
     <script>
-        // Scripts para teléfono 
         const menuToggle = document.getElementById('menu-toggle');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
 
@@ -83,35 +73,30 @@
             }
         }
 
-        menuToggle.addEventListener('click', function() {
+        menuToggle.addEventListener('click', () => {
             setSidebarOpen(!document.body.classList.contains('sidebar-open'));
         });
 
-        sidebarOverlay.addEventListener('click', function() {
-            setSidebarOpen(false);
-        });
+        sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
 
-        document.querySelectorAll('.sidebar-nav a').forEach(item => {
-            item.addEventListener('click', event => {
-                document.querySelectorAll('.sidebar-nav a').forEach(link => {
-                    link.classList.remove('active');
-                });
+        document.querySelectorAll('.sidebar-nav a').forEach(link => {
+            link.addEventListener('click', event => {
+                document.querySelectorAll('.sidebar-nav a').forEach(el => el.classList.remove('active'));
                 event.target.classList.add('active');
-                // No sobreescribimos el contenido renderizado por las plantillas.
                 if (window.innerWidth <= 768) {
                     setSidebarOpen(false);
                 }
             });
         });
 
-        document.querySelector('.user-dropdown-toggle').addEventListener('click', function() {
+        document.querySelector('.user-dropdown-toggle').addEventListener('click', function () {
             this.nextElementSibling.style.display =
                 this.nextElementSibling.style.display === 'block' ? 'none' : 'block';
         });
 
-        window.addEventListener('click', function(e) {
+        window.addEventListener('click', event => {
             const dropdown = document.querySelector('.user-dropdown');
-            if (!dropdown.contains(e.target)) {
+            if (!dropdown.contains(event.target)) {
                 document.querySelector('.user-dropdown-menu').style.display = 'none';
             }
         });
