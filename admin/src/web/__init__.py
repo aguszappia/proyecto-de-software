@@ -28,6 +28,10 @@ def create_app(env="development", static_folder="../../static"):
     def validacion_propuestas():
         return render_template("validacionPropuestas.html")
     
+    @app.route('/moderacion_reseñas')
+    def moderacion_reseñas():
+        return render_template("moderacionReseñas.html")
+    
     app.register_error_handler(404, error.not_found)
 
     app.register_error_handler(401, error.unauthorized)
