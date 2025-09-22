@@ -36,6 +36,10 @@ def create_app(env="development", static_folder="../../static"):
     def gestion_usuarios(): 
         return render_template("gestionUsuarios.html")
     
+    @app.route('/login')
+    def login(): 
+        return render_template("login.html")
+    
     app.register_error_handler(404, error.not_found)
 
     app.register_error_handler(401, error.unauthorized)
