@@ -23,4 +23,4 @@ GRANT ALL PRIVILEGES ON DATABASE grupo28 TO postgres;
 
 \q
 ```
-
+## run: poetry run flask --app src.web:create_app run --debug
