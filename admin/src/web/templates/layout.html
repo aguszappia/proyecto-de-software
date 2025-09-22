@@ -37,16 +37,28 @@
                 <li><a href="#sitios-historicos" class="active">Gestión de sitios históricos</a></li> <!-- temporal hasta crear los templates -->
                 <li><a href="#validar-propuestas">Validación de propuestas</a></li> <!-- temporal hasta crear los templates -->
                 <li><a href="#moderacion-reseñas">Moderación de reseñas</a></li> <!-- temporal hasta crear los templates -->
-                <li><a href="#gestion-usuarios">Gestión de usuarios</a></li> <!-- temporal hasta crear los templates -->
+                <li><a href="{{ url_for('users.index') }}">Gestión de usuarios</a></li>
             </ul>
         </nav>
     </div>
 
     <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=True) %} <!-- Funcion de flask para mostrar mensajes -->
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}
         <div class="content-placeholder">
             <h1>Bienvenido al Contenido Principal</h1>
             <p>Aquí se cargará el contenido específico de cada módulo.</p>
         </div>
+        {% endblock %}
     </div>
 
     <script>

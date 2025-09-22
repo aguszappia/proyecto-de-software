@@ -34,5 +34,5 @@ class User(Base):
         nullable=False,
     )
 
-    def __repr__(self) -> str:  # pragma: no cover - debug helper
+    def __repr__(self) -> str:  
         return f"<User id={self.id} email={self.email} role={self.role}>"
