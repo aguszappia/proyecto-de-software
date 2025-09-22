@@ -40,6 +40,10 @@ def create_app(env="development", static_folder="../../static"):
     def login(): 
         return render_template("login.html")
     
+    @app.route('/perfil_usuario')
+    def perfil_usuario(): 
+        return render_template("perfilUsuario.html")
+    
     app.register_error_handler(404, error.not_found)
 
     app.register_error_handler(401, error.unauthorized)
