@@ -32,6 +32,10 @@ def create_app(env="development", static_folder="../../static"):
     def moderacion_reseñas():
         return render_template("moderacionReseñas.html")
     
+    @app.route('/gestion_usuarios')
+    def gestion_usuarios(): 
+        return render_template("gestionUsuarios.html")
+    
     app.register_error_handler(404, error.not_found)
 
     app.register_error_handler(401, error.unauthorized)
