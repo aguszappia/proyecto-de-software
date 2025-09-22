@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block title %}Gestión de Sitios Históricos{% endblock %}
+
+{% block content %}
+<div class="gestion-sitios container">
+  <h1>Gestión de Sitios Históricos</h1>
+  <p>Lista y filtros para buscar sitios históricos.</p>
+
+  <!-- Aquí va el formulario de filtros y la tabla de resultados -->
+  <a href="{{ url_for('home') }}" class="btn">Volver a inicio</a>
+</div>
+{% endblock %}

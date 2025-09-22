@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplicación - Layout Base</title>
+    <title>{% block title %}Aplicación{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
@@ -34,7 +34,7 @@
     <div class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <ul>
-                <li><a href="#sitios-historicos" class="active">Gestión de sitios históricos</a></li> <!-- temporal hasta crear los templates -->
+                <li><a href="{{ url_for('gestion_sitios') }}">Gestión de sitios históricos</a></li>
                 <li><a href="#validar-propuestas">Validación de propuestas</a></li> <!-- temporal hasta crear los templates -->
                 <li><a href="#moderacion-reseñas">Moderación de reseñas</a></li> <!-- temporal hasta crear los templates -->
                 <li><a href="#gestion-usuarios">Gestión de usuarios</a></li> <!-- temporal hasta crear los templates -->
@@ -44,8 +44,9 @@
 
     <div class="main-content">
         <div class="content-placeholder">
-            <h1>Bienvenido al Contenido Principal</h1>
-            <p>Aquí se cargará el contenido específico de cada módulo.</p>
+            {% block content %}
+            <!-- contenido específico de cada plantilla -->
+            {% endblock %}
         </div>
     </div>
 
@@ -79,9 +80,7 @@
                     link.classList.remove('active');
                 });
                 event.target.classList.add('active');
-                document.querySelector('.content-placeholder h1').textContent = event.target.textContent;
-                document.querySelector('.content-placeholder p').textContent = `Contenido detallado para ${event.target.textContent}.`;
-                // Cerrar sidebar después de seleccionar una opción
+                // No sobreescribimos el contenido renderizado por las plantillas.
                 if (window.innerWidth <= 768) {
                     setSidebarOpen(false);
                 }
