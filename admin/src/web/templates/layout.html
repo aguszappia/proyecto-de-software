@@ -1,39 +1,109 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>{% block title %}Mi Aplicación{% endblock %}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  {% block head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-  {% endblock %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Aplicación{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
 <body>
+    <div class="topbar">
+        <div class="menu-toggle" id="menu-toggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="topbar-logo">
+            <a href="{{ url_for('home') }}" class="topbar-logo-link" style="display:flex;align-items:center;text-decoration:none;color:inherit;">
+                <span>A</span> Aplicación
+            </a>
+        </div>
+        <div class="user-dropdown">
+            <button class="user-dropdown-toggle">Cuenta ▼</button>
+            <div class="user-dropdown-menu">
+                <a href="{{ url_for('perfil_usuario') }}">Ver perfil</a>
+                <a href="{{ url_for('auth.logout') }}" 
+                class="dropdown-item" 
+                onclick="return confirm('¿Estás seguro de cerrar sesión?');">
+                Cerrar sesión
+                </a>
+            </div>
+        </div>
+    </div>
 
-  <header>
-    {% block header %}
-      <h1>Mi Aplicación</h1>
-    {% endblock %}
-  </header>
+    <div id="sidebar-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999;"></div>
+    <div class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="{{ url_for('gestion_sitios') }}">Gestión de sitios históricos</a></li>
+                <li><a href="{{ url_for('validacion_propuestas') }}">Validación de propuestas</a></li>
+                <li><a href="{{ url_for('moderacion_reseñas') }}">Moderación de reseñas</a></li>
+                <li><a href="{{ url_for('users.index') }}">Gestión de usuarios</a></li>
+            </ul>
+        </nav>
+    </div>
 
-  <nav>
-    {% block nav %}
-      <!-- Menú de navegación -->
-      <a href="/">Inicio</a>
-    {% endblock %}
-  </nav>
+    <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
-  <main>
-    {% block content %}
-      <!-- Contenido principal -->
-    {% endblock %}
-  </main>
+        {% block content %}
+        <div class="content-placeholder">
+            <h1>Bienvenido al Contenido Principal</h1>
+            <p>Aquí se cargará el contenido específico de cada módulo.</p>
+        </div>
+        {% endblock %}
+    </div>
 
-  <footer>
-    {% block footer %}
-      &copy; {{ current_year }} - Mi Aplicación
-    {% endblock %}
-  </footer>
+    <script>
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
 
+        function setSidebarOpen(open) {
+            if (open) {
+                document.body.classList.add('sidebar-open');
+                sidebarOverlay.style.display = 'block';
+            } else {
+                document.body.classList.remove('sidebar-open');
+                sidebarOverlay.style.display = 'none';
+            }
+        }
+
+        menuToggle.addEventListener('click', () => {
+            setSidebarOpen(!document.body.classList.contains('sidebar-open'));
+        });
+
+        sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
+
+        document.querySelectorAll('.sidebar-nav a').forEach(link => {
+            link.addEventListener('click', event => {
+                document.querySelectorAll('.sidebar-nav a').forEach(el => el.classList.remove('active'));
+                event.target.classList.add('active');
+                if (window.innerWidth <= 768) {
+                    setSidebarOpen(false);
+                }
+            });
+        });
+
+        document.querySelector('.user-dropdown-toggle').addEventListener('click', function () {
+            this.nextElementSibling.style.display =
+                this.nextElementSibling.style.display === 'block' ? 'none' : 'block';
+        });
+
+        window.addEventListener('click', event => {
+            const dropdown = document.querySelector('.user-dropdown');
+            if (!dropdown.contains(event.target)) {
+                document.querySelector('.user-dropdown-menu').style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
