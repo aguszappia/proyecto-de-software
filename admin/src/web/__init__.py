@@ -1,9 +1,11 @@
-from flask import Flask, request, url_for
-from flask import redirect, render_template
+from flask import Flask, request, url_for, redirect, session
+from flask import render_template
+from flask_session import Session
 from src.core import database
 from src.web.config import config
 from src.web.controllers import register_controllers
 from src.web.handlers import error
+from src.web.controllers.auth import auth_bp
 from src.core import seeds
 
 def create_app(env="development", static_folder="../../static"):
@@ -13,9 +15,13 @@ def create_app(env="development", static_folder="../../static"):
     # Inicializar base de datos
     database.init_db(app)
 
-    @app.route('/')
+    @app.route("/")
     def home():
-        return render_template("home.html")
+    # Si el usuario ya inició sesión → va a home
+        if session.get("user_id"):
+            return render_template("home.html")
+    # Si no tiene sesión → va al login
+        return redirect(url_for("auth.login"))
 
     @app.route('/about')
     def about():
@@ -24,8 +30,7 @@ def create_app(env="development", static_folder="../../static"):
     # falta completar
     @app.route('/gestion_sitios')
     def gestion_sitios(): 
-        return redirect(url_for('sites/index.html'))
-    # return render_template("sites/index.html")
+        return render_template("gestionSitios.html")
 
     @app.route('/validacion_propuestas')
     def validacion_propuestas():
@@ -34,10 +39,6 @@ def create_app(env="development", static_folder="../../static"):
     @app.route('/moderacion_reseñas')
     def moderacion_reseñas():
         return render_template("moderacionReseñas.html")
-    
-    @app.route('/gestion_usuarios')
-    def gestion_usuarios(): 
-        return render_template("gestionUsuarios.html")
     
     @app.route('/login')
     def login(): 
@@ -53,6 +54,8 @@ def create_app(env="development", static_folder="../../static"):
 
     app.register_error_handler(500, error.internal_server_error)
 
+    app.register_blueprint(auth_bp)
+
     # Register commands
     @app.cli.command("reset-db")
     def reset_db():
@@ -64,4 +67,34 @@ def create_app(env="development", static_folder="../../static"):
 
     register_controllers(app)
 
+    Session(app)  # inicializa Flask-Session
+
+    # Middleware para proteger rutas privadas
+    @app.before_request
+    def protect_private_area():
+        path = request.path or ""
+
+        # Rutas públicas (no piden login)
+        allowed = (
+            path == "/login"
+            or path == "/logout"
+            or path.startswith("/static/")
+            or path == "/"        # home pública
+            or path.startswith("/about")
+        )
+
+        if not allowed and not session.get("user_id"):
+            return redirect(url_for("auth.login", next=request.url)) 
+        
+    # Middleware para evitar cache en páginas privadas
+    @app.after_request
+    def add_no_cache_headers(response):
+        try:
+            # Solo si HAY sesión, solo en GET, y solo en 200 OK (no en redirects)
+            if session.get("user_id") and request.method == "GET" and response.status_code == 200:
+                response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+        finally:
+            return response
     return app

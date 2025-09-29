@@ -90,3 +90,16 @@ def create_user(**kgwargs):
     db.session.commit() 
 
     return user
+
+#Funcion para crear en seeds / no lo usamos mas
+"""
+def create_userSeed(**kgwargs):
+    password = kgwargs.pop("password_hash", None)
+    if not password:
+        raise ValueError("Falta 'password' en create_userSeed")
+    user = User(**kgwargs, password_hash=hash_password(password))
+    db.session.add(user)
+    db.session.commit() 
+
+    return user
+"""

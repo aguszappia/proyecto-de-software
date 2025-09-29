@@ -4,6 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from src.core.users import UserRole
 from src.core.users.service import create_user, delete_user, get_allowed_roles_for_admin, get_user, list_users, update_user
+from src.web.controllers.auth import require_login, require_roles
 
 bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -56,7 +57,7 @@ def _form_payload():
         "is_active": "true" if is_active in {"on", "true", "1", "yes", "si"} else "false",
         "role": form.get("role"),
     }
-
+ 
 
 @bp.get("/")
 def index():
@@ -68,7 +69,7 @@ def index():
         search_email=filters.email or None,
         active=_parse_active_filter(filters.active),
         role=filters.role or None,
-        order=filters.order,
+        order=filters.order, 
     )
     return render_template(
         "users/index.html",
@@ -157,3 +158,15 @@ def destroy(user_id: int):
     delete_user(user)
     flash("Usuario eliminado correctamente.", "success")
     return redirect(url_for("users.index"))
+
+admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+ 
+@admin_bp.get("/")
+@require_login
+def dashboard():
+    return render_template("admin/dashboard.html")
+
+@admin_bp.get("/users")
+@require_roles("admin", "editor")
+def users_index():
+    ...
