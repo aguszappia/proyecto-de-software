@@ -3,24 +3,11 @@
 from sqlalchemy import asc, desc
 
 from src.core.database import db
+from src.core.pagination import Pagination
 from src.core.security.passwords import hash_password
 from src.core.users import UserRole
 from src.core.users.models import User
 from src.core.users.validators import validate_user_payload
-
-
-class Pagination:
-    def __init__(self, items, total, page, per_page):
-        self.items = items
-        self.total = total
-        self.page = page
-        self.per_page = per_page
-
-    @property
-    def pages(self):
-        if self.per_page == 0:
-            return 0
-        return (self.total + self.per_page - 1) // self.per_page
 
 
 def list_users(page=1, per_page=25, search_email=None, active=None, role=None, order="-created_at"):

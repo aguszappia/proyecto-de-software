@@ -1,10 +1,9 @@
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
+from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from geoalchemy2 import WKTElement
+from sqlalchemy import asc, desc, or_
+from src.core.pagination import Pagination
 from src.core.sites.models import Historic_Site, SiteTag, ConservationStatus, SiteCategory
-from src.core.sites.crud import SiteCRUD, TagCRUD
-from src.core.sites.schemas import SiteCreateSchema, SiteUpdateSchema, TagCreateSchema
 from src.core.database import db
 
 def list_sites():
@@ -90,6 +89,80 @@ def delete_site(site_id):
     db.session.delete(site)
     db.session.commit()
     return True
+
+
+def search_sites(
+    *,
+    city: Optional[str] = None,
+    province: Optional[str] = None,
+    tag_ids: Optional[List[int]] = None,
+    conservation_status: Optional[ConservationStatus] = None,
+    created_from: Optional[datetime] = None,
+    created_to: Optional[datetime] = None,
+    is_visible: Optional[bool] = None,
+    q: Optional[str] = None,
+    sort_by: str = "created_at",
+    sort_dir: str = "desc",
+    page: int = 1,
+    per_page: int = 25,
+) -> Pagination:
+    session = db.session
+    query = session.query(Historic_Site)
+
+    if tag_ids:
+        query = query.join(Historic_Site.tags).filter(SiteTag.id.in_(tag_ids))
+    if city:
+        query = query.filter(Historic_Site.city.ilike(f"%{city}%"))
+    if province:
+        query = query.filter(Historic_Site.province == province)
+    if conservation_status:
+        query = query.filter(Historic_Site.conservation_status == conservation_status)
+    if created_from:
+        query = query.filter(Historic_Site.created_at >= created_from)
+    if created_to:
+        query = query.filter(Historic_Site.created_at <= created_to)
+    if is_visible is not None:
+        query = query.filter(Historic_Site.is_visible.is_(is_visible))
+    if q:
+        pattern = f"%{q}%"
+        query = query.filter(
+            or_(
+                Historic_Site.name.ilike(pattern),
+                Historic_Site.short_description.ilike(pattern),
+            )
+        )
+
+    query = query.distinct()
+
+    total = query.order_by(None).count()
+
+    allowed_sort = {"created_at", "name", "city"}
+    sort_by = sort_by if sort_by in allowed_sort else "created_at"
+    sort_dir = sort_dir if sort_dir in {"asc", "desc"} else "desc"
+
+    order_column_map = {
+        "created_at": Historic_Site.created_at,
+        "name": Historic_Site.name,
+        "city": Historic_Site.city,
+    }
+    order_column = order_column_map[sort_by]
+    order_fn = asc if sort_dir == "asc" else desc
+    query = query.order_by(order_fn(order_column))
+
+    page = max(page, 1)
+    per_page = max(1, min(per_page, 25))
+    items = query.limit(per_page).offset((page - 1) * per_page).all()
+    site_dicts: List[Dict[str, Any]] = []
+    for site in items:
+        site_dict = site.to_dict()
+        status = site_dict.get("conservation_status")
+        if isinstance(status, ConservationStatus):
+            site_dict["conservation_status"] = status.value
+        category = site_dict.get("category")
+        if isinstance(category, SiteCategory):
+            site_dict["category"] = category.value
+        site_dicts.append(site_dict)
+    return Pagination(site_dicts, total, page, per_page)
 
 # Tags
 def list_tags():

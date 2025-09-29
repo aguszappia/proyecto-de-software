@@ -269,6 +269,10 @@ body {
   margin-bottom: 24px;
 }
 
+.filters-row {
+  display: contents;
+}
+
 .filter-group label {
   display: block;
   font-size: 0.9rem;

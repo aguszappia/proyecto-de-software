@@ -1,5 +1,5 @@
 from flask import Flask, request, url_for
-from flask import render_template
+from flask import redirect, render_template
 from src.core import database
 from src.web.config import config
 from src.web.controllers import register_controllers
@@ -24,7 +24,7 @@ def create_app(env="development", static_folder="../../static"):
     # falta completar
     @app.route('/gestion_sitios')
     def gestion_sitios(): 
-        return render_template("gestionSitios.html")
+        return redirect(url_for('sites/index.html'))
 
     @app.route('/validacion_propuestas')
     def validacion_propuestas():
