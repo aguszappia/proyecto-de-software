@@ -289,6 +289,46 @@ body {
   background: #fff;
 }
 
+.filter-group-text-visible .text-visible-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-group-text-visible input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.visible-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  white-space: nowrap;
+}
+
+.visible-toggle .visible-label {
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.visible-toggle .toggle-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+}
+
+.visible-toggle .toggle-option input[type="radio"] {
+  width: auto;
+  height: 16px;
+  cursor: pointer;
+}
+
 .filter-actions {
   display: flex;
   gap: 12px;

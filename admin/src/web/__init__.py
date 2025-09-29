@@ -25,6 +25,7 @@ def create_app(env="development", static_folder="../../static"):
     @app.route('/gestion_sitios')
     def gestion_sitios(): 
         return redirect(url_for('sites/index.html'))
+    # return render_template("sites/index.html")
 
     @app.route('/validacion_propuestas')
     def validacion_propuestas():
