@@ -83,13 +83,6 @@ def delete_user(user):
 def get_allowed_roles_for_admin():
     return (UserRole.PUBLIC, UserRole.EDITOR, UserRole.ADMIN)
 
-# Funcion para crear en seeds
-def create_user(**kgwargs):
-    user = User(**kgwargs)
-    db.session.add(user)
-    db.session.commit() 
-
-    return user
 
 #Funcion para crear en seeds / no lo usamos mas
 """
