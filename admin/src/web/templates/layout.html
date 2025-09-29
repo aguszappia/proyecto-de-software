@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Aplicación{% endblock %}</title>
+    <title>{% block title %}Aplicación{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
@@ -15,6 +16,9 @@
             <span></span>
         </div>
         <div class="topbar-logo">
+            <a href="{{ url_for('home') }}" class="topbar-logo-link" style="display:flex;align-items:center;text-decoration:none;color:inherit;">
+                <span>A</span> Aplicación
+            </a>
             <a href="{{ url_for('home') }}" class="topbar-logo-link" style="display:flex;align-items:center;text-decoration:none;color:inherit;">
                 <span>A</span> Aplicación
             </a>
@@ -36,7 +40,7 @@
     <div class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <ul>
-                <li><a href="{{ url_for('gestion_sitios') }}">Gestión de sitios históricos</a></li>
+                <li><a href="{{ url_for('sites.index') }}">Gestión de sitios históricos</a></li>
                 <li><a href="{{ url_for('validacion_propuestas') }}">Validación de propuestas</a></li>
                 <li><a href="{{ url_for('moderacion_reseñas') }}">Moderación de reseñas</a></li>
                 <li><a href="{{ url_for('users.index') }}">Gestión de usuarios</a></li>
@@ -45,6 +49,7 @@
     </div>
 
     <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=True) %}
         {% with messages = get_flashed_messages(with_categories=True) %}
             {% if messages %}
                 <div class="flash-container">
@@ -78,11 +83,16 @@
         }
 
         menuToggle.addEventListener('click', () => {
+        menuToggle.addEventListener('click', () => {
             setSidebarOpen(!document.body.classList.contains('sidebar-open'));
         });
 
         sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
+        sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
 
+        document.querySelectorAll('.sidebar-nav a').forEach(link => {
+            link.addEventListener('click', event => {
+                document.querySelectorAll('.sidebar-nav a').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.sidebar-nav a').forEach(link => {
             link.addEventListener('click', event => {
                 document.querySelectorAll('.sidebar-nav a').forEach(el => el.classList.remove('active'));

@@ -57,7 +57,7 @@ def _form_payload():
         "is_active": "true" if is_active in {"on", "true", "1", "yes", "si"} else "false",
         "role": form.get("role"),
     }
-
+ 
 
 @bp.get("/")
 def index():
@@ -69,7 +69,7 @@ def index():
         search_email=filters.email or None,
         active=_parse_active_filter(filters.active),
         role=filters.role or None,
-        order=filters.order,
+        order=filters.order, 
     )
     return render_template(
         "users/index.html",
@@ -160,7 +160,7 @@ def destroy(user_id: int):
     return redirect(url_for("users.index"))
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
-
+ 
 @admin_bp.get("/")
 @require_login
 def dashboard():

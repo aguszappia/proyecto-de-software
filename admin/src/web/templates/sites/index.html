@@ -1,0 +1,137 @@
+{% extends "layout.html" %}
+
+{% block title %}Sitios históricos{% endblock %}
+
+{% block content %}
+<div class="module-header">
+    <h1>Búsqueda de sitios históricos</h1>
+    <span class="results-count">{{ pagination.total }} resultados</span>
+</div>
+
+<form class="filters" method="get" action="{{ url_for('sites.index') }}">
+    <div class="filters-row">
+        <div class="filter-group">
+            <label for="city">Ciudad</label>
+            <input type="text" id="city" name="city" value="{{ filters.city }}" placeholder="Buscar por ciudad">
+        </div>
+        <div class="filter-group">
+            <label for="province">Provincia</label>
+            <select id="province" name="province">
+                <option value="">Todas</option>
+                {% for prov in provinces %}
+                    <option value="{{ prov }}" {% if filters.province == prov %}selected{% endif %}>{{ prov }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="q">Texto libre</label>
+            <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Buscar en nombre o descripción">
+        </div>
+        <div class="filter-group checkbox" style="display: flex; align-items: center; gap: 6px;">
+            <label for="is_visible" style="margin: 0;">Visible</label>
+            <input type="checkbox" id="is_visible" name="is_visible" value="on"
+                {% if filters.is_visible %}checked{% endif %}
+                style="margin: 0;">
+        </div>
+    </div>
+
+    <div class="filters-row">
+        <div class="filter-group">
+            <label for="conservation_status">Estado de conservación</label>
+            <select id="conservation_status" name="conservation_status">
+                <option value="">Todos</option>
+                {% for status in conservation_statuses %}
+                    <option value="{{ status.value }}" {% if filters.conservation_status == status.value %}selected{% endif %}>{{ status.value }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="sort_by">Ordenar por</label>
+            <select id="sort_by" name="sort_by">
+                <option value="created_at" {% if filters.sort_by == 'created_at' %}selected{% endif %}>Fecha de registro</option>
+                <option value="name" {% if filters.sort_by == 'name' %}selected{% endif %}>Nombre</option>
+                <option value="city" {% if filters.sort_by == 'city' %}selected{% endif %}>Ciudad</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="sort_dir">Orden</label>
+            <select id="sort_dir" name="sort_dir">
+                <option value="asc" {% if filters.sort_dir == 'asc' %}selected{% endif %}>Ascendente</option>
+                <option value="desc" {% if filters.sort_dir == 'desc' %}selected{% endif %}>Descendente</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="tags">Etiquetas</label>
+            <select id="tags" name="tags" multiple size="3">
+                {% for tag in tags %}
+                    <option value="{{ tag.id }}" {% if tag.id in filters.tags %}selected{% endif %}>{{ tag.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="filters-row">
+        <div class="filter-group">
+            <label for="created_from">Fecha desde</label>
+            <input type="date" id="created_from" name="created_from" value="{{ filters.created_from }}">
+        </div>
+        <div class="filter-group">
+            <label for="created_to">Fecha hasta</label>
+            <input type="date" id="created_to" name="created_to" value="{{ filters.created_to }}">
+        </div>
+    </div>
+    <div class="filter-actions">
+        <button type="submit" class="primary-button">Buscar</button>
+        <a class="secondary-button" href="{{ url_for('sites.index') }}">Limpiar</a>
+    </div>
+</form>
+
+{% if pagination.items %}
+    <p class="results-summary">
+        Mostrando {{ (pagination.page - 1) * pagination.per_page + 1 }}
+        - {{ (pagination.page - 1) * pagination.per_page + pagination.items|length }}
+        de {{ pagination.total }}
+    </p>
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Ciudad</th>
+                    <th>Provincia</th>
+                    <th>Estado</th>
+                    <th>Visibilidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for site in pagination.items %}
+                    <tr>
+                        <td>{{ site.name }}</td>
+                        <td>{{ site.city }}</td>
+                        <td>{{ site.province }}</td>
+                        <td>{{ site.conservation_status }}</td>
+                        <td>
+                            {% if site.is_visible %}
+                                <span class="status-badge status-active">Visible</span>
+                            {% else %}
+                                <span class="status-badge status-inactive">Oculto</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination">
+        {% if prev_url %}
+            <a href="{{ prev_url }}">Anterior</a>
+        {% endif %}
+        <span>Página {{ pagination.page }} de {{ pagination.pages }}</span>
+        {% if next_url %}
+            <a href="{{ next_url }}">Siguiente</a>
+        {% endif %}
+    </div>
+{% else %}
+    <p>Sin resultados</p>
+{% endif %}
+{% endblock %}
