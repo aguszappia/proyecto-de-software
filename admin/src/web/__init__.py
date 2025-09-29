@@ -1,22 +1,100 @@
-from flask import Flask
+from flask import Flask, request, url_for, redirect, session
 from flask import render_template
+from flask_session import Session
+from src.core import database
+from src.web.config import config
+from src.web.controllers import register_controllers
 from src.web.handlers import error
+from src.web.controllers.auth import auth_bp
+from src.core import seeds
 
 def create_app(env="development", static_folder="../../static"):
     app = Flask(__name__, static_folder=static_folder)
+    app.config.from_object(config[env])
 
-    @app.route('/')
+    # Inicializar base de datos
+    database.init_db(app)
+
+    @app.route("/")
     def home():
-        return render_template("home.html")
-    
+    # Si el usuario ya inició sesión → va a home
+        if session.get("user_id"):
+            return render_template("home.html")
+    # Si no tiene sesión → va al login
+        return redirect(url_for("auth.login"))
+
     @app.route('/about')
     def about():
         return render_template("about.html")
+
+    # falta completar
+    @app.route('/gestion_sitios')
+    def gestion_sitios(): 
+        return render_template("gestionSitios.html")
+
+    @app.route('/validacion_propuestas')
+    def validacion_propuestas():
+        return render_template("validacionPropuestas.html")
+    
+    @app.route('/moderacion_reseñas')
+    def moderacion_reseñas():
+        return render_template("moderacionReseñas.html")
+    
+    @app.route('/login')
+    def login(): 
+        return render_template("login.html")
+    
+    @app.route('/perfil_usuario')
+    def perfil_usuario(): 
+        return render_template("perfilUsuario.html")
     
     app.register_error_handler(404, error.not_found)
 
     app.register_error_handler(401, error.unauthorized)
-    
+
     app.register_error_handler(500, error.internal_server_error)
-    
+
+    app.register_blueprint(auth_bp)
+
+    # Register commands
+    @app.cli.command("reset-db")
+    def reset_db():
+        database.reset_db(app)
+
+    @app.cli.command("seed-db")
+    def seed_db():
+        seeds.run()
+
+    register_controllers(app)
+
+    Session(app)  # inicializa Flask-Session
+
+    # Middleware para proteger rutas privadas
+    @app.before_request
+    def protect_private_area():
+        path = request.path or ""
+
+        # Rutas públicas (no piden login)
+        allowed = (
+            path == "/login"
+            or path == "/logout"
+            or path.startswith("/static/")
+            or path == "/"        # home pública
+            or path.startswith("/about")
+        )
+
+        if not allowed and not session.get("user_id"):
+            return redirect(url_for("auth.login", next=request.url)) 
+        
+    # Middleware para evitar cache en páginas privadas
+    @app.after_request
+    def add_no_cache_headers(response):
+        try:
+            # Solo si HAY sesión, solo en GET, y solo en 200 OK (no en redirects)
+            if session.get("user_id") and request.method == "GET" and response.status_code == 200:
+                response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+        finally:
+            return response
     return app
