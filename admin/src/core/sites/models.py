@@ -8,6 +8,14 @@ from enum import Enum
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 
+# Tabla relacion entre sitios y etiquetas
+site_tag_association = Table(
+    'site_tag_association',
+    Base.metadata,
+    Column('site_id', Integer, ForeignKey('historic_sites.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('site_tags.id'), primary_key=True)
+)
+
 class ConservationStatus(str, Enum):
     GOOD = "Bueno"
     REGULAR = "Regular" 
@@ -17,7 +25,7 @@ class SiteCategory(str, Enum):
     ARCHITECTURE = "Arquitectura"
     INFRASTRUCTURE = "Infraestructura"
     ARCHAEOLOGICAL = "Sitio arqueológico"
-    OTRO = "Otro"
+    OTRO = "Otro" 
 
 class Historic_Site(Base):
     """Represents an historic site"""
@@ -70,30 +78,22 @@ class Historic_Site(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
-# Inversion entre latitud longitud con postgis
-@property
-def latitude(self) -> float:
-    """Returns the latitude of the location."""
-    if self.location:
-        point = to_shape(self.location)
-        return point.y # latitude
-    return None
+    # Inversion entre latitud longitud con postgis
+    @property
+    def latitude(self) -> float:
+        """Returns the latitude of the location."""
+        if self.location:
+            point = to_shape(self.location)
+            return point.y # latitude
+        return None
 
-@property
-def longitude(self) -> float:
-    """Returns the longitude of the location."""
-    if self.location:
-        point = to_shape(self.location)
-        return point.x # longitud
-    return None
-
-# Tabla relacion entre sitios y etiquetas
-site_tag_association = Table(
-    'site_tag_association',
-    Base.metadata,
-    Column('site_id', Integer, ForeignKey('historic_sites.id'), primary_key=True),
-    Column('tag_id', Integer, ForeignKey('site_tags.id'), primary_key=True)
-)
+    @property
+    def longitude(self) -> float:
+        """Returns the longitude of the location."""
+        if self.location:
+            point = to_shape(self.location)
+            return point.x # longitud
+        return None
 
 # Modelo para etiquetas
 class SiteTag(Base):
