@@ -10,6 +10,9 @@ from src.core.database import db
 from src.core.sites.models import ConservationStatus, Historic_Site
 from src.core.sites.service import list_tags, search_sites
 
+from src.web.controllers.auth import require_login, require_roles
+
+
 
 bp = Blueprint("sites", __name__, url_prefix="/sites")
 
@@ -84,6 +87,8 @@ def _available_provinces() -> List[str]:
 
 
 @bp.get("/")
+@require_login
+@require_roles("editor", "admin", "sysadmin")
 def index():
     args = request.args
 

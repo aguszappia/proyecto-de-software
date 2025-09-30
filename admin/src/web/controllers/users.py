@@ -60,6 +60,8 @@ def _form_payload():
  
 
 @bp.get("/")
+@require_login
+@require_roles("admin", "sysadmin")
 def index():
     _ensure_admin_access()
     filters = _extract_filters()
@@ -80,6 +82,8 @@ def index():
 
 
 @bp.get("/new")
+@require_login
+@require_roles("admin", "sysadmin")
 def new():
     _ensure_admin_access()
     return render_template(
@@ -91,6 +95,8 @@ def new():
 
 
 @bp.post("/new")
+@require_login
+@require_roles("admin", "sysadmin")
 def create():
     _ensure_admin_access()
     success, user, errors = create_user(_form_payload(), allowed_roles=get_allowed_roles_for_admin())
@@ -109,6 +115,8 @@ def create():
 
 
 @bp.get("/<int:user_id>/edit")
+@require_login
+@require_roles("admin", "sysadmin")
 def edit(user_id: int):
     _ensure_admin_access()
     user = get_user(user_id)
@@ -125,6 +133,8 @@ def edit(user_id: int):
 
 
 @bp.post("/<int:user_id>/edit")
+@require_login
+@require_roles("admin", "sysadmin")
 def update(user_id: int):
     _ensure_admin_access()
     user = get_user(user_id)
@@ -148,6 +158,8 @@ def update(user_id: int):
 
 
 @bp.post("/<int:user_id>/delete")
+@require_login
+@require_roles("admin", "sysadmin")
 def destroy(user_id: int):
     _ensure_admin_access()
     user = get_user(user_id)
@@ -163,10 +175,11 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
  
 @admin_bp.get("/")
 @require_login
+@require_roles("admin", "sysadmin")
 def dashboard():
     return render_template("admin/dashboard.html")
 
 @admin_bp.get("/users")
-@require_roles("admin", "editor")
+@require_roles("admin", "sysadmin")
 def users_index():
     ...
