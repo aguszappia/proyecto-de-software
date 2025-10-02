@@ -97,10 +97,23 @@ class Historic_Site(Base):
 
 # Modelo para etiquetas
 class SiteTag(Base):
-    __tablename__ = 'site_tags'
-    
+    __tablename__ = "site_tags"
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_site_tags_slug"),
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
-    
+    slug: Mapped[str] = mapped_column(String(60), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
     # Relación con sitios
     sites = relationship("Historic_Site", secondary=site_tag_association, back_populates="tags")
