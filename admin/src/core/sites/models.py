@@ -43,7 +43,7 @@ class Historic_Site(Base):
     conservation_status: Mapped[ConservationStatus] = mapped_column(
         SQLAlchemyEnum(ConservationStatus), nullable=False
     )
-    year: Mapped[int] = mapped_column(nullable=True)
+    inaguration_year: Mapped[int] = mapped_column(nullable=True)
     category: Mapped[SiteCategory] = mapped_column(
         SQLAlchemyEnum(SiteCategory), nullable=False
     )
@@ -70,7 +70,7 @@ class Historic_Site(Base):
             "latitude": self.latitude,
             "longitude": self.longitude,
             "conservation_status": self.conservation_status,
-            "inauguration_year": self.inauguration_year,
+            "inaguration_year": self.inaguration_year,
             "category": self.category,
             "is_visible": self.is_visible,
             "tags": [tag.name for tag in self.tags],
