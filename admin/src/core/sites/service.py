@@ -20,7 +20,7 @@ def create_site(**kwargs):
     lon = kwargs.get("longitude")
     point = WKTElement(f'POINT({lon} {lat})', srid=4326)
     conservation_status = kwargs.get("conservation_status")
-    year = kwargs.get("year")
+    inaguration_year = kwargs.get("inaguration_year")
     category = kwargs.get("category")
     is_visible = kwargs.get("is_visible", False)
     updated_at = datetime.now(timezone.utc)
@@ -33,7 +33,7 @@ def create_site(**kwargs):
         province=province,
         location=point,
         conservation_status=conservation_status,
-        year=year,
+        inaguration_year=inaguration_year,
         category=category,
         is_visible=is_visible,
         updated_at=updated_at
