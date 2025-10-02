@@ -30,3 +30,12 @@ def internal_server_error(e):
         description="Ha ocurrido un error en el servidor. Inténtalo de nuevo más tarde."
     )
     return render_template("error.html", error=error), 500
+
+#error para falta de permisos
+def forbidden(e):
+    error = HTTPError(
+        code=403,
+        message="Error de permisos",
+        description="No tenés permisos para acceder a esta sección."
+    )
+    return render_template("error.html", error=error), 403

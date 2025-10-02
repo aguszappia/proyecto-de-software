@@ -22,7 +22,9 @@ def require_roles(*roles):
             if not session.get("user_id"):
                 return redirect(url_for("auth.login", next=request.url))
             if session.get("user_role") not in roles:
-                abort(403)
+                # flash de falta de permisos y redirige a la pagina anterior o al home si no hay referrer
+                flash("No tenés permisos para acceder a esa sección.", "error")
+                return redirect(request.referrer or url_for("home"))
             return view(*args, **kwargs)
         return wrapped
     return decorator
