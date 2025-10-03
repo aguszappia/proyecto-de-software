@@ -96,6 +96,7 @@ def create_app(env="development", static_folder="../../static"):
             or path.startswith("/static/")
             or path == "/"        # home pública
             or path.startswith("/about")
+            or path.startswith("/sites/public")
         )
 
         if not allowed and not session.get("user_id"):

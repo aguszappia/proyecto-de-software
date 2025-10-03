@@ -24,6 +24,7 @@ def create_site(**kwargs):
     category = kwargs.get("category")
     is_visible = kwargs.get("is_visible", False)
     updated_at = datetime.now(timezone.utc)
+    tag_ids = kwargs.get("tag_ids") or []
 
     new_site = Historic_Site(
         name=name,
@@ -38,6 +39,9 @@ def create_site(**kwargs):
         is_visible=is_visible,
         updated_at=updated_at
     )
+    if tag_ids:
+        tags = db.session.query(SiteTag).filter(SiteTag.id.in_(tag_ids)).all()
+        new_site.tags = tags
     db.session.add(new_site)
     db.session.commit()
     return new_site
@@ -45,7 +49,11 @@ def create_site(**kwargs):
 
 def get_site(site_id):
     site = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
-    return site.to_dict() if site else None
+    if not site:
+        return None
+    data = site.to_dict()
+    data["tag_ids"] = [tag.id for tag in site.tags]
+    return data
 
 
 def update_site(site_id, **kwargs):
@@ -53,29 +61,35 @@ def update_site(site_id, **kwargs):
     if not site:
         return None
     
-    if kwargs.get("name"):
+    if "name" in kwargs:
         site.name = kwargs.get("name")
-    if kwargs.get("short_description"):
+    if "short_description" in kwargs:
         site.short_description = kwargs.get("short_description")
-    if kwargs.get("full_description"):
+    if "full_description" in kwargs:
         site.full_description = kwargs.get("full_description")
-    if kwargs.get("city"):
+    if "city" in kwargs:
         site.city = kwargs.get("city")
-    if kwargs.get("province"):
+    if "province" in kwargs:
         site.province = kwargs.get("province")
-    if kwargs.get("latitude") and kwargs.get("longitude"):
+    if kwargs.get("latitude") is not None and kwargs.get("longitude") is not None:
         lat = kwargs.get("latitude")
         lon = kwargs.get("longitude")
         site.location = WKTElement(f'POINT({lon} {lat})', srid=4326)
-    if kwargs.get("conservation_status"):
+    if "conservation_status" in kwargs and kwargs.get("conservation_status") is not None:
         site.conservation_status = kwargs.get("conservation_status")
-    if kwargs.get("year"):
-        site.year = kwargs.get("year")
-    if kwargs.get("category"):
+    if "inaguration_year" in kwargs:
+        site.inaguration_year = kwargs.get("inaguration_year")
+    if "category" in kwargs and kwargs.get("category") is not None:
         site.category = kwargs.get("category")
     if "is_visible" in kwargs:
         site.is_visible = kwargs.get("is_visible")
-    
+    if "tag_ids" in kwargs:
+        tag_ids = kwargs.get("tag_ids") or []
+        tags = []
+        if tag_ids:
+            tags = db.session.query(SiteTag).filter(SiteTag.id.in_(tag_ids)).all()
+        site.tags = tags
+
     site.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     return site
