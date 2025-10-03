@@ -6,6 +6,7 @@
     <title>{% block title %}Aplicación{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <div class="topbar">
@@ -36,6 +37,7 @@
     <div class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <ul>
+                <li><a href="{{ url_for('public_sites.show_public_sites') }}">Visualizar sitios históricos</a></li>
                 <li><a href="{{ url_for('sites.index') }}">Gestión de sitios históricos</a></li>
                 <li><a href="{{ url_for('validacion_propuestas') }}">Validación de propuestas</a></li>
                 <li><a href="{{ url_for('moderacion_reseñas') }}">Moderación de reseñas</a></li>
@@ -105,5 +107,6 @@
             }
         });
     </script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html>

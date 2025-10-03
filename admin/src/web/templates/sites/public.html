@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sitios históricos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body class="public-page">
+    <header class="public-header">
+        <div class="public-header__content">
+            <div class="public-header__title">
+                <span class="brand-badge">A</span>
+                <div>
+                    <h1>Sitios históricos</h1>
+                    <p>Descubrí los sitios que forman parte del patrimonio histórico.</p>
+                </div>
+            </div>
+            <a class="secondary-button" href="{{ url_for('home') }}">Ir al panel</a>
+        </div>
+    </header>
+
+    <main class="public-sites">
+        <section class="public-sites__list">
+            {% if sites %}
+                <div class="site-card-grid">
+                    {% for site in sites %}
+                        <article class="site-card">
+                            <h2>{{ site.name }}</h2>
+                            <p class="site-card__summary">{{ site.short_description }}</p>
+                            <ul class="site-card__meta">
+                                <li><strong>Ciudad:</strong> {{ site.city }}, {{ site.province }}</li>
+                                <li><strong>Estado:</strong> {{ site.conservation_status }}</li>
+                                <li><strong>Categoría:</strong> {{ site.category }}</li>
+                                {% if site.inaguration_year %}
+                                    <li><strong>Año de inauguración:</strong> {{ site.inaguration_year }}</li>
+                                {% endif %}
+                            </ul>
+                            <p class="site-card__description">{{ site.full_description }}</p>
+                            {% if site.tags %}
+                                <p class="site-card__tags"><strong>Etiquetas:</strong> {{ site.tags | join(', ') }}</p>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No hay sitios históricos visibles por el momento.</p>
+            {% endif %}
+        </section>
+
+        <section class="public-sites__map">
+            <h2>Mapa</h2>
+            <div id="public-site-map" class="site-map" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        (function() {
+            const mapContainer = document.getElementById('public-site-map');
+            const sites = {{ sites | tojson }};
+            if (!mapContainer) {
+                return;
+            }
+
+            const map = L.map(mapContainer).setView([-34.6037, -58.3816], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const bounds = [];
+            sites.forEach(function(site) {
+                if (site.latitude === null || site.longitude === null) {
+                    return;
+                }
+                const marker = L.marker([site.latitude, site.longitude]).addTo(map);
+                const popupContent = '<strong>' + site.name + '</strong><br>' +
+                    (site.city ? site.city + ', ' + site.province : site.province || '') + '<br>' +
+                    (site.conservation_status || '');
+                marker.bindPopup(popupContent);
+                bounds.push([site.latitude, site.longitude]);
+            });
+
+            if (bounds.length > 0) {
+                map.fitBounds(bounds, { padding: [20, 20] });
+            }
+        })();
+    </script>
+</body>
+</html>

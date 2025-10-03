@@ -1,0 +1,149 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ 'Editar' if is_edit else 'Crear' }} sitio histórico{% endblock %}
+
+{% block extra_head %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+>
+{% endblock %}
+
+{% block content %}
+<div class="site-form">
+    <h1>{{ 'Editar sitio histórico' if is_edit else 'Nuevo sitio histórico' }}</h1>
+    <form method="post" class="site-form__form">
+        <div class="form-grid">
+            <div class="form-field">
+                <label for="name">Nombre del sitio</label>
+                <input type="text" id="name" name="name" required value="{{ form_values.name }}">
+            </div>
+            <div class="form-field">
+                <label for="short_description">Descripción breve</label>
+                <input type="text" id="short_description" name="short_description" required value="{{ form_values.short_description }}">
+            </div>
+            <div class="form-field form-field--full">
+                <label for="full_description">Descripción completa</label>
+                <textarea id="full_description" name="full_description" rows="4" required>{{ form_values.full_description }}</textarea>
+            </div>
+            <div class="form-field">
+                <label for="city">Ciudad</label>
+                <input type="text" id="city" name="city" required value="{{ form_values.city }}">
+            </div>
+            <div class="form-field">
+                <label for="province">Provincia</label>
+                <select id="province" name="province" required>
+                    <option value="">Seleccioná una provincia</option>
+                    {% for province in provinces %}
+                        <option value="{{ province }}" {% if form_values.province == province %}selected{% endif %}>{{ province }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="conservation_status">Estado de conservación</label>
+                <select id="conservation_status" name="conservation_status" required>
+                    <option value="">Seleccioná una opción</option>
+                    {% for status in conservation_statuses %}
+                        <option value="{{ status.value }}" {% if form_values.conservation_status == status.value %}selected{% endif %}>{{ status.value }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="category">Categoría</label>
+                <select id="category" name="category" required>
+                    <option value="">Seleccioná una categoría</option>
+                    {% for category in categories %}
+                        <option value="{{ category.value }}" {% if form_values.category == category.value %}selected{% endif %}>{{ category.value }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="inaguration_year">Año de inauguración</label>
+                <input type="number" id="inaguration_year" name="inaguration_year" min="0" value="{{ form_values.inaguration_year }}" required>
+            </div>
+            <div class="form-field form-field--full">
+                <label for="tags">Etiquetas</label>
+                <select id="tags" name="tags" multiple size="4">
+                    {% for tag in tags %}
+                        <option value="{{ tag.id }}" {% if tag.id in form_values.tag_ids %}selected{% endif %}>{{ tag.name }}</option>
+                    {% endfor %}
+                </select>
+                <small>Usá Ctrl o Cmd para seleccionar varias etiquetas.</small>
+            </div>
+            <div class="form-field form-field--checkbox">
+                <label>
+                    <input type="checkbox" name="is_visible" {% if form_values.is_visible %}checked{% endif %}>
+                    Marcar como visible en el portal público
+                </label>
+            </div>
+        </div>
+
+        <div class="map-section">
+            <label for="site-map">Ubicación geográfica</label>
+            <div id="site-map" class="site-map" aria-live="polite"></div>
+            <div class="coordinate-inputs">
+                <div>
+                    <label for="latitude-input">Latitud</label>
+                    <input type="text" id="latitude-input" name="latitude" value="{{ form_values.latitude }}" readonly>
+                </div>
+                <div>
+                    <label for="longitude-input">Longitud</label>
+                    <input type="text" id="longitude-input" name="longitude" value="{{ form_values.longitude }}" readonly>
+                </div>
+            </div>
+            <small>Hacé clic en el mapa para elegir las coordenadas del sitio histórico.</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="primary-button">Guardar</button>
+            <a href="{{ url_for('sites.index') }}" class="secondary-button">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+<script>
+    (function() {
+        const mapElement = document.getElementById('site-map');
+        const latInput = document.getElementById('latitude-input');
+        const lngInput = document.getElementById('longitude-input');
+        if (!mapElement || !latInput || !lngInput) {
+            return;
+        }
+
+        const parsedLat = parseFloat(latInput.value);
+        const parsedLng = parseFloat(lngInput.value);
+        const hasCoords = !Number.isNaN(parsedLat) && !Number.isNaN(parsedLng);
+
+        const defaultCoords = hasCoords ? [parsedLat, parsedLng] : [-34.6037, -58.3816];
+        const defaultZoom = hasCoords ? 14 : 5;
+
+        const map = L.map(mapElement).setView(defaultCoords, defaultZoom);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        let marker = null;
+        if (hasCoords) {
+            marker = L.marker(defaultCoords).addTo(map);
+        }
+
+        map.on('click', function(event) {
+            const { lat, lng } = event.latlng;
+            latInput.value = lat.toFixed(6);
+            lngInput.value = lng.toFixed(6);
+
+            if (marker) {
+                marker.setLatLng(event.latlng);
+            } else {
+                marker = L.marker(event.latlng).addTo(map);
+            }
+        });
+    })();
+</script>
+{% endblock %}
