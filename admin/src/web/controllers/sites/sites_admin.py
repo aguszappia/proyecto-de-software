@@ -7,7 +7,7 @@ import io
 from datetime import datetime
 from typing import Dict, List
 
-from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 
 from src.core.sites.models import ConservationStatus, SiteCategory
 from src.core.sites.service import (
@@ -20,8 +20,8 @@ from src.core.sites.service import (
 )
 from src.core.sites.tags_service import list_tags
 from src.web.controllers.auth import require_login, require_roles
-# Archivo helep
-from src.web.controllers.sites_utils import (
+# Archivo helper - ruta relativa para evitar imports circulares
+from .sites_utils import (
     PROVINCES,
     build_site_payload,
     clean_str,
@@ -129,7 +129,7 @@ def create():
                 provinces=PROVINCES,
                 is_edit=False,
             )
-        create_site(**payload)
+        create_site(performed_by=session.get("user_id"), **payload)
         flash("Sitio histórico creado correctamente.", "success")
         return redirect(url_for("sites.index"))
 
@@ -172,7 +172,7 @@ def edit(site_id: int):
                 is_edit=True,
                 site_id=site_id,
             )
-        update_site(site_id, **payload)
+        update_site(site_id, performed_by=session.get("user_id"), **payload)
         flash("Sitio histórico actualizado correctamente.", "success")
         return redirect(url_for("sites.index"))
 
@@ -217,7 +217,7 @@ def edit(site_id: int):
 def remove(site_id: int):
     """Elimina un sitio histórico (solo para admin o sysadmin)"""
 
-    if delete_site(site_id):
+    if delete_site(site_id, performed_by=session.get("user_id")):
         flash("Sitio histórico eliminado correctamente.", "success")
     else:
         flash("No se encontró el sitio histórico solicitado.", "error")
