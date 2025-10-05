@@ -8,6 +8,29 @@
     <span class="results-count">{{ pagination.total }} resultados</span>
 </div>
 
+<div class="actions-bar">
+    <a class="primary-button" href="{{ url_for('sites.create') }}">Agregar sitio histórico</a>
+    {% if session.get('user_role') in ['admin', 'sysadmin'] %}
+        <form class="export-form" method="get" action="{{ url_for('sites.export_sites') }}">
+            <input type="hidden" name="city" value="{{ filters.city }}">
+            <input type="hidden" name="province" value="{{ filters.province }}">
+            <input type="hidden" name="q" value="{{ filters.q }}">
+            <input type="hidden" name="conservation_status" value="{{ filters.conservation_status }}">
+            <input type="hidden" name="created_from" value="{{ filters.created_from }}">
+            <input type="hidden" name="created_to" value="{{ filters.created_to }}">
+            <input type="hidden" name="sort_by" value="{{ filters.sort_by }}">
+            <input type="hidden" name="sort_dir" value="{{ filters.sort_dir }}">
+            {% if filters.is_visible %}
+                <input type="hidden" name="is_visible" value="on">
+            {% endif %}
+            {% for tag_id in filters.tags %}
+                <input type="hidden" name="tags" value="{{ tag_id }}">
+            {% endfor %}
+            <button type="submit" class="secondary-button">Exportar sitios</button>
+        </form>
+    {% endif %}
+</div>
+
 <form class="filters" method="get" action="{{ url_for('sites.index') }}">
     <div class="filters-row">
         <div class="filter-group">
@@ -101,6 +124,7 @@
                     <th>Provincia</th>
                     <th>Estado</th>
                     <th>Visibilidad</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -115,6 +139,14 @@
                                 <span class="status-badge status-active">Visible</span>
                             {% else %}
                                 <span class="status-badge status-inactive">Oculto</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions-cell">
+                            <a class="secondary-button" href="{{ url_for('sites.edit', site_id=site.id) }}">Editar</a>
+                            {% if session.get('user_role') in ['admin', 'sysadmin'] %}
+                                <form method="post" action="{{ url_for('sites.remove', site_id=site.id) }}" onsubmit="return confirm('¿Seguro que querés eliminar este sitio histórico?');" style="display:inline;">
+                                    <button type="submit" class="danger-button">Eliminar</button>
+                                </form>
                             {% endif %}
                         </td>
                     </tr>
