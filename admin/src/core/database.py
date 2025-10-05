@@ -9,6 +9,7 @@ def init_db(app):
 
 def reset_db(app):
     from src.core.users.models import User
+    from src.core.sites.models import Historic_Site, SiteTag
 
     print("Resetting database...")
     Base.metadata.drop_all(bind=db.engine)

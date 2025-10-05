@@ -6,7 +6,12 @@ from src.web.config import config
 from src.web.controllers import register_controllers
 from src.web.handlers import error
 from src.web.controllers.auth import auth_bp
+from src.web.controllers.validation import  validation_bp
+from src.web.controllers.reviews import  reviews_bp
+
 from src.core import seeds
+
+from src.web.controllers.auth import require_login, require_roles
 
 def create_app(env="development", static_folder="../../static"):
     app = Flask(__name__, static_folder=static_folder)
@@ -32,11 +37,17 @@ def create_app(env="development", static_folder="../../static"):
     def gestion_sitios(): 
         return render_template("gestionSitios.html")
 
+    # bloqueo acceso desde acá hasta crear nuevo index de propuestas
     @app.route('/validacion_propuestas')
+    @require_login
+    @require_roles("editor", "admin", "sysadmin")
     def validacion_propuestas():
         return render_template("validacionPropuestas.html")
     
+    # bloqueo acceso desde acá hasta crear nuevo index de reseñas
     @app.route('/moderacion_reseñas')
+    @require_login
+    @require_roles("editor", "admin", "sysadmin")
     def moderacion_reseñas():
         return render_template("moderacionReseñas.html")
     
@@ -55,6 +66,10 @@ def create_app(env="development", static_folder="../../static"):
     app.register_error_handler(500, error.internal_server_error)
 
     app.register_blueprint(auth_bp)
+
+    app.register_blueprint(validation_bp)
+
+    app.register_blueprint(reviews_bp)
 
     # Register commands
     @app.cli.command("reset-db")
@@ -81,6 +96,7 @@ def create_app(env="development", static_folder="../../static"):
             or path.startswith("/static/")
             or path == "/"        # home pública
             or path.startswith("/about")
+            or path.startswith("/sites/public")
         )
 
         if not allowed and not session.get("user_id"):
