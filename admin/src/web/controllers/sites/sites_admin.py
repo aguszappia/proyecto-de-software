@@ -172,7 +172,22 @@ def edit(site_id: int):
                 is_edit=True,
                 site_id=site_id,
             )
-        update_site(site_id, performed_by=session.get("user_id"), **payload)
+        action_type = "Edición"
+        details = "Datos editados"
+        if payload.get("tag_ids") != site.get("tag_ids", []):
+            action_type = "Cambio de tags"
+            details = "Etiquetas editadas"
+        elif payload.get("is_visible") != bool(site.get("is_visible", False)):
+            action_type = "Cambio de estado"
+            details = "Visibilidad editada"
+
+        update_site(
+            site_id,
+            performed_by=session.get("user_id"),
+            action_type=action_type,
+            details=details,
+            **payload,
+        )
         flash("Sitio histórico actualizado correctamente.", "success")
         return redirect(url_for("sites.index"))
 
@@ -285,8 +300,8 @@ def export_sites():
             "Provincia",
             "Estado de conservación",
             "Fecha de registro",
-            "Coordenadas",
-            "Tags",
+            "Latitud",
+            "Longitud",
         ]
     )
 
