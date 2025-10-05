@@ -10,7 +10,25 @@
 
 <div class="actions-bar">
     <a class="primary-button" href="{{ url_for('sites.create') }}">Agregar sitio histórico</a>
-    <button type="button" class="secondary-button">Exportar sitios</button>
+    {% if session.get('user_role') in ['admin', 'sysadmin'] %}
+        <form class="export-form" method="get" action="{{ url_for('sites.export_sites') }}">
+            <input type="hidden" name="city" value="{{ filters.city }}">
+            <input type="hidden" name="province" value="{{ filters.province }}">
+            <input type="hidden" name="q" value="{{ filters.q }}">
+            <input type="hidden" name="conservation_status" value="{{ filters.conservation_status }}">
+            <input type="hidden" name="created_from" value="{{ filters.created_from }}">
+            <input type="hidden" name="created_to" value="{{ filters.created_to }}">
+            <input type="hidden" name="sort_by" value="{{ filters.sort_by }}">
+            <input type="hidden" name="sort_dir" value="{{ filters.sort_dir }}">
+            {% if filters.is_visible %}
+                <input type="hidden" name="is_visible" value="on">
+            {% endif %}
+            {% for tag_id in filters.tags %}
+                <input type="hidden" name="tags" value="{{ tag_id }}">
+            {% endfor %}
+            <button type="submit" class="secondary-button">Exportar sitios</button>
+        </form>
+    {% endif %}
 </div>
 
 <form class="filters" method="get" action="{{ url_for('sites.index') }}">
