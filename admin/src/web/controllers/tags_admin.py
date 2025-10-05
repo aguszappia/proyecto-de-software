@@ -9,7 +9,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from src.core.pagination import Pagination
 from src.core.sites.models import SiteTag
-from src.core.sites.service import (
+from src.core.sites.tags_service import (
     create_tag,
     delete_tag,
     get_tag,
