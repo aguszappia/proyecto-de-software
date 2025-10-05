@@ -1,0 +1,76 @@
+{% extends "layout.html" %}
+
+{% block title %}Historial de cambios{% endblock %}
+
+{% block content %}
+<h1>Historial de cambios</h1>
+<p>Listado de eventos registrados para el sitio {{ site_id }}.</p>
+
+<form class="filters" method="get" action="{{ url_for('sites_history.view_history', site_id=site_id) }}">
+    <div class="filters-row">
+        <div class="filter-group">
+            <label for="user">Usuario</label>
+            <input type="text" id="user" name="user" value="{{ filters.user }}" placeholder="Buscar por email">
+        </div>
+        <div class="filter-group">
+            <label for="action_type">Acción</label>
+            <select id="action_type" name="action_type">
+                <option value="">Todas</option>
+                {% for action in actions %}
+                <option value="{{ action }}" {% if filters.action_type == action %}selected{% endif %}>{{ action }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="date_from">Desde</label>
+            <input type="date" id="date_from" name="date_from" value="{{ filters.date_from }}">
+        </div>
+        <div class="filter-group">
+            <label for="date_to">Hasta</label>
+            <input type="date" id="date_to" name="date_to" value="{{ filters.date_to }}">
+        </div>
+    </div>
+    <div class="filter-actions">
+        <button type="submit" class="primary-button">Filtrar</button>
+        <a class="secondary-button" href="{{ url_for('sites_history.view_history', site_id=site_id) }}">Limpiar</a>
+    </div>
+</form>
+
+{% if pagination.items %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Acción</th>
+                    <th>Usuario</th>
+                    <th>Detalle</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in pagination.items %}
+                <tr>
+                    <td>{{ entry.created_at[:19] if entry.created_at else '' }}</td>
+                    <td>{{ entry.action_type }}</td>
+                    <td>{{ entry.user_email or '—' }}</td>
+                    <td>{{ entry.details or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination">
+        {% if pagination.page > 1 %}
+            <a href="{{ url_for('sites_history.view_history', site_id=site_id, page=pagination.page - 1, user=filters.user or None, action_type=filters.action_type or None, date_from=filters.date_from or None, date_to=filters.date_to or None) }}">Anterior</a>
+        {% endif %}
+        <span>Página {{ pagination.page }} de {{ pagination.pages }}</span>
+        {% if pagination.page < pagination.pages %}
+            <a href="{{ url_for('sites_history.view_history', site_id=site_id, page=pagination.page + 1, user=filters.user or None, action_type=filters.action_type or None, date_from=filters.date_from or None, date_to=filters.date_to or None) }}">Siguiente</a>
+        {% endif %}
+    </div>
+{% else %}
+    <p>No se registraron eventos para los filtros seleccionados.</p>
+{% endif %}
+
+<p><a class="secondary-button" href="{{ url_for('sites.edit', site_id=site_id) }}">Volver al sitio</a></p>
+{% endblock %}
