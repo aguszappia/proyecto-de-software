@@ -100,6 +100,13 @@
         </div>
     </form>
 </div>
+{% if is_edit and site_id %}
+<div class="site-history-panel">
+    <h2>Historial de cambios</h2>
+    <p>Podés revisar todos los movimientos realizados sobre este sitio.</p>
+    <a class="secondary-button" href="{{ url_for('sites_history.view_history', site_id=site_id) }}">Ver historial completo</a>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_scripts %}

@@ -621,6 +621,17 @@ body {
   color: #555;
 }
 
+.site-history-panel {
+  margin-top: 24px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .has-error input,
 .has-error select {
   border-color: #ef4444;
