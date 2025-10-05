@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ 'Editar' if is_edit else 'Nueva' }} etiqueta{% endblock %}
+
+{% block content %}
+<div class="module-header">
+    <h1>{{ 'Editar etiqueta' if is_edit else 'Nueva etiqueta' }}</h1>
+    <a href="{{ url_for('tags.index') }}" class="secondary-button">← Volver al listado</a>
+</div>
+
+<form class="entity-form" method="post" action="{% if is_edit %}{{ url_for('tags.update', tag_id=tag_id) }}{% else %}{{ url_for('tags.create') }}{% endif %}">
+    <div class="form-grid">
+        <div class="form-field {% if errors.name %}has-error{% endif %}">
+            <label for="name">Nombre *</label>
+            <input type="text" id="name" name="name" value="{{ form_values.name }}" required>
+            {% if errors.name %}
+                <span class="error-message">{{ errors.name[0] }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if is_edit and current_slug %}
+    <p><strong>Slug actual:</strong> {{ current_slug }}</p>
+    {% endif %}
+
+    <div class="form-actions">
+        <button type="submit" class="primary-button">Guardar</button>
+        <a href="{{ url_for('tags.index') }}" class="secondary-button">Cancelar</a>
+    </div>
+</form>
+{% endblock %}
