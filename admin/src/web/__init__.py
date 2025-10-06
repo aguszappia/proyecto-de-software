@@ -29,13 +29,9 @@ def create_app(env="development", static_folder="../../static"):
         return redirect(url_for("auth.login"))
 
     @app.route('/about')
+    @require_login
     def about():
         return render_template("about.html")
-
-    # falta completar
-    @app.route('/gestion_sitios')
-    def gestion_sitios(): 
-        return render_template("gestionSitios.html")
 
     # bloqueo acceso desde acá hasta crear nuevo index de propuestas
     @app.route('/validacion_propuestas')
@@ -56,6 +52,7 @@ def create_app(env="development", static_folder="../../static"):
         return render_template("login.html")
     
     @app.route('/perfil_usuario')
+    @require_login
     def perfil_usuario(): 
         return render_template("perfilUsuario.html")
     
