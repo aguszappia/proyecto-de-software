@@ -41,15 +41,20 @@
       </div>
       <h1 id="title">Iniciar sesión</h1>
 
-      {% with messages = get_flashed_messages(with_categories=True) %}
-        {% if messages %}
-          <div class="flash-container" role="status" aria-live="polite">
-            {% for category, message in messages %}
-              <div class="flash-message flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
+      {% set flashed = get_flashed_messages(with_categories=True) %}
+      {% if flashed %}
+        <div class="flash-container" role="status" aria-live="polite">
+          {% for category, message in flashed %}
+            <div class="flash-message flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if not flashed and admin_maintenance_enabled and admin_maintenance_message %}
+        <div class="flash-container" role="status" aria-live="polite">
+          <div class="flash-message flash-warning">{{ admin_maintenance_message }}</div>
+        </div>
+      {% endif %}
 
       <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" autocomplete="on" novalidate>
         <label for="email">Email</label>
