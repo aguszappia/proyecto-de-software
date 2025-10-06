@@ -718,3 +718,32 @@ body {
 .maintenance-card p { margin-bottom: 24px; color: #475569; }
 
 }
+
+.inline-form { display: inline; }
+
+.secondary-button {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease, transform .02s ease;
+}
+.secondary-button:hover { background: #e5e7eb; }
+.secondary-button:disabled { opacity: .6; cursor: not-allowed; }
+
+.success-button {
+  background: #e7f6ed;
+  color: #166534;
+  border: 1px solid #c1e2c9;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease, transform .02s ease;
+}
+.success-button:hover { background: #d4eed9; }
