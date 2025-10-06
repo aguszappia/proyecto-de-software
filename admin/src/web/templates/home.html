@@ -1,11 +1,43 @@
 {% extends "layout.html" %}
 
-{% block title %}Inicio - Mi Aplicación{% endblock %}
+{% block title %}Proyecto - Grupo 28{% endblock %}
 
 {% block content %}
-	<h1>Inicio</h1>
-	<p>Bienvenido a mi proyecto flask.</p>
-    <p>Somos el grupo numero 28.</p>
+<main style="max-width: 900px; margin: 0 auto; line-height: 1.6; text-align: justify;">
+  <h1 style="margin-bottom: 30px; text-align: center;">Proyecto - Grupo 28</h1>
 
-	<a href="{{ url_for('about') }}">Ir a about</a>
+  <section style="margin-bottom: 25px;">
+    <p>
+      Este proyecto forma parte del <strong>Trabajo Integrador 2025</strong> de la cátedra <em>Proyecto de Software</em>.
+      Su propósito es desarrollar una aplicación web que permita gestionar, preservar y difundir los
+      <strong>sitios históricos del país</strong>, centralizando toda la información relevante en una única plataforma.
+    </p>
+  </section>
+
+  <section style="margin-bottom: 25px;">
+    <p>
+      En esta primera etapa se implementó la <strong>aplicación de administración</strong>, desarrollada en
+      <strong>Python y Flask</strong>, conectada a una base de datos <strong>PostgreSQL</strong> con soporte
+      geoespacial. A través de esta aplicación, los editores y administradores pueden gestionar sitios históricos,
+      moderar reseñas, validar propuestas y administrar usuarios y roles.
+    </p>
+  </section>
+
+  <section style="margin-bottom: 25px;">
+    <p>
+      En etapas futuras se desarrollará el <strong>portal público</strong> en <strong>Vue.js</strong>, que permitirá
+      a cualquier ciudadano explorar los sitios históricos registrados, conocer su historia, dejar reseñas y proponer
+      nuevos lugares de interés cultural.
+    </p>
+  </section>
+
+  <section style="text-align: center; margin-top: 40px;">
+    <p><em>Grupo Nº 28 — Etapa 1</em></p>
+  </section>
+
+  <section style="text-align: center; margin-top: 40px;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flask_logo.svg" alt="Flask Logo" width="130" style="margin: 0 20px;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python Logo" width="120" style="margin: 0 20px;">
+  </section>
+</main>
 {% endblock %}
