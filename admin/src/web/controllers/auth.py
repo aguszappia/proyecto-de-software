@@ -11,6 +11,7 @@ def require_login(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not session.get("user_id"):
+            flash("Se requiere iniciar sesión", "error")
             return redirect(url_for("auth.login", next=request.url))
         return view(*args, **kwargs)
     return wrapped
