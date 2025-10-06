@@ -207,6 +207,11 @@ body {
   color: #b71c1c;
 }
 
+.flash-warning {
+  background: #fff4e5;
+  color: #ad6800;
+}
+
 /* Buttons */
 .primary-button,
 .secondary-button,
@@ -382,12 +387,34 @@ body {
 }
 
 .data-table td.actions {
-  display: flex;
+  text-align: right;
+}
+
+.flag-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
 
-.data-table td.actions form {
-  display: inline;
+.flag-actions form {
+  margin: 0;
+}
+
+.flag-updated {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.flag-updated__user {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.flag-updated__time {
+  font-size: 0.8rem;
+  color: #64748b;
 }
 
 .status-badge {
@@ -621,6 +648,17 @@ body {
   color: #555;
 }
 
+.site-history-panel {
+  margin-top: 24px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .has-error input,
 .has-error select {
   border-color: #ef4444;
@@ -633,8 +671,14 @@ body {
 }
 
 @media (max-width: 768px) {
-  .data-table td.actions {
+  .flag-actions {
     flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .flag-updated {
+    align-items: flex-start;
   }
 
   .module-header {
@@ -660,4 +704,46 @@ body {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .maintenance-card {
+  max-width: 520px;
+  margin: 40px auto;
+  padding: 32px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  text-align: center;
 }
+.maintenance-card h1 { margin-bottom: 16px; }
+.maintenance-card p { margin-bottom: 24px; color: #475569; }
+
+}
+
+.inline-form { display: inline; }
+
+.secondary-button {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease, transform .02s ease;
+}
+.secondary-button:hover { background: #e5e7eb; }
+.secondary-button:disabled { opacity: .6; cursor: not-allowed; }
+
+.success-button {
+  background: #e7f6ed;
+  color: #166534;
+  border: 1px solid #c1e2c9;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease, transform .02s ease;
+}
+.success-button:hover { background: #d4eed9; }

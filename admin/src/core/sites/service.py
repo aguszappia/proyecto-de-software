@@ -5,6 +5,7 @@ from geoalchemy2 import WKTElement
 from sqlalchemy import asc, desc, or_
 from src.core.pagination import Pagination
 from src.core.sites.models import Historic_Site, SiteTag, ConservationStatus, SiteCategory
+from src.core.sites.history_service import record_event
 from src.core.database import db
 
 def list_sites():
@@ -12,6 +13,7 @@ def list_sites():
     return [site.to_dict() for site in sites]
 
 def create_site(**kwargs):
+    performed_by = kwargs.pop("performed_by", None)
     name = kwargs.get("name")
     short_description = kwargs.get("short_description")
     full_description = kwargs.get("full_description")
@@ -45,6 +47,7 @@ def create_site(**kwargs):
         new_site.tags = tags
     db.session.add(new_site)
     db.session.commit()
+    record_event(site_id=new_site.id, user_id=performed_by, action_type="Creación", details="Sitio creado")
     return new_site
 
 
@@ -61,7 +64,10 @@ def update_site(site_id, **kwargs):
     site = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
     if not site:
         return None
-    
+    performed_by = kwargs.pop("performed_by", None)
+    action_type = kwargs.pop("action_type", "Edición")
+    details = kwargs.pop("details", "Datos editados")
+
     if "name" in kwargs:
         site.name = kwargs.get("name")
     if "short_description" in kwargs:
@@ -93,10 +99,12 @@ def update_site(site_id, **kwargs):
 
     site.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    record_event(site_id=site.id, user_id=performed_by, action_type=action_type, details=details)
     return site
 
 
-def delete_site(site_id):
+def delete_site(site_id, performed_by: Optional[int] = None):
     site = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
     if not site:
         return False

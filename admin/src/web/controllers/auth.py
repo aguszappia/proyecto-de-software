@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from src.core.database import db
 from src.core.users.models import User
 from src.core.security.passwords import verify_password
+from src.core.flags import service as flags_service
 
 auth_bp = Blueprint("auth", __name__) 
 
@@ -11,6 +12,7 @@ def require_login(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not session.get("user_id"):
+            flash("Se requiere iniciar sesión", "error")
             return redirect(url_for("auth.login", next=request.url))
         return view(*args, **kwargs)
     return wrapped
@@ -43,9 +45,27 @@ def login_post():
     next_url = request.args.get("next") or url_for("home")
 
     user = db.session.query(User).filter(User.email.ilike(email)).first()
-    if not user or not user.is_active or not verify_password(password, user.password_hash):
-        flash("Credenciales inválidas", "error")
+
+    if not user:
+        flash("Credenciales inválidas.", "error")
         return redirect(url_for("auth.login", next=next_url))
+
+    if not user.is_active:
+        flash("Tu cuenta se encuentra inactiva. Contactá a un administrador para reactivarla.", "error")
+        return redirect(url_for("auth.login", next=next_url))
+
+    if not verify_password(password, user.password_hash):
+        flash("Credenciales inválidas.", "error")
+        return redirect(url_for("auth.login", next=next_url))
+
+    maintenance_flag = flags_service.get_flag("admin_maintenance_mode")
+    if maintenance_flag and maintenance_flag.enabled:
+        user_role_value = user.role.value if hasattr(user.role, "value") else str(user.role)
+        if user_role_value != "sysadmin":
+            message = maintenance_flag.message or "El panel de administración está en mantenimiento."
+            flash(message, "warning")
+            return redirect(url_for("auth.login", next=next_url))
+        next_url = url_for("featureflags")
 
     session.clear()
     session.permanent = True

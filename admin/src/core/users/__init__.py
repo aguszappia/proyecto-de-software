@@ -7,6 +7,7 @@ class UserRole(StrEnum):
     PUBLIC = "public"
     EDITOR = "editor"
     ADMIN = "admin"
+    SYSADMIN = "sysadmin"
 
 
 DEFAULT_USER_ROLE = UserRole.PUBLIC

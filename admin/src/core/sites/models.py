@@ -8,6 +8,30 @@ from enum import Enum
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 
+class SiteHistory(Base):
+    """Tabla para historial de cambios"""
+
+    __tablename__ = "site_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    site_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    action_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    details: Mapped[str] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "site_id": self.site_id,
+            "user_id": self.user_id,
+            "action_type": self.action_type,
+            "details": self.details,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
 # Tabla relacion entre sitios y etiquetas
 site_tag_association = Table(
     'site_tag_association',

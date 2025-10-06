@@ -7,7 +7,7 @@ import io
 from datetime import datetime
 from typing import Dict, List
 
-from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 
 from src.core.sites.models import ConservationStatus, SiteCategory
 from src.core.sites.service import (
@@ -20,8 +20,8 @@ from src.core.sites.service import (
 )
 from src.core.sites.tags_service import list_tags
 from src.web.controllers.auth import require_login, require_roles
-# Archivo helep
-from src.web.controllers.sites_utils import (
+# Archivo helper - ruta relativa para evitar imports circulares
+from .sites_utils import (
     PROVINCES,
     build_site_payload,
     clean_str,
@@ -129,7 +129,7 @@ def create():
                 provinces=PROVINCES,
                 is_edit=False,
             )
-        create_site(**payload)
+        create_site(performed_by=session.get("user_id"), **payload)
         flash("Sitio histórico creado correctamente.", "success")
         return redirect(url_for("sites.index"))
 
@@ -172,7 +172,22 @@ def edit(site_id: int):
                 is_edit=True,
                 site_id=site_id,
             )
-        update_site(site_id, **payload)
+        action_type = "Edición"
+        details = "Datos editados"
+        if payload.get("tag_ids") != site.get("tag_ids", []):
+            action_type = "Cambio de tags"
+            details = "Etiquetas editadas"
+        elif payload.get("is_visible") != bool(site.get("is_visible", False)):
+            action_type = "Cambio de estado"
+            details = "Visibilidad editada"
+
+        update_site(
+            site_id,
+            performed_by=session.get("user_id"),
+            action_type=action_type,
+            details=details,
+            **payload,
+        )
         flash("Sitio histórico actualizado correctamente.", "success")
         return redirect(url_for("sites.index"))
 
@@ -217,7 +232,7 @@ def edit(site_id: int):
 def remove(site_id: int):
     """Elimina un sitio histórico (solo para admin o sysadmin)"""
 
-    if delete_site(site_id):
+    if delete_site(site_id, performed_by=session.get("user_id")):
         flash("Sitio histórico eliminado correctamente.", "success")
     else:
         flash("No se encontró el sitio histórico solicitado.", "error")
@@ -285,18 +300,22 @@ def export_sites():
             "Provincia",
             "Estado de conservación",
             "Fecha de registro",
-            "Coordenadas",
-            "Tags",
+            "Latitud",
+            "Longitud",
         ]
     )
 
     for site in sites:
         status_value = site.conservation_status.value if hasattr(site.conservation_status, "value") else str(site.conservation_status)
         created_value = site.created_at.strftime("%Y-%m-%d %H:%M") if site.created_at else ""
-        coordinates = ""
-        if site.latitude is not None and site.longitude is not None:
-            coordinates = f"{site.latitude}, {site.longitude}"
-        tag_names = sorted(tag.name for tag in site.tags)
+
+        lat_value = ""
+        if getattr(site, "latitude", None) is not None:
+            lat_value = f"{site.latitude:.6f}"
+
+        lon_value = ""
+        if getattr(site, "longitude", None) is not None:
+            lon_value = f"{site.longitude:.6f}"
 
         writer.writerow(
             [
@@ -307,8 +326,8 @@ def export_sites():
                 site.province,
                 status_value,
                 created_value,
-                coordinates,
-                "; ".join(tag_names),
+                lat_value,
+                lon_value,
             ]
         )
 

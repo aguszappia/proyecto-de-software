@@ -1,5 +1,6 @@
 from src.core.users import service as user_service
 from src.core.sites import service as sites_service
+from src.core.flags import service as flags_service
 
 def run():
     users = [
@@ -24,6 +25,13 @@ def run():
             "password":"12345678",
             "role":"editor"
         },
+        {
+            "email":"systemAdmin@example.com",
+            "first_name":"SysAdmin",
+            "last_name":"Cuatro",
+            "password":"12345678",
+            "role":"sysadmin"
+        }
     ]
     
     for payload in users:
@@ -93,3 +101,49 @@ def run():
             print(f"[SEED ERROR] {name}: {e}")
 
     print("Seeds de sitios históricos cargadas")
+
+    # Seeds de Flags iniciales
+    flags_defaults = [
+        {
+            "key": "admin_maintenance_mode",
+            "name": "Modo mantenimiento administración",
+            "description": "Bloquea el panel de administración salvo login.",
+            "enabled": False,
+            "message": "",
+        },
+        {
+            "key": "portal_maintenance_mode",
+            "name": "Modo mantenimiento portal",
+            "description": "Pone el portal público en modo mantenimiento.",
+            "enabled": False,
+            "message": "",
+        },
+        {
+            "key": "reviews_enabled",
+            "name": "Reseñas habilitadas",
+            "description": "Controla si el portal permite crear nuevas reseñas.",
+            "enabled": True,
+            "message": "Las reseñas están disponibles.",
+        },
+    ]
+
+
+    for data in flags_defaults:
+        flags_service.ensure_flag(
+            key=data["key"],
+            name=data["name"],
+            description=data["description"],
+            enabled=data["enabled"],
+            message=data["message"],
+        )
+        flags_service.set_flag(
+            data["key"],
+            enabled=data["enabled"],
+            message=data["message"],
+            user_id=None,
+        )
+        print(f"[SEED OK] feature flag {data['key']}")
+
+
+
+    print("Seeds de feature flags cargadas")

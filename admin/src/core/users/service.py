@@ -62,7 +62,12 @@ def update_user(user, payload, allowed_roles=None):
     )
     if not is_valid:
         return False, None, errors
-
+    
+    # No permitir desactivar un usuario con rol Administrador
+    if "is_active" in data and data["is_active"] is False and (user.role == UserRole.ADMIN or user.role == UserRole.SYSADMIN):
+        errors = {"is_active": "No se puede desactivar a un usuario con rol Administrador."}
+        return False, None, errors
+    
     password = data.pop("password", None)
     for key, value in data.items():
         setattr(user, key, value)
@@ -79,6 +84,26 @@ def delete_user(user):
     session.delete(user)
     session.commit()
 
+def deactivate_user(user):
+    """
+    Desactiva (bloquea) un usuario, excepto si tiene rol Administrador.
+    """
+    if user.role == UserRole.ADMIN or user.role == UserRole.SYSADMIN:
+        raise ValueError("No se puede desactivar a un usuario con rol Administrador o System Admin.")
+    user.is_active = False
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
+def activate_user(user):
+    """
+    Activa (desbloquea) un usuario.
+    """
+    user.is_active = True
+    db.session.add(user)
+    db.session.commit()
+    return user
 
 def get_allowed_roles_for_admin():
     return (UserRole.PUBLIC, UserRole.EDITOR, UserRole.ADMIN)

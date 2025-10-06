@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for, session
 
 from src.core.users import UserRole
-from src.core.users.service import create_user, delete_user, get_allowed_roles_for_admin, get_user, list_users, update_user
+from src.core.users.service import create_user, delete_user, get_allowed_roles_for_admin, get_user, list_users, update_user, activate_user, deactivate_user
 from src.web.controllers.auth import require_login, require_roles
 
 bp = Blueprint("users", __name__, url_prefix="/users")
@@ -54,7 +54,7 @@ def _form_payload():
         "first_name": form.get("first_name"),
         "last_name": form.get("last_name"),
         "password": form.get("password"),
-        "is_active": "true" if is_active in {"on", "true", "1", "yes", "si"} else "false",
+        "is_active": is_active in {"on", "true", "1", "yes", "si"},
         "role": form.get("role"),
     }
  
@@ -142,6 +142,17 @@ def update(user_id: int):
         flash("El usuario no existe.", "error")
         return redirect(url_for("users.index"))
 
+    payload = _form_payload()
+    if payload.get("is_active") is False and user.role in ("admin", "sysadmin"):
+        flash("No se puede desactivar a un usuario con rol Administrador.", "error")
+        return render_template(
+            "users/form.html",
+            user=user,
+            errors={"is_active": "No se puede desactivar a un Administrador."},
+            form=request.form,
+            roles=list(get_allowed_roles_for_admin()),
+        ), 400
+    
     success, updated_user, errors = update_user(user, _form_payload(), allowed_roles=get_allowed_roles_for_admin())
     if not success:
         flash("No se pudo actualizar el usuario. Revisá los errores.", "error")
@@ -172,6 +183,40 @@ def destroy(user_id: int):
     return redirect(url_for("users.index"))
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+@bp.post("/<int:user_id>/deactivate")
+@require_login
+@require_roles("admin", "sysadmin")
+def deactivate(user_id: int):
+    _ensure_admin_access()
+    user = get_user(user_id)
+    if user is None:
+        flash("El usuario no existe.", "error")
+        return redirect(url_for("users.index"))
+    
+    try:
+        # Llama al service que valida "no desactivar Admin"
+        deactivate_user(user)
+        flash("Usuario desactivado correctamente.", "success")
+    except ValueError as e:
+        flash(str(e), "error")
+
+    return redirect(url_for("users.index"))
+
+
+@bp.post("/<int:user_id>/activate")
+@require_login
+@require_roles("admin", "sysadmin")
+def activate(user_id: int):
+    _ensure_admin_access()
+    user = get_user(user_id)
+    if user is None:
+        flash("El usuario no existe.", "error")
+        return redirect(url_for("users.index"))
+
+    activate_user(user)
+    flash("Usuario activado correctamente.", "success")
+    return redirect(url_for("users.index"))
  
 @admin_bp.get("/")
 @require_login
@@ -182,4 +227,4 @@ def dashboard():
 @admin_bp.get("/users")
 @require_roles("admin", "sysadmin")
 def users_index():
-    ...
+    return redirect(url_for("users.index"))
