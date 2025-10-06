@@ -1,0 +1,73 @@
+{# admin/src/web/templates/flags/featureflags.html #}
+{% extends "layout.html" %}
+
+{% block title %}Feature Flags{% endblock %}
+
+{% block content %}
+<div class="module-header">
+  <h1>Feature Flags</h1>
+</div>
+
+{% if flags %}
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Descripción</th>
+          <th>Última modificación</th>
+          <th>Estado</th>
+          <th class="actions">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for flag in flags %}
+          {% set default_message = default_messages.get(flag.key) %}
+          <tr>
+            <td>
+              <strong>{{ flag.name }}</strong>
+            </td>
+            <td>{{ flag.description or 'Sin descripción' }}</td>
+            <td>
+              {% set updated_user = flag.updated_by %}
+              {% if updated_user and flag.updated_at %}
+                <div class="flag-updated">
+                  <span class="flag-updated__user">{{ updated_user.first_name }} {{ updated_user.last_name }}</span>
+                  <span class="flag-updated__time">{{ flag.updated_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                </div>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              <span class="status-badge {{ 'status-active' if flag.enabled else 'status-inactive' }}">
+                {{ 'ON' if flag.enabled else 'OFF' }}
+              </span>
+            </td>
+            <td class="actions">
+              <div class="flag-actions">
+                {% if flag.enabled %}
+                  <form method="post" action="{{ url_for('featureflags') }}">
+                    <input type="hidden" name="flag_key" value="{{ flag.key }}">
+                    <input type="hidden" name="enabled" value="false">
+                    <button type="submit" class="secondary-button">Desactivar</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{{ url_for('featureflags') }}">
+                    <input type="hidden" name="flag_key" value="{{ flag.key }}">
+                    <input type="hidden" name="enabled" value="true">
+                    <input type="hidden" name="message" value="{{ default_message or '' }}">
+                    <button type="submit" class="primary-button">Activar</button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p>No hay feature flags cargados.</p>
+{% endif %}
+{% endblock %}

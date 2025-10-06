@@ -43,6 +43,9 @@
                 <li><a href="{{ url_for('validacion_propuestas') }}">Validación de propuestas</a></li>
                 <li><a href="{{ url_for('moderacion_reseñas') }}">Moderación de reseñas</a></li>
                 <li><a href="{{ url_for('users.index') }}">Gestión de usuarios</a></li>
+                {% if session.get('user_role') == 'sysadmin' %}
+                    <li><a href="{{ url_for('featureflags') }}">Feature Flags</a></li>
+                {% endif %}
             </ul>
         </nav>
     </div>
