@@ -15,6 +15,7 @@ from src.web.controllers.auth import require_login, require_roles
 
 from src.core.flags import service as flags_service
 from src.core.flags.service import FeatureFlagError
+from src.core.users.service import get_user
 
 
 DEFAULT_FLAG_MESSAGES = {
@@ -67,7 +68,11 @@ def create_app(env="development", static_folder="../../static"):
     @app.route('/perfil_usuario')
     @require_login
     def perfil_usuario(): 
-        return render_template("perfilUsuario.html")
+        user = get_user(session.get("user_id"))
+        if not user:
+            flash("No se encontró el usuario.", "error")
+            return redirect(url_for("auth.logout"))
+        return render_template("perfilUsuario.html", user=user)
     
     @app.route('/featureflags', methods=['GET', 'POST'])
     @require_login
