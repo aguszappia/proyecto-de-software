@@ -308,10 +308,14 @@ def export_sites():
     for site in sites:
         status_value = site.conservation_status.value if hasattr(site.conservation_status, "value") else str(site.conservation_status)
         created_value = site.created_at.strftime("%Y-%m-%d %H:%M") if site.created_at else ""
-        coordinates = ""
-        if site.latitude is not None and site.longitude is not None:
-            coordinates = f"{site.latitude}, {site.longitude}"
-        tag_names = sorted(tag.name for tag in site.tags)
+
+        lat_value = ""
+        if getattr(site, "latitude", None) is not None:
+            lat_value = f"{site.latitude:.6f}"
+
+        lon_value = ""
+        if getattr(site, "longitude", None) is not None:
+            lon_value = f"{site.longitude:.6f}"
 
         writer.writerow(
             [
@@ -322,8 +326,8 @@ def export_sites():
                 site.province,
                 status_value,
                 created_value,
-                coordinates,
-                "; ".join(tag_names),
+                lat_value,
+                lon_value,
             ]
         )
 
