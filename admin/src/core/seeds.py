@@ -24,6 +24,13 @@ def run():
             "password":"12345678",
             "role":"editor"
         },
+        {
+            "email":"systemAdmin@example.com",
+            "first_name":"SysAdmin",
+            "last_name":"Cuatro",
+            "password":"12345678",
+            "role":"sysadmin"
+        }
     ]
     
     for payload in users:
