@@ -114,6 +114,33 @@ def create():
     return redirect(url_for("users.index"))
 
 
+@bp.get("/me")
+@require_login
+def me():
+    """Vista de perfil para el propio usuario autenticado."""
+
+    user = get_user(session.get("user_id"))
+    if not user:
+        flash("No se encontró el usuario.", "error")
+        return redirect(url_for("auth.logout"))
+    return render_template("perfilUsuario.html", user=user)
+
+
+@bp.get("/<int:user_id>")
+@require_login
+@require_roles("admin", "sysadmin")
+def show(user_id: int):
+    """Muestra información detallada del usuario."""
+
+    _ensure_admin_access()
+    user = get_user(user_id)
+    if user is None:
+        flash("El usuario no existe.", "error")
+        return redirect(url_for("users.index"))
+
+    return render_template("users/show.html", user=user)
+
+
 @bp.get("/<int:user_id>/edit")
 @require_login
 @require_roles("admin", "sysadmin")
