@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Aplicación{% endblock %}</title>
+    <title>{% block title %}Sitios Históricos{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
     {% block extra_head %}{% endblock %}
@@ -16,8 +16,13 @@
             <span></span>
         </div>
         <div class="topbar-logo">
-            <a href="{{ url_for('home') }}" class="topbar-logo-link" style="display:flex;align-items:center;text-decoration:none;color:inherit;">
-                <span>A</span> Aplicación
+            <a href="{{ url_for('home') }}" class="topbar-logo-link" style="display:flex;align-items:center;text-decoration:none;color:inherit;gap:10px;">
+                <span class="logo-icon" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C7.581 2 4 5.436 4 9.772c0 5.176 6.332 11.393 7.305 12.302a1 1 0 0 0 1.39 0C13.668 21.165 20 14.948 20 9.772 20 5.436 16.419 2 12 2Zm0 17.306c-2.01-2.036-6-6.698-6-9.534C6 6.477 8.579 4 12 4s6 2.477 6 5.772c0 2.836-3.99 7.498-6 9.534Zm0-12.306a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 4a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span class="logo-text">Sitios Históricos</span>
             </a>
         </div>
         <div class="user-dropdown">
