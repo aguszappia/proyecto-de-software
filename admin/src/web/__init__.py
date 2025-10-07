@@ -129,6 +129,17 @@ def create_app(env="development", static_folder="../../static"):
     def seed_db():
         seeds.run()
 
+    with app.app_context():
+        if env == "production":
+            from core.database import reset_db
+            from core.seeds import run as seed_db
+
+            #Resetea la base de datos
+            reset_db(app)
+
+            #Corre las seeds
+            seed_db()
+
     register_controllers(app)
 
     Session(app)  # inicializa Flask-Session
