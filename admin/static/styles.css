@@ -38,13 +38,25 @@ body {
   font-size: 1.3rem;
 }
 
-.topbar-logo span {
+.topbar-logo .logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   background: var(--light-blue);
   color: var(--blue);
-  padding: 2px 8px;
-  border-radius: 4px;
-  margin-right: 8px;
-  font-weight: bold;
+  border-radius: 6px;
+  margin-right: 10px;
+}
+
+.topbar-logo .logo-text {
+  font-weight: 600;
+}
+
+.topbar-logo .logo-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Dropdown de usuario */
