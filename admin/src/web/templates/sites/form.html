@@ -20,8 +20,8 @@
 {% endblock %}
 
 {% block content %}
+<h1>{{ 'Editar sitio histórico' if is_edit else 'Nuevo sitio histórico' }}</h1>
 <div class="site-form">
-    <h1>{{ 'Editar sitio histórico' if is_edit else 'Nuevo sitio histórico' }}</h1>
     <form method="post" class="site-form__form">
         <div class="form-grid">
             <div class="form-field">

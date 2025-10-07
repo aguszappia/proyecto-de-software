@@ -206,7 +206,7 @@ def destroy(user_id: int):
         return redirect(url_for("users.index"))
 
     delete_user(user)
-    flash("Usuario eliminado correctamente.", "success")
+    flash("Usuario eliminado correctamente.", "error")
     return redirect(url_for("users.index"))
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -224,7 +224,7 @@ def deactivate(user_id: int):
     try:
         # Llama al service que valida "no desactivar Admin"
         deactivate_user(user)
-        flash("Usuario desactivado correctamente.", "success")
+        flash("Usuario desactivado correctamente.", "error")
     except ValueError as e:
         flash(str(e), "error")
 

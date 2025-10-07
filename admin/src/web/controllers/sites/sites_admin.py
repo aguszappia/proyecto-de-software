@@ -43,7 +43,12 @@ def index():
 
     args = request.args
     tag_ids = parse_tag_ids(args.getlist("tags"))
-    only_visible = args.get("is_visible") == "on"
+    visibility_raw = clean_str(args.get("is_visible")) or ""
+    match_visibility = None
+    if visibility_raw == "true":
+        match_visibility = True
+    elif visibility_raw == "false":
+        match_visibility = False
 
     filters = {
         "city": clean_str(args.get("city")),
@@ -55,7 +60,7 @@ def index():
         "sort_by": clean_str(args.get("sort_by")) or "created_at",
         "sort_dir": clean_str(args.get("sort_dir")) or "desc",
         "tags": tag_ids,
-        "is_visible": only_visible,
+        "is_visible": visibility_raw,
     }
 
     page = safe_int(args.get("page")) or 1
@@ -70,7 +75,7 @@ def index():
         conservation_status=status_enum,
         created_from=created_from,
         created_to=created_to,
-        is_visible=True if only_visible else None,
+        is_visible=match_visibility,
         q=filters["q"] or None,
         sort_by=filters["sort_by"],
         sort_dir=filters["sort_dir"],
@@ -84,8 +89,8 @@ def index():
             params[key] = filters[key]
     if tag_ids:
         params["tags"] = tag_ids
-    if only_visible:
-        params["is_visible"] = "on"
+    if visibility_raw:
+        params["is_visible"] = visibility_raw
 
     prev_url = url_for("sites.index", page=pagination.page - 1, **params) if pagination.page > 1 else None
     next_url = (
@@ -245,7 +250,12 @@ def remove(site_id: int):
 def export_sites():
     args = request.args
     tag_ids = parse_tag_ids(args.getlist("tags"))
-    only_visible = args.get("is_visible") == "on"
+    visibility_raw = clean_str(args.get("is_visible")) or ""
+    match_visibility = None
+    if visibility_raw == "true":
+        match_visibility = True
+    elif visibility_raw == "false":
+        match_visibility = False
 
     filters = {
         "city": clean_str(args.get("city")),
@@ -256,7 +266,7 @@ def export_sites():
         "created_to": clean_str(args.get("created_to")),
         "sort_by": clean_str(args.get("sort_by")) or "created_at",
         "sort_dir": clean_str(args.get("sort_dir")) or "desc",
-        "is_visible": only_visible,
+        "is_visible": visibility_raw,
     }
 
     created_from = parse_date(filters["created_from"])
@@ -270,7 +280,7 @@ def export_sites():
         conservation_status=status_enum,
         created_from=created_from,
         created_to=created_to,
-        is_visible=True if only_visible else None,
+        is_visible=match_visibility,
         q=filters["q"] or None,
         sort_by=filters["sort_by"],
         sort_dir=filters["sort_dir"],
@@ -282,8 +292,8 @@ def export_sites():
             params[key] = filters[key]
     if tag_ids:
         params["tags"] = tag_ids
-    if only_visible:
-        params["is_visible"] = "on"
+    if visibility_raw:
+        params["is_visible"] = visibility_raw
 
     if not sites:
         flash("No hay datos para exportar con los filtros seleccionados.", "error")

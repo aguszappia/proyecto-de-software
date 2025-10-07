@@ -38,13 +38,25 @@ body {
   font-size: 1.3rem;
 }
 
-.topbar-logo span {
+.topbar-logo .logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   background: var(--light-blue);
   color: var(--blue);
-  padding: 2px 8px;
-  border-radius: 4px;
-  margin-right: 8px;
-  font-weight: bold;
+  border-radius: 6px;
+  margin-right: 10px;
+}
+
+.topbar-logo .logo-text {
+  font-weight: 600;
+}
+
+.topbar-logo .logo-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Dropdown de usuario */
@@ -239,6 +251,16 @@ body {
   color: #333;
 }
 
+.primary-button,
+.secondary-button,
+.success-button,
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .link-button {
   background: transparent;
   color: var(--blue);
@@ -339,6 +361,14 @@ body {
   gap: 12px;
 }
 
+.filter-actions .primary-button,
+.filter-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
 .actions-bar {
   display: flex;
   flex-wrap: wrap;
@@ -346,10 +376,31 @@ body {
   margin-bottom: 20px;
 }
 
+.actions-bar .primary-button,
+.actions-bar .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.actions-bar .primary-button {
+  min-width: 220px;
+}
+
+.actions-bar .secondary-button {
+  min-width: 120px;
+}
+
+.actions-bar .export-form {
+  display: inline-flex;
+}
+
 .actions-cell {
   display: flex;
   gap: 8px;
   align-items: center;
+  justify-content: center;
 }
 
 .actions-cell form {
@@ -386,8 +437,9 @@ body {
   background: #f3f4f6;
 }
 
+/* general alignment for tables */
 .data-table td.actions {
-  text-align: right;
+  text-align: left;
 }
 
 .flag-actions {
@@ -398,6 +450,17 @@ body {
 }
 
 .flag-actions form {
+  margin: 0;
+}
+
+
+.tag-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tag-actions form {
   margin: 0;
 }
 
@@ -734,6 +797,7 @@ body {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 8px 12px;
+  min-width: 90px;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -748,6 +812,7 @@ body {
   border: 1px solid #c1e2c9;
   border-radius: 8px;
   padding: 8px 12px;
+  min-width: 90px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
