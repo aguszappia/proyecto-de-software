@@ -6,6 +6,7 @@ from src.core.users.models import User
 from src.core.security.passwords import verify_password
 from src.core.flags import service as flags_service
 from src.core.permissions import service as permissions_service
+from src.core.users import UserRole
 
 auth_bp = Blueprint("auth", __name__) 
 
@@ -25,6 +26,8 @@ def require_roles(*roles):
         def wrapped(*args, **kwargs):
             if not session.get("user_id"):
                 return redirect(url_for("auth.login", next=request.url))
+            if session.get("user_role") == UserRole.SYSADMIN.value:
+                return view(*args, **kwargs)
             if session.get("user_role") not in roles:
                 # flash de falta de permisos y redirige a la pagina anterior o al home si no hay referrer
                 flash("No tenés permisos para acceder a esa sección.", "error")
@@ -39,6 +42,8 @@ def require_permissions(*required):
         def wrapped(*args, **kwargs):
             if not session.get("user_id"):
                 return redirect(url_for("auth.login", next=request.url))
+            if session.get("user_role") == UserRole.SYSADMIN.value:
+                return view(*args, **kwargs)
             permissions = set(session.get("permissions") or [])
             if not permissions.issuperset(required):
                 flash("No tenés permisos para acceder a esa sección.", "error")
