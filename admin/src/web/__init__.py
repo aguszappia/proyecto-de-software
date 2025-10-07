@@ -65,15 +65,6 @@ def create_app(env="development", static_folder="../../static"):
     def login(): 
         return render_template("login.html")
     
-    @app.route('/perfil_usuario')
-    @require_login
-    def perfil_usuario(): 
-        user = get_user(session.get("user_id"))
-        if not user:
-            flash("No se encontró el usuario.", "error")
-            return redirect(url_for("auth.logout"))
-        return render_template("perfilUsuario.html", user=user)
-    
     @app.route('/featureflags', methods=['GET', 'POST'])
     @require_login
     @require_roles("sysadmin")
@@ -137,6 +128,17 @@ def create_app(env="development", static_folder="../../static"):
     @app.cli.command("seed-db")
     def seed_db():
         seeds.run()
+
+    with app.app_context():
+        if env == "production":
+            from core.database import reset_db
+            from core.seeds import run as seed_db
+
+            #Resetea la base de datos
+            reset_db(app)
+
+            #Corre las seeds
+            seed_db()
 
     register_controllers(app)
 
