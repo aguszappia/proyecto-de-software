@@ -110,7 +110,8 @@
         </div>
     </form>
 </div>
-{% if is_edit and site_id %}
+{% set can_view_history = has_permission('site_history_view') %}
+{% if is_edit and site_id and can_view_history %}
 <div class="site-history-panel">
     <h2>Historial de cambios</h2>
     <p>Podés revisar todos los movimientos realizados sobre este sitio.</p>

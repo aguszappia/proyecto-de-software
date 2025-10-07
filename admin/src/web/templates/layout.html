@@ -39,15 +39,26 @@
             <ul>
                 <li><a href="{{ url_for('public_sites.show_public_sites') }}">Visualizar sitios históricos</a></li>
                 {% set role = session.get('user_role') %}
-                {% if role in ['sysadmin', 'admin', 'editor'] %}
-                    <li><a href="{{ url_for('sites.index') }}">Gestión de sitios históricos</a></li>
-                    <li><a href="{{ url_for('validacion_propuestas') }}">Validación de propuestas</a></li>
-                    <li><a href="{{ url_for('moderacion_reseñas') }}">Moderación de reseñas</a></li>
+                {% set can_manage_users = has_permission('user_index') %}
+                {% set can_manage_sites = has_permission('site_index') %}
+                {% set can_validate_proposals = has_permission('proposals_validate') %}
+                {% set can_moderate_reviews = has_permission('reviews_moderate') %}
 
-                    {% if role in ['sysadmin', 'admin'] %}
-                        <li><a href="{{ url_for('tags.index') }}">Gestión de etiquetas</a></li>
-                        <li><a href="{{ url_for('users.index') }}">Gestión de usuarios</a></li>
-                    {% endif %}
+                {% if can_manage_sites %}
+                    <li><a href="{{ url_for('sites.index') }}">Gestión de sitios históricos</a></li>
+                {% endif %}
+                {% if can_validate_proposals %}
+                    <li><a href="{{ url_for('validacion_propuestas') }}">Validación de propuestas</a></li>
+                {% endif %}
+                {% if can_moderate_reviews %}
+                    <li><a href="{{ url_for('moderacion_reseñas') }}">Moderación de reseñas</a></li>
+                {% endif %}
+
+                {% if role in ['sysadmin', 'admin'] %}
+                    <li><a href="{{ url_for('tags.index') }}">Gestión de etiquetas</a></li>
+                {% endif %}
+                {% if can_manage_users %}
+                    <li><a href="{{ url_for('users.index') }}">Gestión de usuarios</a></li>
                 {% endif %}
                 {% if role == 'sysadmin' %}
                     <li><a href="{{ url_for('featureflags') }}">Feature Flags</a></li>

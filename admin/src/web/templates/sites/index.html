@@ -3,14 +3,20 @@
 {% block title %}Sitios históricos{% endblock %}
 
 {% block content %}
+{% set can_create_site = has_permission('site_new') %}
+{% set can_export_sites = has_permission('site_export') %}
+{% set can_update_site = has_permission('site_update') %}
+{% set can_delete_site = has_permission('site_destroy') %}
 <div class="module-header">
     <h1>Búsqueda de sitios históricos</h1>
     <span class="results-count">{{ pagination.total }} resultados</span>
 </div>
 
 <div class="actions-bar">
-    <a class="primary-button" href="{{ url_for('sites.create') }}">Agregar sitio histórico</a>
-    {% if session.get('user_role') in ['admin', 'sysadmin'] %}
+    {% if can_create_site %}
+        <a class="primary-button" href="{{ url_for('sites.create') }}">Agregar sitio histórico</a>
+    {% endif %}
+    {% if can_export_sites %}
         <form class="export-form" method="get" action="{{ url_for('sites.export_sites') }}">
             <input type="hidden" name="city" value="{{ filters.city }}">
             <input type="hidden" name="province" value="{{ filters.province }}">
@@ -142,8 +148,10 @@
                             {% endif %}
                         </td>
                         <td class="actions-cell">
-                            <a class="secondary-button" href="{{ url_for('sites.edit', site_id=site.id) }}">Editar</a>
-                            {% if session.get('user_role') in ['admin', 'sysadmin'] %}
+                            {% if can_update_site %}
+                                <a class="secondary-button" href="{{ url_for('sites.edit', site_id=site.id) }}">Editar</a>
+                            {% endif %}
+                            {% if can_delete_site %}
                                 <form method="post" action="{{ url_for('sites.remove', site_id=site.id) }}" onsubmit="return confirm('¿Seguro que querés eliminar este sitio histórico?');" style="display:inline;">
                                     <button type="submit" class="danger-button">Eliminar</button>
                                 </form>

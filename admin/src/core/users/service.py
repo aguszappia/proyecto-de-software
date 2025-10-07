@@ -1,25 +1,26 @@
 """Funciones sencillas para manejar usuarios."""
 
 from sqlalchemy import asc, desc
+from sqlalchemy.orm import joinedload
 
 from src.core.database import db
 from src.core.pagination import Pagination
 from src.core.security.passwords import hash_password
 from src.core.users import UserRole
-from src.core.users.models import User
+from src.core.users.models import Role, User
 from src.core.users.validators import validate_user_payload
 
 
 def list_users(page=1, per_page=25, search_email=None, active=None, role=None, order="-created_at"):
     session = db.session
-    query = session.query(User)
+    query = session.query(User).options(joinedload(User.role_rel))
 
     if search_email:
         query = query.filter(User.email.ilike(f"%{search_email.lower()}%"))
     if active is not None:
         query = query.filter(User.is_active.is_(active))
     if role:
-        query = query.filter(User.role == role)
+        query = query.join(User.role_rel).filter(Role.slug == role)
 
     total = query.count()
 
@@ -43,9 +44,14 @@ def create_user(payload, allowed_roles=None):
     is_valid, errors, data = validate_user_payload(payload, session, allowed_roles=allowed_roles)
     if not is_valid:
         return False, None, errors
-
+    
+    role_slug = data.pop("role")
+    role = _get_role_by_slug(session, role_slug)
+    if not role:
+        return False, None, {"role": "El rol seleccionado no existe."}
+    
     password = data.pop("password")
-    user = User(**data, password_hash=hash_password(password))
+    user = User(**data, password_hash=hash_password(password), role_rel=role)
     session.add(user)
     session.commit()
     return True, user, {}
@@ -64,15 +70,23 @@ def update_user(user, payload, allowed_roles=None):
         return False, None, errors
     
     # No permitir desactivar un usuario con rol Administrador o System Admin
-    if "is_active" in data and data["is_active"] is False and (user.role == UserRole.ADMIN or user.role == UserRole.SYSADMIN):
+    if "is_active" in data and data["is_active"] is False and (
+        user.role in {UserRole.ADMIN.value, UserRole.SYSADMIN.value}
+    ):
         errors = {"is_active": "No se puede desactivar a un usuario con rol Administrador."}
         return False, None, errors
     
+    role_slug = data.pop("role", None)
     password = data.pop("password", None)
     for key, value in data.items():
         setattr(user, key, value)
     if password:
         user.password_hash = hash_password(password)
+    if role_slug:
+        role = _get_role_by_slug(session, role_slug)
+        if not role:
+            return False, None, {"role": "El rol seleccionado no existe."}
+        user.role_rel = role
 
     session.add(user)
     session.commit()
@@ -88,7 +102,7 @@ def deactivate_user(user):
     """
     Desactiva (bloquea) un usuario, excepto si tiene rol Administrador.
     """
-    if user.role == UserRole.ADMIN or user.role == UserRole.SYSADMIN:
+    if user.role in {UserRole.ADMIN.value, UserRole.SYSADMIN.value}:
         raise ValueError("No se puede desactivar a un usuario con rol Administrador o System Admin.")
     user.is_active = False
     db.session.add(user)
@@ -107,6 +121,35 @@ def activate_user(user):
 
 def get_allowed_roles_for_admin():
     return (UserRole.PUBLIC, UserRole.EDITOR, UserRole.ADMIN)
+
+
+def _get_role_by_slug(session, slug):
+    return session.query(Role).filter(Role.slug == slug).one_or_none()
+
+
+def ensure_role(slug: str, name: str) -> Role:
+    """Crea el rol si no existe y devuelve la instancia."""
+    session = db.session
+    role = session.query(Role).filter(Role.slug == slug).one_or_none()
+    if role:
+        if name and role.name != name:
+            role.name = name
+            session.add(role)
+            session.commit()
+        return role
+
+    role = Role(slug=slug, name=name)
+    session.add(role)
+    session.commit()
+    return role
+
+
+def get_role_by_slug(slug: str) -> Role | None:
+    return db.session.query(Role).filter(Role.slug == slug).one_or_none()
+
+
+def list_roles():
+    return db.session.query(Role).order_by(Role.slug).all()
 
 
 #Funcion para crear en seeds / no lo usamos mas
