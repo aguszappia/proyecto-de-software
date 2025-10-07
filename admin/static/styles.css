@@ -351,11 +351,39 @@ body {
   gap: 12px;
 }
 
+.filter-actions .primary-button,
+.filter-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
 .actions-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 20px;
+}
+
+.actions-bar .primary-button,
+.actions-bar .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.actions-bar .primary-button {
+  min-width: 220px;
+}
+
+.actions-bar .secondary-button {
+  min-width: 120px;
+}
+
+.actions-bar .export-form {
+  display: inline-flex;
 }
 
 .actions-cell {
@@ -398,8 +426,9 @@ body {
   background: #f3f4f6;
 }
 
+/* general alignment for tables */
 .data-table td.actions {
-  text-align: right;
+  text-align: left;
 }
 
 .flag-actions {
@@ -410,6 +439,17 @@ body {
 }
 
 .flag-actions form {
+  margin: 0;
+}
+
+
+.tag-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tag-actions form {
   margin: 0;
 }
 

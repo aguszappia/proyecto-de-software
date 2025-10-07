@@ -92,8 +92,12 @@ def run():
     historic_sites = [
         {
             "name": "Cabildo de Buenos Aires",
-            "short_description": "Descripcion corta...",
-            "full_description": "Descripcion larga...",
+            "short_description": "Icono colonial que resguarda la historia política rioplatense.",
+            "full_description": (
+                "El Cabildo conserva actas y salas decisivas de la Revolución de Mayo. "
+                "Opera como museo con piezas originales de la vida colonial. "
+                "Su visita ayuda a comprender el origen institucional porteño."
+            ),
             "city": "La Plata",
             "province": "Buenos Aires",
             "latitude": -34.6081,
@@ -105,8 +109,12 @@ def run():
         },
         {
             "name": "Puente Viejo",
-            "short_description": "Descripcion corta...",
-            "full_description": "Descripcion completa...",
+            "short_description": "Antiguo puente de piedra que unió barrios tandilenses.",
+            "full_description": (
+                "El Puente Viejo cruza el arroyo Langueyú y dinamizó el comercio barrial. "
+                "Sus arcos de mampostería muestran la ingeniería provincial de fin de siglo. "
+                "Hoy sigue siendo un paso emblemático y mirador urbano."
+            ),
             "city": "Tandil",
             "province": "Buenos Aires",
             "latitude": -37.3212,
@@ -118,8 +126,8 @@ def run():
         },
         {
             "name": "Sitio Arqueológico Las Piedras",
-            "short_description": "Descripcion corta...",
-            "full_description": "Descripcion completa...",
+            "short_description": "Antiguo asentamiento indígena con vestigios líticos y cerámica local.",
+            "full_description": "El Sitio Arqueológico Las Piedras conserva herramientas de piedra y fragmentos cerámicos que revelan modos de vida prehispánicos. Su hallazgo permitió reconstruir rutas de intercambio y prácticas culturales de las primeras comunidades de la región.",
             "city": "Cafayate",
             "province": "Salta",
             "latitude": -26.0723,
