@@ -93,10 +93,15 @@ def update_user(user, payload, allowed_roles=None):
     return True, user, {}
 
 
-def delete_user(user):
+def delete_user(user) -> bool:
+    """ Elimina un usuario, excepto si tiene rol Administrador o System Admin.
+    Devuelve True si se eliminó, False si no se pudo eliminar """
+    if user.role in {UserRole.ADMIN.value, UserRole.SYSADMIN.value}:
+        return False
     session = db.session
     session.delete(user)
     session.commit()
+    return True
 
 def deactivate_user(user):
     """
