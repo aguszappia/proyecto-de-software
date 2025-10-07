@@ -1,8 +1,53 @@
+from src.core.users import UserRole
 from src.core.users import service as user_service
 from src.core.sites import service as sites_service
 from src.core.flags import service as flags_service
+from src.core.permissions import service as permissions_service
 
 def run():
+    default_roles = [
+        (UserRole.PUBLIC.value, "Usuario público"),
+        (UserRole.EDITOR.value, "Editor"),
+        (UserRole.ADMIN.value, "Administrador"),
+        (UserRole.SYSADMIN.value, "System Admin"),
+    ]
+    for slug, name in default_roles:
+        user_service.ensure_role(slug, name)
+
+    permission_payloads = [
+        {"code": "user_index", "description": "Listar usuarios", "roles": [UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "user_show", "description": "Ver detalle de usuario", "roles": [UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "user_new", "description": "Crear usuario", "roles": [UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "user_update", "description": "Actualizar usuario", "roles": [UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "user_destroy", "description": "Eliminar usuario", "roles": [UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "site_index", "description": "Gestionar listado de sitios", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "site_new", "description": "Crear sitio histórico", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "site_update", "description": "Editar sitio histórico", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "site_destroy", "description": "Eliminar sitio histórico", "roles": [UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "site_export", "description": "Exportar sitios históricos", "roles": [UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "site_history_view", "description": "Ver historial de sitios", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "proposals_validate", "description": "Validar propuestas ciudadanas", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "reviews_moderate", "description": "Moderar reseñas", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+    ]
+
+    for payload in permission_payloads:
+        code = payload["code"]
+        try:
+            permissions_service.ensure_permission(
+                code,
+                description=payload.get("description"),
+            )
+            print(f"[SEED OK] permiso {code}")
+        except Exception as exc:
+            print(f"[SEED ERROR] permiso {code}: {exc}")
+
+    for payload in permission_payloads:
+        code = payload["code"]
+        for role in payload.get("roles", []):
+            permissions_service.assign_permission(role, code)
+
+    print(f"Seeds de permisos cargada")
+
     users = [
         {
             "email":"user1@example.com",
