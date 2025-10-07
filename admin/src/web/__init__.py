@@ -11,11 +11,13 @@ from src.web.controllers.reviews import  reviews_bp
 
 from src.core import seeds
 
-from src.web.controllers.auth import require_login, require_roles
+from src.web.controllers.auth import require_login, require_roles, require_permissions
 
 from src.core.flags import service as flags_service
 from src.core.flags.service import FeatureFlagError
 from src.core.users.service import get_user
+from src.core.permissions import models as permissions_models  # noqa: F401
+from src.core.permissions import service as permissions_service
 
 
 DEFAULT_FLAG_MESSAGES = {
@@ -50,14 +52,14 @@ def create_app(env="development", static_folder="../../static"):
     # bloqueo acceso desde acá hasta crear nuevo index de propuestas
     @app.route('/validacion_propuestas')
     @require_login
-    @require_roles("editor", "admin", "sysadmin")
+    @require_permissions("proposals_validate")
     def validacion_propuestas():
         return render_template("validacionPropuestas.html")
     
     # bloqueo acceso desde acá hasta crear nuevo index de reseñas
     @app.route('/moderacion_reseñas')
     @require_login
-    @require_roles("editor", "admin", "sysadmin")
+    @require_permissions("reviews_moderate")
     def moderacion_reseñas():
         return render_template("moderacionReseñas.html")
     
@@ -133,6 +135,19 @@ def create_app(env="development", static_folder="../../static"):
 
     Session(app)  # inicializa Flask-Session
 
+    @app.before_request
+    def load_user_permissions():
+        user_id = session.get("user_id")
+        perms = session.get("permissions")
+        if user_id and perms is None:
+            user = get_user(user_id)
+            if user:
+                perms = [perm.code for perm in permissions_service.list_role_permissions(user.role)]
+                session["permissions"] = perms
+            else:
+                perms = []
+        g.permissions = set(perms or []) if user_id else set()
+
     @app.context_processor
     def inject_admin_maintenance_message():
         flag = flags_service.get_flag(ADMIN_MAINTENANCE_FLAG_KEY)
@@ -143,6 +158,18 @@ def create_app(env="development", static_folder="../../static"):
         return {
             "admin_maintenance_enabled": enabled,
             "admin_maintenance_message": message,
+        }
+
+    @app.context_processor
+    def inject_permission_helpers():
+        permissions = getattr(g, "permissions", set())
+
+        def has_permission(code: str) -> bool:
+            return code in permissions
+
+        return {
+            "has_permission": has_permission,
+            "current_permissions": permissions,
         }
 
     # Middleware para proteger rutas privadas

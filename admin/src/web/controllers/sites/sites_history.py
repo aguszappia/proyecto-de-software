@@ -5,7 +5,7 @@ from __future__ import annotations
 from flask import Blueprint, render_template, request
 
 from src.core.sites.history_service import ACTIONS, list_history
-from src.web.controllers.auth import require_login, require_roles
+from src.web.controllers.auth import require_login, require_permissions
 from .sites_utils import clean_str, parse_date, safe_int
 
 history_bp = Blueprint("sites_history", __name__, url_prefix="/sites")
@@ -13,7 +13,7 @@ history_bp = Blueprint("sites_history", __name__, url_prefix="/sites")
 
 @history_bp.get("/<int:site_id>/history")
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions("site_history_view")
 def view_history(site_id: int):
     """Muestra el historial de un sitio con filtros y paginación (25)"""
 

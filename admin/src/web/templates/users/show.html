@@ -9,11 +9,14 @@
     'admin': 'Administrador',
     'sysadmin': 'System Admin',
 } %}
+{% set can_edit = has_permission('user_update') %}
 <div class="module-header">
     <h1>Detalle de usuario</h1>
     <div class="flag-actions">
         <a class="secondary-button" href="{{ url_for('users.index') }}">Volver al listado</a>
-        <a class="primary-button" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
+        {% if can_edit %}
+            <a class="primary-button" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
+        {% endif %}
     </div>
 </div>
 

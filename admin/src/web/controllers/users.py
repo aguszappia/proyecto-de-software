@@ -4,7 +4,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for,
 
 from src.core.users import UserRole
 from src.core.users.service import create_user, delete_user, get_allowed_roles_for_admin, get_user, list_users, update_user, activate_user, deactivate_user
-from src.web.controllers.auth import require_login, require_roles
+from src.web.controllers.auth import require_login, require_permissions
 
 bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -61,7 +61,7 @@ def _form_payload():
 
 @bp.get("/")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_index")
 def index():
     _ensure_admin_access()
     filters = _extract_filters()
@@ -83,7 +83,7 @@ def index():
 
 @bp.get("/new")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_new")
 def new():
     _ensure_admin_access()
     return render_template(
@@ -96,7 +96,7 @@ def new():
 
 @bp.post("/new")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_new")
 def create():
     _ensure_admin_access()
     success, user, errors = create_user(_form_payload(), allowed_roles=get_allowed_roles_for_admin())
@@ -128,7 +128,7 @@ def me():
 
 @bp.get("/<int:user_id>")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_show")
 def show(user_id: int):
     """Muestra información detallada del usuario."""
 
@@ -143,7 +143,7 @@ def show(user_id: int):
 
 @bp.get("/<int:user_id>/edit")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_update")
 def edit(user_id: int):
     _ensure_admin_access()
     user = get_user(user_id)
@@ -161,7 +161,7 @@ def edit(user_id: int):
 
 @bp.post("/<int:user_id>/edit")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_update")
 def update(user_id: int):
     _ensure_admin_access()
     user = get_user(user_id)
@@ -197,7 +197,7 @@ def update(user_id: int):
 
 @bp.post("/<int:user_id>/delete")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_destroy")
 def destroy(user_id: int):
     _ensure_admin_access()
     user = get_user(user_id)
@@ -213,7 +213,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 @bp.post("/<int:user_id>/deactivate")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_update")
 def deactivate(user_id: int):
     _ensure_admin_access()
     user = get_user(user_id)
@@ -233,7 +233,7 @@ def deactivate(user_id: int):
 
 @bp.post("/<int:user_id>/activate")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_update")
 def activate(user_id: int):
     _ensure_admin_access()
     user = get_user(user_id)
@@ -247,11 +247,11 @@ def activate(user_id: int):
  
 @admin_bp.get("/")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("user_index")
 def dashboard():
     return render_template("admin/dashboard.html")
 
 @admin_bp.get("/users")
-@require_roles("admin", "sysadmin")
+@require_permissions("user_index")
 def users_index():
     return redirect(url_for("users.index"))

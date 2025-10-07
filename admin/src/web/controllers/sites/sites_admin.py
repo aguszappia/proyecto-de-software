@@ -19,7 +19,7 @@ from src.core.sites.service import (
     update_site,
 )
 from src.core.sites.tags_service import list_tags
-from src.web.controllers.auth import require_login, require_roles
+from src.web.controllers.auth import require_login, require_permissions
 # Archivo helper - ruta relativa para evitar imports circulares
 from .sites_utils import (
     PROVINCES,
@@ -37,7 +37,7 @@ bp = Blueprint("sites", __name__, url_prefix="/sites")
 
 @bp.get("/")
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions("site_index")
 def index():
     """Lista los sitios con filtros y paginación para el panel de gestion"""
 
@@ -108,7 +108,7 @@ def index():
 
 @bp.route("/new", methods=["GET", "POST"])
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions("site_new")
 def create():
     """Funcion para crear un nuevo sitio histórico
         Si el HTTP es GET renderiza el template de formulario vacío
@@ -146,7 +146,7 @@ def create():
 
 @bp.route("/<int:site_id>/edit", methods=["GET", "POST"])
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions("site_update")
 def edit(site_id: int):
     """Edita un sitio histórico existente
         Si el HTTP es GET renderiza el template de formulario vacío
@@ -228,7 +228,7 @@ def edit(site_id: int):
 
 @bp.post("/<int:site_id>/delete")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("site_destroy")
 def remove(site_id: int):
     """Elimina un sitio histórico (solo para admin o sysadmin)"""
 
@@ -241,7 +241,7 @@ def remove(site_id: int):
 
 @bp.get("/export")
 @require_login
-@require_roles("admin", "sysadmin")
+@require_permissions("site_export")
 def export_sites():
     args = request.args
     tag_ids = parse_tag_ids(args.getlist("tags"))

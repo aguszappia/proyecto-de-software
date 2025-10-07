@@ -8,8 +8,11 @@ def init_db(app):
     return db
 
 def reset_db(app):
-    from src.core.users.models import User
+    from src.core.users.models import User, Role
     from src.core.sites.models import Historic_Site, SiteTag
+    from src.core.permissions.models import Permission, RolePermission
+    from src.core.flags.models import FeatureFlag
+
 
     print("Resetting database...")
     Base.metadata.drop_all(bind=db.engine)
