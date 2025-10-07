@@ -133,8 +133,8 @@ def create_app(env="development", static_folder="../../static"):
 
     with app.app_context():
         if env == "production":
-            from core.database import reset_db
-            from core.seeds import run as seed_db
+            from src.core.database import reset_db
+            from src.core.seeds import run as seed_db
 
             #Resetea la base de datos
             reset_db(app)
