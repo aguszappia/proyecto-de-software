@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "layout.html" %}
+{% block title %}Sitios históricos{% endblock %}
+{% block content %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,18 +10,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body class="public-page">
-    <header class="public-header">
-        <div class="public-header__content">
-            <div class="public-header__title">
-                <span class="brand-badge">A</span>
-                <div>
-                    <h1>Sitios históricos</h1>
-                    <p>Descubrí los sitios que forman parte del patrimonio histórico.</p>
-                </div>
-            </div>
-            <a class="secondary-button" href="{{ url_for('home') }}">Ir al panel</a>
-        </div>
-    </header>
 
     <main class="public-sites">
         <section class="public-sites__list">
@@ -55,7 +44,8 @@
             <div id="public-site-map" class="site-map" aria-live="polite"></div>
         </section>
     </main>
-
+{% endblock %}
+{% block extra_scripts %}
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         (function() {
@@ -89,5 +79,4 @@
             }
         })();
     </script>
-</body>
-</html>
+{% endblock %}
