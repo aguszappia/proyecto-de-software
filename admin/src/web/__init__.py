@@ -95,8 +95,8 @@ def create_app(env="development", static_folder="../../static"):
                     user_id=session.get("user_id"),
                 )
                 flash(
-                    f"Flag «{flag.name}» {'activado' if enabled else 'desactivado'}.",
-                    "success",
+                    f"{flag.name} {'activado' if enabled else 'desactivado'}.",
+                    "success" if enabled else "error",
                 )
             except FeatureFlagError as exc:
                 flash(str(exc), "error")
