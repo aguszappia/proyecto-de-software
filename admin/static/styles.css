@@ -272,7 +272,15 @@ body {
   color: white;
 }
 
-.danger-button:hover {
+.danger-button:disabled,
+.danger-button[disabled] {
+  background: #e0e0e0;
+  color: #7a7a7a;
+  cursor: not-allowed;
+  border: none;
+}
+
+.danger-button:not(:disabled):hover {
   background: #d32f2f;
 }
 
