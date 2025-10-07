@@ -50,7 +50,7 @@
         </select>
     </div>
     <div class="filter-actions">
-        <button type="submit">Aplicar filtros</button>
+        <button type="submit" class="primary-button filters-apply">Aplicar filtros</button>
         <a class="secondary-button" href="{{ url_for('users.index') }}">Limpiar</a>
     </div>
 </form>
@@ -65,7 +65,7 @@
                     <th>Rol</th>
                     <th>Activo</th>
                     <th>Creado</th>
-                    <th class="actions"></th>
+                    <th class="actions">Acciones</th>
                 </tr>
             </thead>
             <tbody>

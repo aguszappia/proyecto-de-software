@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Sitios históricos{% endblock %}
+{% block title %}Gestión de Sitios Históricos{% endblock %}
 
 {% block content %}
 {% set can_create_site = has_permission('site_new') %}
@@ -26,9 +26,7 @@
             <input type="hidden" name="created_to" value="{{ filters.created_to }}">
             <input type="hidden" name="sort_by" value="{{ filters.sort_by }}">
             <input type="hidden" name="sort_dir" value="{{ filters.sort_dir }}">
-            {% if filters.is_visible %}
-                <input type="hidden" name="is_visible" value="on">
-            {% endif %}
+            <input type="hidden" name="is_visible" value="{{ filters.is_visible }}">
             {% for tag_id in filters.tags %}
                 <input type="hidden" name="tags" value="{{ tag_id }}">
             {% endfor %}
@@ -56,11 +54,13 @@
             <label for="q">Texto libre</label>
             <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="Buscar en nombre o descripción">
         </div>
-        <div class="filter-group checkbox" style="display: flex; align-items: center; gap: 6px;">
-            <label for="is_visible" style="margin: 0;">Visible</label>
-            <input type="checkbox" id="is_visible" name="is_visible" value="on"
-                {% if filters.is_visible %}checked{% endif %}
-                style="margin: 0;">
+        <div class="filter-group">
+            <label for="is_visible">Estado de visibilidad</label>
+            <select id="is_visible" name="is_visible">
+                <option value="">Todos</option>
+                <option value="true" {% if filters.is_visible == 'true' %}selected{% endif %}>Visible</option>
+                <option value="false" {% if filters.is_visible == 'false' %}selected{% endif %}>Oculto</option>
+            </select>
         </div>
     </div>
 
@@ -130,7 +130,7 @@
                     <th>Provincia</th>
                     <th>Estado</th>
                     <th>Visibilidad</th>
-                    <th>Acciones</th>
+                    <th style="text-align: center;">Acciones</th>
                 </tr>
             </thead>
             <tbody>

@@ -15,6 +15,19 @@
     <a href="{{ url_for('users.index') }}" class="secondary-button">← Volver al listado</a>
 </div>
 
+{% set form_data = form if form is defined else None %}
+{% set current_status = 'true' %}
+{% if form_data %}
+    {% set form_status = form_data.get('is_active', 'true') %}
+    {% if form_status in ['true', 'on', '1', 'yes', 'si'] %}
+        {% set current_status = 'true' %}
+    {% else %}
+        {% set current_status = 'false' %}
+    {% endif %}
+{% elif user %}
+    {% set current_status = 'true' if user.is_active else 'false' %}
+{% endif %}
+
 {# FORMULARIO #}
 <form class="entity-form" method="post" action="{% if user %}{{ url_for('users.update', user_id=user.id) }}{% else %}{{ url_for('users.create') }}{% endif %}">
     <div class="form-grid">
@@ -64,13 +77,13 @@
             {% endif %}
         </div>
         
-        {# checkbox USUARIO ACTIVO #}
-        <div class="form-field checkbox-field">
-            <label class="checkbox">
-                <input type="checkbox" id="is_active" name="is_active" 
-                       {% if not user or user.is_active %}checked{% endif %}>
-                Usuario activo
-            </label>
+        {# ESTADO DE USUARIO #}
+        <div class="form-field">
+            <label for="is_active">Estado</label>
+            <select id="is_active" name="is_active">
+                <option value="true" {% if current_status == 'true' %}selected{% endif %}>Activo</option>
+                <option value="false" {% if current_status == 'false' %}selected{% endif %}>Inactivo</option>
+            </select>
         </div>
         
         {# CAMPO CONTRASEÑA #}
