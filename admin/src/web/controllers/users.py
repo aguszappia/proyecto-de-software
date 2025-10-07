@@ -205,8 +205,12 @@ def destroy(user_id: int):
         flash("El usuario no existe.", "error")
         return redirect(url_for("users.index"))
 
-    delete_user(user)
-    flash("Usuario eliminado correctamente.", "error")
+    deleted = delete_user(user)
+    if not deleted:
+        flash("No se puede eliminar un usuario con rol Administrador o System Admin.", "error")
+        return redirect(url_for("users.index"))
+
+    flash("Usuario eliminado correctamente.", "success")
     return redirect(url_for("users.index"))
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
