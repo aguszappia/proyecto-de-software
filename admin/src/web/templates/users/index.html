@@ -59,7 +59,7 @@
                     <th>Rol</th>
                     <th>Activo</th>
                     <th>Creado</th>
-                    <th class="actions">Acciones</th>
+                    <th class="actions"></th>
                 </tr>
             </thead>
             <tbody>
@@ -77,30 +77,31 @@
                         </td>
                         <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</td>
                         <td class="actions">
+                            <a class="link-button action-item" href="{{ url_for('users.show', user_id=user.id) }}">Ver</a>
                             {% if user.is_active %}
                             {% if user.role != 'admin' and user.role != 'sysadmin'%}
                                 <form method="post"
                                     action="{{ url_for('users.deactivate', user_id=user.id) }}"
-                                    class="inline-form"
+                                    class="inline-form action-item"
                                     onsubmit="return confirm('¿Seguro que querés desactivar este usuario?');">
                                 <button type="submit" class="secondary-button">Desactivar</button>
                                 </form>
                             {% else %}
-                                <button type="button" class="secondary-button" disabled title="No se puede desactivar un Administrador">Desactivar</button>
+                                <button type="button" class="secondary-button action-item" disabled title="No se puede desactivar un Administrador">Desactivar</button>
                             {% endif %}
                             {% else %}
                             <form method="post"
                                     action="{{ url_for('users.activate', user_id=user.id) }}"
-                                    class="inline-form">
+                                    class="inline-form action-item">
                                 <button type="submit" class="success-button">Activar</button>
                             </form>
                             {% endif %}
 
-                            <a class="link-button" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
+                            <a class="link-button action-item" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
 
                             <form method="post"
                                 action="{{ url_for('users.destroy', user_id=user.id) }}"
-                                style="display:inline"
+                                class="inline-form action-item"
                                 onsubmit="return confirm('¿Eliminar usuario?');">
                             <button type="submit" class="danger-button">Eliminar</button>
                             </form>

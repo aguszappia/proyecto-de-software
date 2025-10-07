@@ -65,15 +65,6 @@ def create_app(env="development", static_folder="../../static"):
     def login(): 
         return render_template("login.html")
     
-    @app.route('/perfil_usuario')
-    @require_login
-    def perfil_usuario(): 
-        user = get_user(session.get("user_id"))
-        if not user:
-            flash("No se encontró el usuario.", "error")
-            return redirect(url_for("auth.logout"))
-        return render_template("perfilUsuario.html", user=user)
-    
     @app.route('/featureflags', methods=['GET', 'POST'])
     @require_login
     @require_roles("sysadmin")

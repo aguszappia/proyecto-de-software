@@ -23,7 +23,7 @@
         <div class="user-dropdown">
             <button class="user-dropdown-toggle">Cuenta ▼</button>
             <div class="user-dropdown-menu">
-                <a href="{{ url_for('perfil_usuario') }}">Ver perfil</a>
+                <a href="{{ url_for('users.me') }}">Ver perfil</a>
                 <a href="{{ url_for('auth.logout') }}" 
                 class="dropdown-item" 
                 onclick="return confirm('¿Estás seguro de cerrar sesión?');">

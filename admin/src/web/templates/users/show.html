@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block title %}Detalle de usuario{% endblock %}
+
+{% block content %}
+{% set role_labels = {
+    'public': 'Usuario público',
+    'editor': 'Editor',
+    'admin': 'Administrador',
+    'sysadmin': 'System Admin',
+} %}
+<div class="module-header">
+    <h1>Detalle de usuario</h1>
+    <div class="flag-actions">
+        <a class="secondary-button" href="{{ url_for('users.index') }}">Volver al listado</a>
+        <a class="primary-button" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
+    </div>
+</div>
+
+<div class="table-wrapper">
+    <table class="data-table">
+        <tbody>
+            <tr>
+                <td>Nombre</td>
+                <td>{{ user.first_name }} {{ user.last_name }}</td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td>{{ user.email }}</td>
+            </tr>
+            <tr>
+                <td>Rol</td>
+                <td>{{ role_labels.get(user.role, user.role) }}</td>
+            </tr>
+            <tr>
+                <td>Estado</td>
+                <td>
+                    {% if user.is_active %}
+                        <span class="status-badge status-active">Activo</span>
+                    {% else %}
+                        <span class="status-badge status-inactive">Inactivo</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Creado</td>
+                <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</td>
+            </tr>
+            <tr>
+                <td>Actualizado</td>
+                <td>{{ user.updated_at.strftime('%Y-%m-%d %H:%M') if user.updated_at else '-' }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

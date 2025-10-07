@@ -63,7 +63,7 @@ def update_user(user, payload, allowed_roles=None):
     if not is_valid:
         return False, None, errors
     
-    # No permitir desactivar un usuario con rol Administrador
+    # No permitir desactivar un usuario con rol Administrador o System Admin
     if "is_active" in data and data["is_active"] is False and (user.role == UserRole.ADMIN or user.role == UserRole.SYSADMIN):
         errors = {"is_active": "No se puede desactivar a un usuario con rol Administrador."}
         return False, None, errors
