@@ -110,12 +110,16 @@
                             {% endif %}
 
                             {% if can_delete %}
-                                <form method="post"
-                                    action="{{ url_for('users.destroy', user_id=user.id) }}"
-                                    class="inline-form action-item"
-                                    onsubmit="return confirm('¿Eliminar usuario?');">
-                                <button type="submit" class="danger-button">Eliminar</button>
-                                </form>
+                                {% if user.role != 'admin' and user.role != 'sysadmin' %}
+                                    <form method="post"
+                                        action="{{ url_for('users.destroy', user_id=user.id) }}"
+                                        class="inline-form action-item"
+                                        onsubmit="return confirm('¿Eliminar usuario?');">
+                                    <button type="submit" class="danger-button">Eliminar</button>
+                                    </form>
+                                {% else %}
+                                    <button type="button" class="danger-button action-item" disabled title="No se puede eliminar un Administrador">Eliminar</button>
+                                {% endif %}
                             {% endif %}
                         </td>
                     </tr>
