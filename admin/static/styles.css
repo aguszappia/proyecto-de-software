@@ -114,7 +114,7 @@ body {
 /* Contenido principal */
 .main-content {
   margin-left: var(--sidebar-width);
-  margin-top: 100px;
+  margin-top: 60px;
   padding: 20px;
   transition: 0.3s;
 }
