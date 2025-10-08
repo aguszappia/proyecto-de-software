@@ -916,6 +916,16 @@ td.actions {
   font-weight: 500;
   color: var(--color-text-muted);
 }
+.empty-state-message {
+  font-weight: 500;
+  color: var(--color-text-muted);
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  text-align: center;
+}
 
 .pagination {
   display: flex;

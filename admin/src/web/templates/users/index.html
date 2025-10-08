@@ -39,7 +39,7 @@
         <label for="active">Activo</label>
         <select id="active" name="active">
             <option value="">Todos</option>
-            <option value="true" {% if filters.active == 'true' %}selected{% endif %}>Sí</option>
+            <option value="true" {% if filters.active == 'true' %}selected{% endif %}>Si</option>
             <option value="false" {% if filters.active == 'false' %}selected{% endif %}>No</option>
         </select>
     </div>
@@ -77,7 +77,7 @@
                         <td>{{ role_labels[user.role] }}</td>
                         <td>
                             {% if user.is_active %}
-                                <span class="status-badge status-active">Sí</span>
+                                <span class="status-badge status-active">Si</span>
                             {% else %}
                                 <span class="status-badge status-inactive">No</span>
                             {% endif %}
@@ -170,7 +170,7 @@
         {% endif %}
     </div>
 {% else %}
-    <p>No se encontraron usuarios con los filtros seleccionados.</p>
+    <p class="empty-state-message">No se encontraron usuarios con los filtros seleccionados.</p>
 {% endif %}
 </section>
 {% endblock %}
