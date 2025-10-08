@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from src.core.database import db
 from src.core.pagination import Pagination
@@ -13,6 +14,7 @@ ACTIONS: List[str] = [
     "Edición",
     "Cambio de estado",
     "Cambio de tags",
+    "Eliminación",
 ]
 
 
@@ -70,12 +72,82 @@ def list_history(
     )
 
     data = []
+    user_cache: Dict[int, Optional[User]] = {}
     for event in items:
         item = event.to_dict()
+        parsed_details = None
+        if event.details:
+            try:
+                parsed_details = json.loads(event.details)
+            except json.JSONDecodeError:
+                parsed_details = None
+
+        if parsed_details and isinstance(parsed_details, dict):
+            message = parsed_details.get("message")
+            if message:
+                item["details"] = message
+            item["metadata"] = parsed_details
+        else:
+            item["metadata"] = None
+
         if event.user_id:
-            user = db.session.get(User, event.user_id)
+            if event.user_id in user_cache:
+                user = user_cache[event.user_id]
+            else:
+                user = db.session.get(User, event.user_id)
+                user_cache[event.user_id] = user
             item["user_email"] = user.email if user else None
         else:
             item["user_email"] = None
         data.append(item)
     return Pagination(data, total, page, per_page)
+
+
+def list_deleted_sites() -> List[Dict[str, object]]:
+    """Devuelve los eventos de eliminación con la metadata asociada."""
+
+    events = (
+        db.session.query(SiteHistory)
+        .filter(SiteHistory.action_type == "Eliminación")
+        .order_by(SiteHistory.created_at.desc())
+        .all()
+    )
+
+    deleted_sites: List[Dict[str, object]] = []
+    user_cache: Dict[int, Optional[User]] = {}
+
+    for event in events:
+        metadata: Dict[str, Optional[str]] = {}
+        if event.details:
+            try:
+                parsed = json.loads(event.details)
+                if isinstance(parsed, dict):
+                    metadata = {key: parsed.get(key) for key in parsed.keys()}
+            except json.JSONDecodeError:
+                metadata = {"message": event.details}
+
+        if event.user_id:
+            if event.user_id in user_cache:
+                user = user_cache[event.user_id]
+            else:
+                user = db.session.get(User, event.user_id)
+                user_cache[event.user_id] = user
+            deleted_by = user.email if user else None
+        else:
+            deleted_by = None
+
+        deleted_sites.append(
+            {
+                "site_id": event.site_id,
+                "name": metadata.get("name"),
+                "city": metadata.get("city"),
+                "province": metadata.get("province"),
+                "category": metadata.get("category"),
+                "conservation_status": metadata.get("conservation_status"),
+                "deleted_at": event.created_at,
+                "deleted_by": deleted_by,
+                "message": metadata.get("message") or "Sitio eliminado",
+            }
+        )
+
+    return deleted_sites

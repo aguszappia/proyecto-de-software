@@ -10,10 +10,11 @@
     'admin': 'Administrador'
 } %}
 
-<div class="module-header">
-    <h1>{% if user %}Editar usuario{% else %}Nuevo usuario{% endif %}</h1>
-    <a href="{{ url_for('users.index') }}" class="secondary-button">← Volver al listado</a>
-</div>
+<section class="container content-stack">
+  <div class="module-header">
+      <h1>{% if user %}Editar usuario{% else %}Nuevo usuario{% endif %}</h1>
+      <a href="{{ url_for('users.index') }}" class="secondary-button">← Volver al listado</a>
+  </div>
 
 {% set form_data = form if form is defined else None %}
 {% set current_status = 'true' %}
@@ -29,7 +30,7 @@
 {% endif %}
 
 {# FORMULARIO #}
-<form class="entity-form" method="post" action="{% if user %}{{ url_for('users.update', user_id=user.id) }}{% else %}{{ url_for('users.create') }}{% endif %}">
+  <form class="entity-form" method="post" action="{% if user %}{{ url_for('users.update', user_id=user.id) }}{% else %}{{ url_for('users.create') }}{% endif %}">
     <div class="form-grid">
         {# CAMPO EMAIL #}
         <div class="form-field {% if errors and errors.email %}has-error{% endif %}">
@@ -105,5 +106,6 @@
         <button type="submit" class="primary-button">Guardar</button>
         <a href="{{ url_for('users.index') }}" class="secondary-button">Cancelar</a>
     </div>
-</form>
+  </form>
+</section>
 {% endblock %}

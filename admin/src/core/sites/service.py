@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 
@@ -108,7 +109,30 @@ def delete_site(site_id, performed_by: Optional[int] = None):
     site = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
     if not site:
         return False
-    
+
+    payload = {
+        "message": f'Sitio "{site.name}" eliminado',
+        "name": site.name,
+        "city": site.city,
+        "province": site.province,
+        "category": site.category.value if isinstance(site.category, SiteCategory) else str(site.category)
+        if site.category
+        else None,
+        "conservation_status": site.conservation_status.value
+        if isinstance(site.conservation_status, ConservationStatus)
+        else str(site.conservation_status)
+        if site.conservation_status
+        else None,
+        "deleted_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    record_event(
+        site_id=site.id,
+        user_id=performed_by,
+        action_type="Eliminación",
+        details=json.dumps(payload),
+    )
+
     db.session.delete(site)
     db.session.commit()
     return True
