@@ -139,13 +139,20 @@
       text-transform: uppercase;
       color: var(--muted);
     }
-    form label + input {
+    form label + input,
+    form label + .input-group {
       margin-top: 8px;
     }
-    form input + label {
+    form input + label,
+    form .input-group + label {
       margin-top: 20px;
     }
-    input {
+    .input-group {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-group input {
       width: 100%;
       padding: 14px 16px;
       border-radius: 16px;
@@ -154,17 +161,67 @@
       font-size: 15px;
       transition: border 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
       color: var(--fg);
+      padding-right: 52px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
     }
-    input::placeholder {
+    .input-group input::placeholder {
       color: rgba(100, 116, 139, 0.6);
     }
-    input:focus {
+    .input-group input:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
       transform: translateY(-1px);
       outline: none;
     }
-    button {
+    .input-icon,
+    .input-action {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      color: rgba(148, 163, 184, 0.82);
+    }
+    .input-icon {
+      right: 20px;
+    }
+    .input-icon svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+      stroke: rgba(148, 163, 184, 0.8);
+    }
+    .input-action {
+      right: 12px;
+      pointer-events: auto;
+      border: none;
+      background: transparent;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+      color: rgba(100, 116, 139, 0.85);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .input-action svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+      stroke: rgba(148, 163, 184, 0.8);
+    }
+    .input-action:hover,
+    .input-action:focus-visible {
+      background: rgba(37, 99, 235, 0.12);
+      color: rgba(37, 99, 235, 0.9);
+      outline: none;
+    }
+    .login-submit {
       width: 100%;
       margin-top: 26px;
       padding: 15px 16px;
@@ -178,7 +235,7 @@
       transition: transform 0.2s ease, box-shadow 0.2s ease;
       box-shadow: 0 22px 40px rgba(37, 99, 235, 0.35);
     }
-    button span {
+    .login-submit span {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -189,21 +246,25 @@
       line-height: 1;
       margin-top: -2px;
     }
-    button:hover {
+    .login-submit:hover {
       transform: translateY(-2px);
       box-shadow: 0 26px 45px rgba(29, 78, 216, 0.38);
     }
-    button:active {
+    .login-submit:active {
       transform: translateY(0);
       box-shadow: 0 18px 35px rgba(29, 78, 216, 0.32);
     }
-    button:focus-visible {
+    .login-submit:focus-visible {
       outline: 3px solid rgba(37, 99, 235, 0.45);
       outline-offset: 4px;
     }
     .flash-container {
       margin-bottom: 20px;
-      text-align: left;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
     }
     .flash-message {
       padding: 12px 16px;
@@ -317,14 +378,34 @@
         </div>
       {% endif %}
 
-      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" autocomplete="on" novalidate>
+      <form method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}" autocomplete="on" novalidate>
         <label for="email">Email</label>
-        <input id="email" name="email" type="email" inputmode="email" autocomplete="username" required>
+        <div class="input-group">
+          <input id="email" name="email" type="email" inputmode="email" autocomplete="username" required>
+          <span class="input-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </span>
+        </div>
 
         <label for="password">Contraseña</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <div class="input-group">
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+          <button type="button"
+                  class="input-action"
+                  id="password-toggle"
+                  aria-label="Mostrar contraseña"
+                  aria-pressed="false">
+            <svg class="icon-eye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
 
-        <button type="submit">
+        <button type="submit" class="login-submit">
           <span>Ingresar <span class="button-arrow" aria-hidden="true">→</span></span>
         </button>
       </form>
@@ -332,5 +413,38 @@
       <div class="foot">© Grupo 28</div>
     </div>
   </div>
+  <script>
+    (function() {
+      const toggle = document.getElementById('password-toggle');
+      const input = document.getElementById('password');
+      if (!toggle || !input) {
+        return;
+      }
+
+      const iconShow = `
+        <svg class="icon-eye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>`;
+      const iconHide = `
+        <svg class="icon-eye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.94"/>
+          <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.82 21.82 0 0 1-2.11 3.95"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>`;
+
+      function updateState(show) {
+        input.type = show ? 'text' : 'password';
+        toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+        toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        toggle.innerHTML = show ? iconHide : iconShow;
+      }
+
+      toggle.addEventListener('click', () => {
+        updateState(input.type === 'password');
+        input.focus();
+      });
+    })();
+  </script>
 </body>
 </html>

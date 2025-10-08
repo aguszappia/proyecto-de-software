@@ -212,9 +212,6 @@ def destroy(user_id: int):
 
     flash("Usuario eliminado correctamente.", "success")
     return redirect(url_for("users.index"))
-
-admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
-
 @bp.post("/<int:user_id>/deactivate")
 @require_login
 @require_permissions("user_update")
@@ -247,15 +244,4 @@ def activate(user_id: int):
 
     activate_user(user)
     flash("Usuario activado correctamente.", "success")
-    return redirect(url_for("users.index"))
- 
-@admin_bp.get("/")
-@require_login
-@require_permissions("user_index")
-def dashboard():
-    return render_template("admin/dashboard.html")
-
-@admin_bp.get("/users")
-@require_permissions("user_index")
-def users_index():
     return redirect(url_for("users.index"))

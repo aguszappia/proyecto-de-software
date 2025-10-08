@@ -85,16 +85,16 @@
                         {% endif %}
                         {% if can_validate_proposals %}
                             <li>
-                                <a {% if current_endpoint == 'validacion_propuestas' %}class="active"{% endif %}
-                                   href="{{ url_for('validacion_propuestas') }}">
+                                <a {% if current_endpoint.startswith('validation.') %}class="active"{% endif %}
+                                   href="{{ url_for('validation.index') }}">
                                     <span>Validación de propuestas</span>
                                 </a>
                             </li>
                         {% endif %}
                         {% if can_moderate_reviews %}
                             <li>
-                                <a {% if current_endpoint == 'moderacion_reseñas' or current_endpoint.startswith('reviews.') %}class="active"{% endif %}
-                                   href="{{ url_for('moderacion_reseñas') }}">
+                                <a {% if current_endpoint.startswith('reviews.') %}class="active"{% endif %}
+                                   href="{{ url_for('reviews.index') }}">
                                     <span>Moderación de reseñas</span>
                                 </a>
                             </li>

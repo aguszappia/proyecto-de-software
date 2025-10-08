@@ -10,10 +10,11 @@
     'admin': 'Administrador'
 } %}
 
-<div class="module-header">
-    <h1>{% if user %}Editar usuario{% else %}Nuevo usuario{% endif %}</h1>
-    <a href="{{ url_for('users.index') }}" class="secondary-button">← Volver al listado</a>
-</div>
+<section class="container content-stack">
+  <div class="module-header">
+      <h1>{% if user %}Editar usuario{% else %}Nuevo usuario{% endif %}</h1>
+      <a href="{{ url_for('users.index') }}" class="secondary-button">← Volver al listado</a>
+  </div>
 
 {% set form_data = form if form is defined else None %}
 {% set current_status = 'true' %}
@@ -29,13 +30,13 @@
 {% endif %}
 
 {# FORMULARIO #}
-<form class="entity-form" method="post" action="{% if user %}{{ url_for('users.update', user_id=user.id) }}{% else %}{{ url_for('users.create') }}{% endif %}">
+  <form class="entity-form" method="post" action="{% if user %}{{ url_for('users.update', user_id=user.id) }}{% else %}{{ url_for('users.create') }}{% endif %}">
     <div class="form-grid">
         {# CAMPO EMAIL #}
         <div class="form-field {% if errors and errors.email %}has-error{% endif %}">
             <label for="email">Email *</label>
             <input type="email" id="email" name="email" 
-                   value="{{ user.email if user else '' }}" required>
+                   value="{{ form_data.get('email') if form_data is not none else (user.email if user else '') }}" required>
             {% if errors and errors.email %}
                 <span class="error-message">{{ errors.email[0] }}</span>
             {% endif %}
@@ -45,7 +46,7 @@
         <div class="form-field {% if errors and errors.first_name %}has-error{% endif %}">
             <label for="first_name">Nombre *</label>
             <input type="text" id="first_name" name="first_name" 
-                   value="{{ user.first_name if user else '' }}" required>
+                   value="{{ form_data.get('first_name') if form_data is not none else (user.first_name if user else '') }}" required>
             {% if errors and errors.first_name %}
                 <span class="error-message">{{ errors.first_name[0] }}</span>
             {% endif %}
@@ -55,7 +56,7 @@
         <div class="form-field {% if errors and errors.last_name %}has-error{% endif %}">
             <label for="last_name">Apellido *</label>
             <input type="text" id="last_name" name="last_name" 
-                   value="{{ user.last_name if user else '' }}" required>
+                   value="{{ form_data.get('last_name') if form_data is not none else (user.last_name if user else '') }}" required>
             {% if errors and errors.last_name %}
                 <span class="error-message">{{ errors.last_name[0] }}</span>
             {% endif %}
@@ -64,10 +65,11 @@
         {# CAMPO ROL DE USUARIO #}
         <div class="form-field {% if errors and errors.role %}has-error{% endif %}">
             <label for="role">Rol *</label>
+            {% set selected_role = form_data.get('role') if form_data is not none else (user.role if user else None) %}
             <select id="role" name="role" required>
                 {% for role in roles %}
                     <option value="{{ role.value }}" 
-                            {% if user and user.role == role.value %}selected{% endif %}>
+                            {% if selected_role == role.value %}selected{% endif %}>
                         {{ role_labels[role.value] }}
                     </option>
                 {% endfor %}
@@ -104,5 +106,6 @@
         <button type="submit" class="primary-button">Guardar</button>
         <a href="{{ url_for('users.index') }}" class="secondary-button">Cancelar</a>
     </div>
-</form>
+  </form>
+</section>
 {% endblock %}

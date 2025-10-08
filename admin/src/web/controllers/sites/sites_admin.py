@@ -10,6 +10,7 @@ from typing import Dict, List
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 
 from src.core.sites.models import ConservationStatus, SiteCategory
+from src.core.sites.history_service import list_deleted_sites
 from src.core.sites.service import (
     create_site,
     delete_site,
@@ -242,6 +243,19 @@ def remove(site_id: int):
     else:
         flash("No se encontró el sitio histórico solicitado.", "error")
     return redirect(url_for("sites.index"))
+
+
+@bp.get("/deleted")
+@require_login
+@require_permissions("site_index")
+def deleted_list():
+    """Muestra el historial de sitios eliminados."""
+
+    deleted_sites = list_deleted_sites()
+    return render_template(
+        "sites/deleted.html",
+        deleted_sites=deleted_sites,
+    )
 
 
 @bp.get("/export")
