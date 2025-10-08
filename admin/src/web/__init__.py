@@ -76,14 +76,16 @@ def create_app(env="development", static_folder="../../static"):
             enabled = request.form.get("enabled") == "true"
 
             if enabled:
-                message = (
-                    (request.form.get("message") or "")
-                    or DEFAULT_FLAG_MESSAGES.get(key, "")
-                ).strip()
-
+                message = (request.form.get("message") or "").strip()
                 if not message:
-                    flag = flags_service.get_flag(key)
-                    message = (flag.message if flag else "") or ""
+                    flash("Ingresá un mensaje de mantenimiento para activar el flag.", "error")
+                    return redirect(url_for("featureflags"))
+                if len(message) > flags_service.MAX_MESSAGE_LENGTH:
+                    flash(
+                        f"El mensaje no puede superar {flags_service.MAX_MESSAGE_LENGTH} caracteres.",
+                        "error",
+                    )
+                    return redirect(url_for("featureflags"))
             else:
                 message = ""
 
@@ -108,6 +110,7 @@ def create_app(env="development", static_folder="../../static"):
             "flags/featureflags.html",
             flags=flags,
             default_messages=DEFAULT_FLAG_MESSAGES,
+            max_message_length=flags_service.MAX_MESSAGE_LENGTH,
         )
     
     app.register_error_handler(404, error.not_found)

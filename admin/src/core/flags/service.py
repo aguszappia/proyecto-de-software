@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from src.core.database import db
 from src.core.flags.models import FeatureFlag
 
-MAX_MESSAGE_LENGTH = 200
+MAX_MESSAGE_LENGTH = 150
 
 
 class FeatureFlagError(ValueError):
@@ -98,4 +98,3 @@ def set_flag(
     session.commit()
     session.refresh(flag)
     return flag
-
