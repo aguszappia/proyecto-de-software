@@ -12,8 +12,8 @@ class Config:
 
     # Cookies más seguras
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = "Lax"      
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = environ.get("SESSION_COOKIE_SECURE", "true").strip().lower() == "true"
 
     # SQLAlchemy (Base de datos)
     SQLALCHEMY_ENGINE_OPTIONS = {
