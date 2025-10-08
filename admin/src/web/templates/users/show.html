@@ -10,50 +10,64 @@
     'sysadmin': 'System Admin',
 } %}
 {% set can_edit = has_permission('user_update') %}
-<div class="module-header">
-    <h1>Detalle de usuario</h1>
-    <div class="flag-actions">
-        <a class="secondary-button" href="{{ url_for('users.index') }}">Volver al listado</a>
-        {% if can_edit %}
-            <a class="primary-button" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
-        {% endif %}
-    </div>
-</div>
+<section class="container management-card">
+  <div class="module-header">
+      <h1>Detalle de usuario</h1>
+      <div class="flag-actions">
+          <a class="secondary-button" href="{{ url_for('users.index') }}">← Volver al listado</a>
+          {% if can_edit %}
+              <a class="primary-button" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
+          {% endif %}
+      </div>
+  </div>
 
-<div class="table-wrapper">
-    <table class="data-table">
-        <tbody>
-            <tr>
-                <td>Nombre</td>
-                <td>{{ user.first_name }} {{ user.last_name }}</td>
-            </tr>
-            <tr>
-                <td>Email</td>
-                <td>{{ user.email }}</td>
-            </tr>
-            <tr>
-                <td>Rol</td>
-                <td>{{ role_labels.get(user.role, user.role) }}</td>
-            </tr>
-            <tr>
-                <td>Estado</td>
-                <td>
-                    {% if user.is_active %}
-                        <span class="status-badge status-active">Activo</span>
-                    {% else %}
-                        <span class="status-badge status-inactive">Inactivo</span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td>Creado</td>
-                <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</td>
-            </tr>
-            <tr>
-                <td>Actualizado</td>
-                <td>{{ user.updated_at.strftime('%Y-%m-%d %H:%M') if user.updated_at else '-' }}</td>
-            </tr>
-        </tbody>
-    </table>
-</div>
+  <div class="table-wrapper">
+      <table class="data-table">
+          <tbody>
+              <tr>
+                  <td>Nombre</td>
+                  <td>{{ user.first_name }} {{ user.last_name }}</td>
+              </tr>
+              <tr>
+                  <td>Email</td>
+                  <td>{{ user.email }}</td>
+              </tr>
+              <tr>
+                  <td>Rol</td>
+                  <td>{{ role_labels.get(user.role, user.role) }}</td>
+              </tr>
+              <tr>
+                  <td>Estado</td>
+                  <td>
+                      {% if user.is_active %}
+                          <span class="status-badge status-active">Activo</span>
+                      {% else %}
+                          <span class="status-badge status-inactive">Inactivo</span>
+                      {% endif %}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Creado</td>
+                  <td>
+                      {% if user.created_at %}
+                          {{ user.created_at.strftime('%d/%m/%Y %H:%M') }}
+                      {% else %}
+                          -
+                      {% endif %}
+                  </td>
+              </tr>
+              <tr>
+                  <td>Actualizado</td>
+                  <td>
+                      {% if user.updated_at %}
+                          {{ user.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                      {% else %}
+                          -
+                      {% endif %}
+                  </td>
+              </tr>
+          </tbody>
+      </table>
+  </div>
+</section>
 {% endblock %}

@@ -5,6 +5,7 @@ from __future__ import annotations
 from flask import Blueprint, render_template, request
 
 from src.core.sites.history_service import ACTIONS, list_history
+from src.core.sites.service import get_site
 from src.web.controllers.auth import require_login, require_permissions
 from .sites_utils import clean_str, parse_date, safe_int
 
@@ -41,9 +42,13 @@ def view_history(site_id: int):
         "date_to": args.get("date_to") or "",
     }
 
+    site = get_site(site_id)
+    site_name = site.get("name") if site else "Sitio #{}".format(site_id)
+
     return render_template(
         "sites/history.html",
         site_id=site_id,
+        site_name=site_name,
         filters=filters,
         actions=ACTIONS,
         pagination=pagination,

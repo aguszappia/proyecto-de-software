@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+
+{% block title %}Sitios eliminados{% endblock %}
+
+{% block content %}
+<section class="container management-card">
+  <div class="module-header">
+      <h1>Historial de sitios eliminados</h1>
+      <a class="secondary-button deleted-sites-back" href="{{ url_for('sites.index') }}">
+        ← Volver a la gestión
+      </a>
+  </div>
+
+{% if deleted_sites %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Ubicación</th>
+                    <th>Categoría</th>
+                    <th>Estado de conservación</th>
+                    <th>Eliminado el</th>
+                    <th>Eliminado por</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for site in deleted_sites %}
+                    <tr>
+                        <td class="deleted-sites-col deleted-sites-col--name">{{ site.name or 'Sin nombre' }}</td>
+                        <td class="deleted-sites-col deleted-sites-col--location">
+                            {% if site.city or site.province %}
+                                {{ site.city or '-' }}, {{ site.province or '-' }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="deleted-sites-col deleted-sites-col--category">{{ site.category or '-' }}</td>
+                        <td class="deleted-sites-col deleted-sites-col--status">{{ site.conservation_status or '-' }}</td>
+                        <td class="deleted-sites-col deleted-sites-col--date">
+                            {% if site.deleted_at %}
+                                {{ site.deleted_at.strftime('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="deleted-sites-col deleted-sites-col--user">{{ site.deleted_by or 'No registrado' }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p>No hay sitios eliminados registrados.</p>
+{% endif %}
+</section>
+{% endblock %}

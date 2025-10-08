@@ -3,10 +3,13 @@
 {% block title %}Historial de cambios{% endblock %}
 
 {% block content %}
-<h1>Historial de cambios</h1>
-<p>Listado de eventos registrados para el sitio {{ site_id }}.</p>
+<section class="container management-card">
+  <div class="module-header">
+      <h1>Historial de cambios</h1>
+      <a class="deleted-sites-back" href="{{ url_for('sites.edit', site_id=site_id) }}">← Volver al sitio</a>
+  </div>
 
-<form class="filters" method="get" action="{{ url_for('sites_history.view_history', site_id=site_id) }}">
+  <form class="filters" method="get" action="{{ url_for('sites_history.view_history', site_id=site_id) }}">
     <div class="filters-row">
         <div class="filter-group">
             <label for="user">Usuario</label>
@@ -34,13 +37,14 @@
         <button type="submit" class="primary-button">Filtrar</button>
         <a class="secondary-button" href="{{ url_for('sites_history.view_history', site_id=site_id) }}">Limpiar</a>
     </div>
-</form>
+  </form>
 
 {% if pagination.items %}
     <div class="table-wrapper">
         <table class="data-table">
             <thead>
                 <tr>
+                    <th>Nombre</th>
                     <th>Fecha</th>
                     <th>Acción</th>
                     <th>Usuario</th>
@@ -50,7 +54,17 @@
             <tbody>
                 {% for entry in pagination.items %}
                 <tr>
-                    <td>{{ entry.created_at[:19] if entry.created_at else '' }}</td>
+                    <td>{{ site_name }}</td>
+                    <td>
+                        {% if entry.created_at %}
+                            {% set parts = entry.created_at.split('T') %}
+                            {% set date_part = parts[0].split('-') %}
+                            {% set time_part = parts[1].split(':') %}
+                            {{ date_part[2] }}/{{ date_part[1] }}/{{ date_part[0] }} {{ time_part[0] }}:{{ time_part[1] }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td>{{ entry.action_type }}</td>
                     <td>{{ entry.user_email or '—' }}</td>
                     <td>{{ entry.details or '' }}</td>
@@ -71,6 +85,5 @@
 {% else %}
     <p>No se registraron eventos para los filtros seleccionados.</p>
 {% endif %}
-
-<p><a class="secondary-button" href="{{ url_for('sites.edit', site_id=site_id) }}">Volver al sitio</a></p>
+</section>
 {% endblock %}

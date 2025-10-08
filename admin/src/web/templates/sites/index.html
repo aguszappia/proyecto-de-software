@@ -7,12 +7,14 @@
 {% set can_export_sites = has_permission('site_export') %}
 {% set can_update_site = has_permission('site_update') %}
 {% set can_delete_site = has_permission('site_destroy') %}
-<div class="module-header">
-    <h1>Búsqueda de sitios históricos</h1>
-    <span class="results-count">{{ pagination.total }} resultados</span>
-</div>
 
-<div class="actions-bar">
+<section class="container management-card">
+  <div class="module-header">
+      <h1>Búsqueda de sitios históricos</h1>
+      <span class="results-count">{{ pagination.total }} resultados</span>
+  </div>
+
+  <div class="actions-bar">
     {% if can_create_site %}
         <a class="primary-button" href="{{ url_for('sites.create') }}">Agregar sitio histórico</a>
     {% endif %}
@@ -42,9 +44,9 @@
             </button>
         </form>
     {% endif %}
-</div>
+  </div>
 
-<form class="filters" method="get" action="{{ url_for('sites.index') }}">
+  <form class="filters" method="get" action="{{ url_for('sites.index') }}">
     <div class="filters-row">
         <div class="filter-group">
             <label for="city">Ciudad</label>
@@ -122,7 +124,7 @@
         <button type="submit" class="primary-button">Buscar</button>
         <a class="secondary-button" href="{{ url_for('sites.index') }}">Limpiar</a>
     </div>
-</form>
+  </form>
 
 {% if pagination.items %}
     <p class="results-summary">
@@ -194,4 +196,18 @@
 {% else %}
     <p>Sin resultados</p>
 {% endif %}
+
+<section class="deleted-sites-section">
+    <div class="deleted-sites-card">
+        <div class="deleted-sites-card__content">
+            <h2>Sitios eliminados</h2>
+            <p>Revisá el historial completo de sitios que fueron dados de baja.</p>
+        </div>
+        <a class="secondary-button deleted-sites-toggle"
+           href="{{ url_for('sites.deleted_list') }}">
+            Ver Sitios Eliminados
+        </a>
+    </div>
+</section>
+</section>
 {% endblock %}

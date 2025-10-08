@@ -3,12 +3,13 @@
 {% block title %}{{ 'Editar' if is_edit else 'Nueva' }} etiqueta{% endblock %}
 
 {% block content %}
-<div class="module-header">
-    <h1>{{ 'Editar etiqueta' if is_edit else 'Nueva etiqueta' }}</h1>
-    <a href="{{ url_for('tags.index') }}" class="secondary-button">← Volver al listado</a>
-</div>
+<section class="container content-stack">
+  <div class="module-header">
+      <h1>{{ 'Editar etiqueta' if is_edit else 'Nueva etiqueta' }}</h1>
+      <a href="{{ url_for('tags.index') }}" class="secondary-button">← Volver al listado</a>
+  </div>
 
-<form class="entity-form" method="post" action="{% if is_edit %}{{ url_for('tags.update', tag_id=tag_id) }}{% else %}{{ url_for('tags.create') }}{% endif %}">
+  <form class="entity-form" method="post" action="{% if is_edit %}{{ url_for('tags.update', tag_id=tag_id) }}{% else %}{{ url_for('tags.create') }}{% endif %}">
     <div class="form-grid">
         <div class="form-field {% if errors.name %}has-error{% endif %}">
             <label for="name">Nombre *</label>
@@ -27,5 +28,6 @@
         <button type="submit" class="primary-button">Guardar</button>
         <a href="{{ url_for('tags.index') }}" class="secondary-button">Cancelar</a>
     </div>
-</form>
+  </form>
+</section>
 {% endblock %}
