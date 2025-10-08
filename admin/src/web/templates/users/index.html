@@ -91,9 +91,17 @@
                                     {% if user.role != 'admin' and user.role != 'sysadmin'%}
                                         <form method="post"
                                             action="{{ url_for('users.deactivate', user_id=user.id) }}"
-                                            class="inline-form action-item"
-                                            onsubmit="return confirm('¿Seguro que querés desactivar este usuario?');">
-                                        <button type="submit" class="secondary-button action-button">Desactivar</button>
+                                            class="inline-form action-item">
+                                        <button type="button"
+                                                class="secondary-button action-button"
+                                                data-confirm-trigger
+                                                data-confirm-mode="submit"
+                                                data-confirm-title="Desactivar usuario"
+                                                data-confirm-message="¿Seguro que querés desactivar este usuario?"
+                                                data-confirm-accept="Desactivar"
+                                                data-confirm-variant="danger">
+                                            Desactivar
+                                        </button>
                                         </form>
                                     {% else %}
                                         <button type="button" class="secondary-button action-item action-button" disabled title="No se puede desactivar un Administrador">Desactivar</button>
@@ -102,7 +110,16 @@
                                     <form method="post"
                                             action="{{ url_for('users.activate', user_id=user.id) }}"
                                             class="inline-form action-item">
-                                        <button type="submit" class="secondary-button action-button action-button--primary action-button--secondary-invert">Activar</button>
+                                        <button type="button"
+                                                class="secondary-button action-button action-button--primary action-button--secondary-invert"
+                                                data-confirm-trigger
+                                                data-confirm-mode="submit"
+                                                data-confirm-title="Activar usuario"
+                                                data-confirm-message="¿Querés activar nuevamente este usuario?"
+                                                data-confirm-accept="Activar"
+                                                data-confirm-variant="primary">
+                                            Activar
+                                        </button>
                                     </form>
                                 {% endif %}
 
@@ -113,9 +130,17 @@
                                 {% if user.role != 'admin' and user.role != 'sysadmin' %}
                                     <form method="post"
                                         action="{{ url_for('users.destroy', user_id=user.id) }}"
-                                        class="inline-form action-item"
-                                        onsubmit="return confirm('¿Eliminar usuario?');">
-                                    <button type="submit" class="danger-button action-button">Eliminar</button>
+                                        class="inline-form action-item">
+                                    <button type="button"
+                                            class="danger-button action-button"
+                                            data-confirm-trigger
+                                            data-confirm-mode="submit"
+                                            data-confirm-title="Eliminar usuario"
+                                            data-confirm-message="¿Eliminar usuario?"
+                                            data-confirm-accept="Eliminar"
+                                            data-confirm-variant="danger">
+                                        Eliminar
+                                    </button>
                                     </form>
                                 {% else %}
                                     <button type="button" class="danger-button action-item action-button" disabled title="No se puede eliminar un Administrador">Eliminar</button>

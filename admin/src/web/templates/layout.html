@@ -39,9 +39,15 @@
                     <div class="user-dropdown-menu" role="menu">
                         <a href="{{ url_for('users.me') }}" role="menuitem">Ver perfil</a>
                         <a href="{{ url_for('auth.logout') }}"
-                           class="dropdown-item logout-trigger"
+                           class="dropdown-item"
                            role="menuitem"
-                           data-logout-url="{{ url_for('auth.logout') }}">
+                           data-confirm-trigger
+                           data-confirm-mode="href"
+                           data-confirm-href="{{ url_for('auth.logout') }}"
+                           data-confirm-title="Cerrar sesión"
+                           data-confirm-message="¿Seguro que querés cerrar sesión? Perderás el acceso hasta volver a iniciar."
+                           data-confirm-accept="Salir"
+                           data-confirm-variant="danger">
                            Cerrar sesión
                         </a>
                     </div>
@@ -145,13 +151,13 @@
         </div>
     </div>
 
-    <div id="logout-modal" class="confirm-modal" hidden>
-        <div class="confirm-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="logout-modal-title">
-            <h2 id="logout-modal-title">Cerrar sesión</h2>
-            <p>¿Seguro que querés cerrar sesión? Perderás el acceso hasta volver a iniciar.</p>
+    <div id="confirm-modal" class="confirm-modal" hidden>
+        <div class="confirm-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+            <h2 id="confirm-modal-title" data-confirm-title>Confirmar acción</h2>
+            <p data-confirm-message>¿Deseás continuar con esta operación?</p>
             <div class="confirm-modal__actions">
-                <button type="button" class="secondary-button" data-cancel>Cancelar</button>
-                <button type="button" class="danger-button" data-confirm>Salir</button>
+                <button type="button" class="secondary-button" data-confirm-cancel>Cancelar</button>
+                <button type="button" class="danger-button confirm-modal__accept" data-confirm-accept>Confirmar</button>
             </div>
         </div>
     </div>
@@ -219,66 +225,114 @@
                 });
             });
         }
-        const logoutModal = document.getElementById('logout-modal');
-        if (logoutModal) {
-            const logoutTriggers = document.querySelectorAll('.logout-trigger');
-            const confirmButton = logoutModal.querySelector('[data-confirm]');
-            const cancelButton = logoutModal.querySelector('[data-cancel]');
-            if (!confirmButton || !cancelButton) {
-                console.warn('Logout modal is missing buttons.');
-            } else {
-                let pendingUrl = null;
-                let lastFocused = null;
+        const confirmModal = document.getElementById('confirm-modal');
+        if (confirmModal) {
+            const titleEl = confirmModal.querySelector('[data-confirm-title]');
+            const messageEl = confirmModal.querySelector('[data-confirm-message]');
+            const acceptBtn = confirmModal.querySelector('[data-confirm-accept]');
+            const cancelBtn = confirmModal.querySelector('[data-confirm-cancel]');
+            const triggers = document.querySelectorAll('[data-confirm-trigger]');
+            let onConfirm = null;
+            let lastFocusedElement = null;
 
-                function openLogoutModal(url, trigger) {
-                    pendingUrl = url;
-                    lastFocused = trigger;
-                    logoutModal.hidden = false;
-                    logoutModal.classList.add('is-open');
-                    confirmButton.focus();
+            function setAcceptVariant(variant) {
+                if (!acceptBtn) {
+                    return;
                 }
-
-                function closeLogoutModal() {
-                    logoutModal.classList.remove('is-open');
-                    logoutModal.hidden = true;
-                    pendingUrl = null;
-                    if (lastFocused) {
-                        lastFocused.focus();
-                        lastFocused = null;
-                    }
+                acceptBtn.classList.remove('primary-button', 'danger-button');
+                if (variant === 'primary') {
+                    acceptBtn.classList.add('primary-button');
+                } else {
+                    acceptBtn.classList.add('danger-button');
                 }
+            }
 
-                logoutTriggers.forEach(trigger => {
-                    trigger.addEventListener('click', event => {
-                        event.preventDefault();
-                        const url = trigger.dataset.logoutUrl || trigger.getAttribute('href');
+            function openConfirmModal(config, trigger) {
+                lastFocusedElement = trigger;
+                if (titleEl) {
+                    titleEl.textContent = config.title || 'Confirmar acción';
+                }
+                if (messageEl) {
+                    messageEl.textContent = config.message || '¿Deseás continuar con esta operación?';
+                }
+                if (acceptBtn) {
+                    acceptBtn.textContent = config.acceptLabel || 'Confirmar';
+                    setAcceptVariant(config.variant);
+                }
+                onConfirm = config.onConfirm || null;
+                confirmModal.hidden = false;
+                confirmModal.classList.add('is-open');
+                acceptBtn.focus();
+            }
+
+            function closeConfirmModal() {
+                confirmModal.classList.remove('is-open');
+                confirmModal.hidden = true;
+                onConfirm = null;
+                if (lastFocusedElement) {
+                    lastFocusedElement.focus();
+                    lastFocusedElement = null;
+                }
+            }
+
+            triggers.forEach(trigger => {
+                trigger.addEventListener('click', event => {
+                    event.preventDefault();
+                    const mode = trigger.dataset.confirmMode || 'submit';
+                    const variant = trigger.dataset.confirmVariant || 'danger';
+                    const title = trigger.dataset.confirmTitle || null;
+                    const message = trigger.dataset.confirmMessage || null;
+                    const acceptLabel = trigger.dataset.confirmAccept || null;
+
+                    let action = null;
+                    if (mode === 'submit') {
+                        const form = trigger.closest('form');
+                        if (!form) {
+                            return;
+                        }
+                        action = () => form.submit();
+                    } else if (mode === 'href') {
+                        const url = trigger.dataset.confirmHref || trigger.getAttribute('href');
                         if (!url) {
                             return;
                         }
-                        openLogoutModal(url, trigger);
-                    });
-                });
+                        action = () => {
+                            window.location.href = url;
+                        };
+                    } else {
+                        return;
+                    }
 
-                confirmButton.addEventListener('click', () => {
-                    const url = pendingUrl;
-                    closeLogoutModal();
-                    if (url) {
-                        window.location.href = url;
-                    }
+                    openConfirmModal({ title, message, acceptLabel, variant, onConfirm: action }, trigger);
                 });
-                cancelButton.addEventListener('click', closeLogoutModal);
-                logoutModal.addEventListener('click', event => {
-                    if (event.target === logoutModal) {
-                        closeLogoutModal();
-                    }
-                });
-                logoutModal.addEventListener('keydown', event => {
-                    if (event.key === 'Escape') {
-                        event.preventDefault();
-                        closeLogoutModal();
+            });
+
+            if (acceptBtn) {
+                acceptBtn.addEventListener('click', () => {
+                    const action = onConfirm;
+                    closeConfirmModal();
+                    if (typeof action === 'function') {
+                        action();
                     }
                 });
             }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => closeConfirmModal());
+            }
+
+            confirmModal.addEventListener('click', event => {
+                if (event.target === confirmModal) {
+                    closeConfirmModal();
+                }
+            });
+
+            confirmModal.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeConfirmModal();
+                }
+            });
         }
     </script>
     {% block extra_scripts %}{% endblock %}

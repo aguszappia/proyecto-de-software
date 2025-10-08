@@ -58,9 +58,17 @@
                             <a class="secondary-button" href="{{ url_for('tags.edit', tag_id=tag.id) }}">Editar</a>
                             <form method="post"
                                   action="{{ url_for('tags.destroy', tag_id=tag.id) }}"
-                                  class="inline-form"
-                                  onsubmit="return confirm('¿Eliminar la etiqueta?');">
-                                <button type="submit" class="danger-button">Eliminar</button>
+                                  class="inline-form">
+                                <button type="button"
+                                        class="danger-button"
+                                        data-confirm-trigger
+                                        data-confirm-mode="submit"
+                                        data-confirm-title="Eliminar etiqueta"
+                                        data-confirm-message="¿Eliminar la etiqueta?"
+                                        data-confirm-accept="Eliminar"
+                                        data-confirm-variant="danger">
+                                    Eliminar
+                                </button>
                             </form>
                         </div>
                     </td>
