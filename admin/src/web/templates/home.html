@@ -3,41 +3,39 @@
 {% block title %}Proyecto - Grupo 28{% endblock %}
 
 {% block content %}
-<main style="max-width: 900px; margin: 0 auto; line-height: 1.6; text-align: justify;">
-  <h1 style="margin-bottom: 30px; text-align: center;">Proyecto - Grupo 28</h1>
-
-  <section style="margin-bottom: 25px;">
-    <p>
-      Este proyecto forma parte del <strong>Trabajo Integrador 2025</strong> de la cátedra <em>Proyecto de Software</em>.
-      Su propósito es desarrollar una aplicación web que permita gestionar, preservar y difundir los
-      <strong>sitios históricos del país</strong>, centralizando toda la información relevante en una única plataforma.
+<section class="container content-stack home-intro">
+  <header class="section-heading">
+    <span class="section-kicker">Proyecto Integrador 2025</span>
+    <h1 class="page-title">Sitios Históricos · Grupo 28</h1>
+    <p class="section-subtitle">
+      Plataforma administrativa para preservar, difundir y gestionar el patrimonio cultural del país.
     </p>
-  </section>
+  </header>
 
-  <section style="margin-bottom: 25px;">
+  <article class="text-block">
+    <h2>¿De qué se trata?</h2>
     <p>
-      En esta primera etapa se implementó la <strong>aplicación de administración</strong>, desarrollada en
-      <strong>Python y Flask</strong>, conectada a una base de datos <strong>PostgreSQL</strong> con soporte
-      geoespacial. A través de esta aplicación, los editores y administradores pueden gestionar sitios históricos,
-      moderar reseñas, validar propuestas y administrar usuarios y roles.
+      Este proyecto forma parte del <strong>Trabajo Integrador 2025</strong> de la cátedra
+      <em>Proyecto de Software</em>. Construimos una aplicación web que centraliza la información
+      de los <strong>sitios históricos</strong>, facilitando su administración, difusión y cuidado.
     </p>
-  </section>
+  </article>
 
-  <section style="margin-bottom: 25px;">
+  <article class="text-block">
+    <h2>Qué incluye esta etapa</h2>
     <p>
-      En etapas futuras se desarrollará el <strong>portal público</strong> en <strong>Vue.js</strong>, que permitirá
-      a cualquier ciudadano explorar los sitios históricos registrados, conocer su historia, dejar reseñas y proponer
-      nuevos lugares de interés cultural.
+      Implementamos la aplicación de <strong>administración</strong> utilizando
+      <strong>Python + Flask</strong> sobre <strong>PostgreSQL</strong> con soporte geoespacial.
+      Desde aquí, los equipos autorizados pueden gestionar sitios, validar propuestas,
+      moderar reseñas y administrar usuarios y permisos.
     </p>
-  </section>
-
-  <section style="text-align: center; margin-top: 40px;">
-    <p><em>Grupo Nº 28 — Etapa 1</em></p>
-  </section>
-
-  <section style="text-align: center; margin-top: 40px;">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flask_logo.svg" alt="Flask Logo" width="130" style="margin: 0 20px;">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python Logo" width="120" style="margin: 0 20px;">
-  </section>
-</main>
+  </article>
+  <footer class="home-footer">
+    <p class="section-kicker">Grupo Nº 28 — Etapa 1</p>
+    <div class="tech-stack">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Flask_logo.svg" alt="Flask Logo" width="120" height="48" loading="lazy">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python Logo" width="110" height="48" loading="lazy">
+    </div>
+  </footer>
+</section>
 {% endblock %}

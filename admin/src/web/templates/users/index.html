@@ -84,7 +84,7 @@
                         <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</td>
                         <td class="actions">
                             {% if can_view %}
-                                <a class="link-button action-item" href="{{ url_for('users.show', user_id=user.id) }}">Ver</a>
+                                <a class="secondary-button action-item action-button action-button--neutral" href="{{ url_for('users.show', user_id=user.id) }}">Ver</a>
                             {% endif %}
                             {% if can_edit %}
                                 {% if user.is_active %}
@@ -93,20 +93,20 @@
                                             action="{{ url_for('users.deactivate', user_id=user.id) }}"
                                             class="inline-form action-item"
                                             onsubmit="return confirm('¿Seguro que querés desactivar este usuario?');">
-                                        <button type="submit" class="secondary-button">Desactivar</button>
+                                        <button type="submit" class="secondary-button action-button">Desactivar</button>
                                         </form>
                                     {% else %}
-                                        <button type="button" class="secondary-button action-item" disabled title="No se puede desactivar un Administrador">Desactivar</button>
+                                        <button type="button" class="secondary-button action-item action-button" disabled title="No se puede desactivar un Administrador">Desactivar</button>
                                     {% endif %}
                                 {% else %}
                                     <form method="post"
                                             action="{{ url_for('users.activate', user_id=user.id) }}"
                                             class="inline-form action-item">
-                                        <button type="submit" class="success-button">Activar</button>
+                                        <button type="submit" class="secondary-button action-button action-button--primary action-button--secondary-invert">Activar</button>
                                     </form>
                                 {% endif %}
 
-                                <a class="link-button action-item" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
+                                <a class="secondary-button action-item action-button action-button--neutral" href="{{ url_for('users.edit', user_id=user.id) }}">Editar</a>
                             {% endif %}
 
                             {% if can_delete %}
@@ -115,10 +115,10 @@
                                         action="{{ url_for('users.destroy', user_id=user.id) }}"
                                         class="inline-form action-item"
                                         onsubmit="return confirm('¿Eliminar usuario?');">
-                                    <button type="submit" class="danger-button">Eliminar</button>
+                                    <button type="submit" class="danger-button action-button">Eliminar</button>
                                     </form>
                                 {% else %}
-                                    <button type="button" class="danger-button action-item" disabled title="No se puede eliminar un Administrador">Eliminar</button>
+                                    <button type="button" class="danger-button action-item action-button" disabled title="No se puede eliminar un Administrador">Eliminar</button>
                                 {% endif %}
                             {% endif %}
                         </td>

@@ -4,133 +4,152 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Sitios Históricos{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
     {% block extra_head %}{% endblock %}
 </head>
-<body>
-    <div class="topbar">
-        <div class="menu-toggle" id="menu-toggle">
-            <span></span>
-            <span></span>
-            <span></span>
-        </div>
-        <div class="topbar-logo">
-            <a href="{{ url_for('home') }}" class="topbar-logo-link" style="display:flex;align-items:center;text-decoration:none;color:inherit;gap:10px;">
-                <span class="logo-icon" aria-hidden="true">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2C7.581 2 4 5.436 4 9.772c0 5.176 6.332 11.393 7.305 12.302a1 1 0 0 0 1.39 0C13.668 21.165 20 14.948 20 9.772 20 5.436 16.419 2 12 2Zm0 17.306c-2.01-2.036-6-6.698-6-9.534C6 6.477 8.579 4 12 4s6 2.477 6 5.772c0 2.836-3.99 7.498-6 9.534Zm0-12.306a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 4a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" fill="currentColor"/>
-                    </svg>
-                </span>
-                <span class="logo-text">Sitios Históricos</span>
-            </a>
-        </div>
-        <div class="user-dropdown">
-            <button class="user-dropdown-toggle">Cuenta ▼</button>
-            <div class="user-dropdown-menu">
-                <a href="{{ url_for('users.me') }}">Ver perfil</a>
-                <a href="{{ url_for('auth.logout') }}" 
-                class="dropdown-item" 
-                onclick="return confirm('¿Estás seguro de cerrar sesión?');">
-                Cerrar sesión
+<body class="app-shell">
+    <div class="app-shell__backdrop"></div>
+    <div class="app-shell__glow app-shell__glow--one"></div>
+    <div class="app-shell__glow app-shell__glow--two"></div>
+
+    <div class="app-shell__inner">
+        <header class="topbar">
+            <div class="topbar__content">
+                <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menú de navegación">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <a href="{{ url_for('home') }}" class="topbar-logo">
+                    <span class="logo-icon" aria-hidden="true">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C7.581 2 4 5.436 4 9.772c0 5.176 6.332 11.393 7.305 12.302a1 1 0 0 0 1.39 0C13.668 21.165 20 14.948 20 9.772 20 5.436 16.419 2 12 2Zm0 17.306c-2.01-2.036-6-6.698-6-9.534C6 6.477 8.579 4 12 4s6 2.477 6 5.772c0 2.836-3.99 7.498-6 9.534Zm0-12.306a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 4a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" fill="currentColor"/>
+                        </svg>
+                    </span>
+                    <span class="logo-text">Sitios Históricos</span>
                 </a>
-            </div>
-        </div>
-    </div>
-
-    <div id="sidebar-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:999;"></div>
-    <div class="sidebar" id="sidebar">
-        {% set current_endpoint = (request.endpoint or '') %}
-        {% set current_path = (request.path or '') %}
-        <nav class="sidebar-nav">
-            <ul>
-                <li>
-                    <a {% if current_endpoint.startswith('public_sites.') or current_path.startswith(url_for('public_sites.show_public_sites')) %}class="active"{% endif %}
-                       href="{{ url_for('public_sites.show_public_sites') }}">
-                        Visualizar sitios históricos
-                    </a>
-                </li>
-                {% set role = session.get('user_role') %}
-                {% set can_manage_users = has_permission('user_index') %}
-                {% set can_manage_sites = has_permission('site_index') %}
-                {% set can_validate_proposals = has_permission('proposals_validate') %}
-                {% set can_moderate_reviews = has_permission('reviews_moderate') %}
-
-                {% if can_manage_sites %}
-                    <li>
-                        <a {% if current_endpoint.startswith('sites.') %}class="active"{% endif %}
-                           href="{{ url_for('sites.index') }}">
-                            Gestión de sitios históricos
+                <div class="user-dropdown">
+                    <button class="user-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+                        <span class="user-dropdown-label">Cuenta</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M3 4l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <div class="user-dropdown-menu" role="menu">
+                        <a href="{{ url_for('users.me') }}" role="menuitem">Ver perfil</a>
+                        <a href="{{ url_for('auth.logout') }}"
+                           class="dropdown-item"
+                           role="menuitem"
+                           onclick="return confirm('¿Estás seguro de cerrar sesión?');">
+                           Cerrar sesión
                         </a>
-                    </li>
-                {% endif %}
-                {% if can_validate_proposals %}
-                    <li>
-                        <a {% if current_endpoint == 'validacion_propuestas' %}class="active"{% endif %}
-                           href="{{ url_for('validacion_propuestas') }}">
-                            Validación de propuestas
-                        </a>
-                    </li>
-                {% endif %}
-                {% if can_moderate_reviews %}
-                    <li>
-                        <a {% if current_endpoint == 'moderacion_reseñas' or current_endpoint.startswith('reviews.') %}class="active"{% endif %}
-                           href="{{ url_for('moderacion_reseñas') }}">
-                            Moderación de reseñas
-                        </a>
-                    </li>
-                {% endif %}
-
-                {% if role in ['sysadmin', 'admin'] %}
-                    <li>
-                        <a {% if current_endpoint.startswith('tags.') %}class="active"{% endif %}
-                           href="{{ url_for('tags.index') }}">
-                            Gestión de etiquetas
-                        </a>
-                    </li>
-                {% endif %}
-                {% if can_manage_users %}
-                    <li>
-                        <a {% if current_endpoint.startswith('users.') %}class="active"{% endif %}
-                           href="{{ url_for('users.index') }}">
-                            Gestión de usuarios
-                        </a>
-                    </li>
-                {% endif %}
-                {% if role == 'sysadmin' %}
-                    <li>
-                        <a {% if current_endpoint == 'featureflags' %}class="active"{% endif %}
-                           href="{{ url_for('featureflags') }}">
-                            Feature Flags
-                        </a>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
-    </div>
-
-    <div class="main-content">
-        {% with messages = get_flashed_messages(with_categories=True) %}
-            {% if messages %}
-                <div class="flash-container">
-                    {% for category, message in messages %}
-                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
-                    {% endfor %}
+                    </div>
                 </div>
-            {% endif %}
-        {% endwith %}
+            </div>
+        </header>
 
-        {% block content %}
-        <div class="content-placeholder">
-            <h1>Bienvenido al Contenido Principal</h1>
-            <p>Aquí se cargará el contenido específico de cada módulo.</p>
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+        <div class="app-shell__body">
+            <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+                {% set current_endpoint = (request.endpoint or '') %}
+                {% set current_path = (request.path or '') %}
+                <nav class="sidebar-nav">
+                    <ul>
+                        <li>
+                            <a {% if current_endpoint.startswith('public_sites.') or current_path.startswith(url_for('public_sites.show_public_sites')) %}class="active"{% endif %}
+                               href="{{ url_for('public_sites.show_public_sites') }}">
+                                <span>Visualizar sitios históricos</span>
+                            </a>
+                        </li>
+                        {% set role = session.get('user_role') %}
+                        {% set can_manage_users = has_permission('user_index') %}
+                        {% set can_manage_sites = has_permission('site_index') %}
+                        {% set can_validate_proposals = has_permission('proposals_validate') %}
+                        {% set can_moderate_reviews = has_permission('reviews_moderate') %}
+
+                        {% if can_manage_sites %}
+                            <li>
+                                <a {% if current_endpoint.startswith('sites.') %}class="active"{% endif %}
+                                   href="{{ url_for('sites.index') }}">
+                                    <span>Gestión de sitios históricos</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if can_validate_proposals %}
+                            <li>
+                                <a {% if current_endpoint == 'validacion_propuestas' %}class="active"{% endif %}
+                                   href="{{ url_for('validacion_propuestas') }}">
+                                    <span>Validación de propuestas</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if can_moderate_reviews %}
+                            <li>
+                                <a {% if current_endpoint == 'moderacion_reseñas' or current_endpoint.startswith('reviews.') %}class="active"{% endif %}
+                                   href="{{ url_for('moderacion_reseñas') }}">
+                                    <span>Moderación de reseñas</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% if role in ['sysadmin', 'admin'] %}
+                            <li>
+                                <a {% if current_endpoint.startswith('tags.') %}class="active"{% endif %}
+                                   href="{{ url_for('tags.index') }}">
+                                    <span>Gestión de etiquetas</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if can_manage_users %}
+                            <li>
+                                <a {% if current_endpoint.startswith('users.') %}class="active"{% endif %}
+                                   href="{{ url_for('users.index') }}">
+                                    <span>Gestión de usuarios</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if role == 'sysadmin' %}
+                            <li>
+                                <a {% if current_endpoint == 'featureflags' %}class="active"{% endif %}
+                                   href="{{ url_for('featureflags') }}">
+                                    <span>Feature Flags</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </aside>
+
+            <main class="main-content">
+                <div class="content-inner">
+                    {% with messages = get_flashed_messages(with_categories=True) %}
+                        {% if messages %}
+                            <div class="flash-container">
+                                {% for category, message in messages %}
+                                    <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    {% block content %}
+                    <div class="content-placeholder">
+                        <h1>Bienvenido al Contenido Principal</h1>
+                        <p>Aquí se cargará el contenido específico de cada módulo.</p>
+                    </div>
+                    {% endblock %}
+                </div>
+            </main>
         </div>
-        {% endblock %}
     </div>
 
     <script>
         const menuToggle = document.getElementById('menu-toggle');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const userDropdownToggle = document.querySelector('.user-dropdown-toggle');
+        const userDropdownMenu = document.querySelector('.user-dropdown-menu');
 
         function setSidebarOpen(open) {
             if (open) {
@@ -142,11 +161,15 @@
             }
         }
 
-        menuToggle.addEventListener('click', () => {
-            setSidebarOpen(!document.body.classList.contains('sidebar-open'));
-        });
+        if (menuToggle) {
+            menuToggle.addEventListener('click', () => {
+                setSidebarOpen(!document.body.classList.contains('sidebar-open'));
+            });
+        }
 
-        sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
+        }
 
         document.querySelectorAll('.sidebar-nav a').forEach(link => {
             link.addEventListener('click', event => {
@@ -158,17 +181,33 @@
             });
         });
 
-        document.querySelector('.user-dropdown-toggle').addEventListener('click', function () {
-            this.nextElementSibling.style.display =
-                this.nextElementSibling.style.display === 'block' ? 'none' : 'block';
-        });
+        if (userDropdownToggle && userDropdownMenu) {
+            const dropdown = userDropdownToggle.closest('.user-dropdown');
+            userDropdownToggle.addEventListener('click', function () {
+                const expanded = this.getAttribute('aria-expanded') === 'true';
+                const nextState = !expanded;
+                this.setAttribute('aria-expanded', nextState ? 'true' : 'false');
+                if (dropdown) {
+                    dropdown.classList.toggle('is-open', nextState);
+                }
+            });
 
-        window.addEventListener('click', event => {
-            const dropdown = document.querySelector('.user-dropdown');
-            if (!dropdown.contains(event.target)) {
-                document.querySelector('.user-dropdown-menu').style.display = 'none';
-            }
-        });
+            window.addEventListener('click', event => {
+                if (dropdown && !dropdown.contains(event.target)) {
+                    dropdown.classList.remove('is-open');
+                    userDropdownToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            userDropdownMenu.querySelectorAll('a, button').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (dropdown) {
+                        dropdown.classList.remove('is-open');
+                    }
+                    userDropdownToggle.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
     </script>
     {% block extra_scripts %}{% endblock %}
 </body>

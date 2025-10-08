@@ -3,8 +3,14 @@
 {% block title %}Mi Perfil{% endblock %}
 
 {% block content %}
-<div class="perfilUsuario container">
-  <h1>Mi Perfil</h1>
+<section class="container content-stack perfilUsuario">
+  <header class="section-heading">
+    <span class="section-kicker">Cuenta personal</span>
+    <h1 class="page-title">Mi perfil</h1>
+    <p class="section-subtitle">
+      Datos asociados a tu cuenta dentro de la plataforma de Sitios Históricos.
+    </p>
+  </header>
 
   {% if user %}
     {% set role_labels = {
@@ -50,7 +56,9 @@
       </table>
     </div>
   {% else %}
-    <p>No se encontraron datos del usuario.</p>
+    <div class="empty-state">
+      <p>No se encontraron datos del usuario.</p>
+    </div>
   {% endif %}
-</div>
+</section>
 {% endblock %}
