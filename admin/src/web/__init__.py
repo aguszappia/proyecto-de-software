@@ -49,24 +49,6 @@ def create_app(env="development", static_folder="../../static"):
     def about():
         return render_template("about.html")
 
-    # bloqueo acceso desde acá hasta crear nuevo index de propuestas
-    @app.route('/validacion_propuestas')
-    @require_login
-    @require_permissions("proposals_validate")
-    def validacion_propuestas():
-        return render_template("validacionPropuestas.html")
-    
-    # bloqueo acceso desde acá hasta crear nuevo index de reseñas
-    @app.route('/moderacion_reseñas')
-    @require_login
-    @require_permissions("reviews_moderate")
-    def moderacion_reseñas():
-        return render_template("moderacionReseñas.html")
-    
-    @app.route('/login')
-    def login(): 
-        return render_template("login.html")
-    
     @app.route('/featureflags', methods=['GET', 'POST'])
     @require_login
     @require_roles("sysadmin")
