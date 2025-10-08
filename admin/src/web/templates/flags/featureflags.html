@@ -10,6 +10,82 @@
 
 {% if flags %}
   <div class="table-wrapper">
+    <style>
+      .flag-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .flag-modal {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 3000;
+      }
+      .flag-modal[hidden] {
+        display: none;
+      }
+      .flag-modal__dialog {
+        background: #fff;
+        border-radius: 16px;
+        width: min(480px, 90vw);
+        padding: 24px;
+        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.25);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .flag-modal__title {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+      .flag-modal textarea {
+        width: 100%;
+        min-height: 120px;
+        resize: vertical;
+      }
+      .flag-modal__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+      .flag-modal__close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: transparent;
+        color: var(--color-text, #0f172a);
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+      }
+      .flag-modal__close::before {
+        content: "×";
+        line-height: 1;
+      }
+      .flag-modal__close:hover {
+        background: rgba(226, 232, 240, 0.6);
+      }
+      .flag-modal__counter {
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+        text-align: right;
+      }
+      .flag-modal__error {
+        color: var(--color-danger, #ef4444);
+        font-size: 0.85rem;
+        min-height: 1.2em;
+      }
+    </style>
     <table class="data-table">
       <thead>
         <tr>
@@ -47,17 +123,31 @@
             <td class="actions actions--flag">
               <div class="flag-actions">
                 {% if flag.enabled %}
-                  <form method="post" action="{{ url_for('featureflags') }}">
+                  <form method="post"
+                        action="{{ url_for('featureflags') }}"
+                        class="flag-form flag-form--disable">
                     <input type="hidden" name="flag_key" value="{{ flag.key }}">
                     <input type="hidden" name="enabled" value="false">
-                    <button type="submit" class="secondary-button">Desactivar</button>
+                    <button type="button"
+                            class="secondary-button flag-disable-button"
+                            data-flag-name="{{ flag.name }}">
+                      Desactivar
+                    </button>
                   </form>
                 {% else %}
-                  <form method="post" action="{{ url_for('featureflags') }}">
+                  <form method="post"
+                        action="{{ url_for('featureflags') }}"
+                        class="flag-form flag-form--enable">
                     <input type="hidden" name="flag_key" value="{{ flag.key }}">
                     <input type="hidden" name="enabled" value="true">
-                    <input type="hidden" name="message" value="{{ default_message or '' }}">
-                    <button type="submit" class="primary-button">Activar</button>
+                    <input type="hidden" name="message" value="">
+                    <button type="button"
+                            class="primary-button flag-activate-button"
+                            data-flag-name="{{ flag.name }}"
+                            data-default-message="{{ default_message or '' }}"
+                            data-max-message="{{ max_message_length }}">
+                      Activar
+                    </button>
                   </form>
                 {% endif %}
               </div>
@@ -67,7 +157,188 @@
       </tbody>
     </table>
   </div>
+  <div id="flag-message-modal" class="flag-modal" hidden>
+    <div class="flag-modal__dialog" role="dialog" aria-modal="true">
+      <h2 class="flag-modal__title" data-modal-title>Activar modo mantenimiento</h2>
+      <p data-modal-description>Ingresá el mensaje que verán los usuarios al intentar acceder al panel de administración mientras el modo mantenimiento esté activo.</p>
+      <textarea maxlength="{{ max_message_length }}"></textarea>
+      <div class="flag-modal__counter" data-modal-counter>0/{{ max_message_length }}</div>
+      <div class="flag-modal__error" data-modal-error></div>
+      <div class="flag-modal__footer">
+        <button type="button" class="secondary-button" data-modal-cancel>Cancelar</button>
+        <button type="button" class="primary-button" data-modal-confirm>Confirmar</button>
+      </div>
+      <button type="button" class="flag-modal__close" data-modal-close aria-label="Cerrar"></button>
+    </div>
+  </div>
 {% else %}
   <p>No hay feature flags cargados.</p>
 {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ super() }}
+  <script>
+    (function() {
+      const modal = document.getElementById('flag-message-modal');
+      if (!modal) {
+        return;
+      }
+      const closeBtn = modal.querySelector('[data-modal-close]');
+      const cancelBtn = modal.querySelector('[data-modal-cancel]');
+      const confirmBtn = modal.querySelector('[data-modal-confirm]');
+      const textarea = modal.querySelector('textarea');
+      const counter = modal.querySelector('[data-modal-counter]');
+      const description = modal.querySelector('[data-modal-description]');
+      const errorBox = modal.querySelector('[data-modal-error]');
+      let maxLength = parseInt(textarea.getAttribute('maxlength') || '0', 10) || {{ max_message_length }};
+      let activeForm = null;
+      let flagName = '';
+      let modalMode = 'enable';
+
+      function updateCounter(value) {
+        if (!counter) return;
+        counter.textContent = `${value.length}/${maxLength}`;
+      }
+
+      function openModal(form, defaults) {
+        activeForm = form;
+        flagName = defaults.name;
+        modalMode = defaults.mode || 'enable';
+        maxLength = defaults.maxLength || maxLength;
+        textarea.value = defaults.message || '';
+        if (modalMode === 'disable') {
+          textarea.setAttribute('readonly', 'readonly');
+          textarea.style.display = 'none';
+          if (counter) {
+            counter.style.display = 'none';
+          }
+          if (description) {
+            description.textContent = `¿Querés desactivar ${flagName}? Los usuarios volverán a acceder normalmente.`;
+          }
+          confirmBtn.textContent = 'Desactivar';
+        } else {
+          textarea.removeAttribute('readonly');
+          textarea.style.display = 'block';
+          if (counter) {
+            counter.style.display = 'block';
+          }
+          textarea.setAttribute('maxlength', maxLength.toString());
+          if (description) {
+            description.textContent = 'Ingresá el mensaje que verán los usuarios al intentar acceder al panel de administración mientras el modo mantenimiento esté activo.';
+          }
+          confirmBtn.textContent = 'Activar';
+        }
+        updateCounter(textarea.value);
+        if (errorBox) {
+          errorBox.textContent = '';
+        }
+        modal.querySelector('[data-modal-title]').textContent =
+          (modalMode === 'disable' ? 'Desactivar ' : 'Activar ') + flagName;
+        modal.hidden = false;
+        modal.classList.add('is-open');
+        if (modalMode === 'disable') {
+          confirmBtn.focus();
+        } else {
+          textarea.focus();
+        }
+      }
+
+      function closeModal() {
+        modal.classList.remove('is-open');
+        modal.hidden = true;
+        activeForm = null;
+        flagName = '';
+      }
+
+      function handleConfirm() {
+        if (!activeForm) {
+          closeModal();
+          return;
+        }
+        let message = textarea.value.trim();
+        if (modalMode === 'enable') {
+          if (!message) {
+            if (errorBox) {
+              errorBox.textContent = 'Ingresá un mensaje para continuar.';
+            }
+            textarea.focus();
+            return;
+          }
+          if (message.length > maxLength) {
+            if (errorBox) {
+              errorBox.textContent = `El mensaje supera el máximo de ${maxLength} caracteres.`;
+            }
+            textarea.focus();
+            return;
+          }
+        } else {
+          message = '';
+        }
+        const formToSubmit = activeForm;
+        const messageInput = formToSubmit.querySelector('input[name="message"]');
+        if (messageInput) {
+          messageInput.value = message;
+        }
+        closeModal();
+        formToSubmit.submit();
+      }
+
+      const buttons = document.querySelectorAll('.flag-activate-button');
+      buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const form = button.closest('form');
+          if (!form) return;
+          openModal(form, {
+            message: button.dataset.defaultMessage || '',
+            maxLength: parseInt(button.dataset.maxMessage || '0', 10) || {{ max_message_length }},
+            name: button.dataset.flagName || 'la funcionalidad',
+            mode: 'enable',
+          });
+        });
+      });
+      const disableButtons = document.querySelectorAll('.flag-disable-button');
+      disableButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const form = button.closest('form');
+          if (!form) return;
+          openModal(form, {
+            message: '',
+            maxLength: maxLength,
+            name: button.dataset.flagName || 'la funcionalidad',
+            mode: 'disable',
+          });
+        });
+      });
+
+      textarea.addEventListener('input', (event) => {
+        const value = event.target.value;
+        updateCounter(value);
+        if (value.trim().length > 0 && value.length <= maxLength) {
+          if (errorBox) {
+            errorBox.textContent = '';
+          }
+        }
+      });
+
+      [closeBtn, cancelBtn].forEach((element) => {
+        if (element) {
+          element.addEventListener('click', () => closeModal());
+        }
+      });
+
+      confirmBtn.addEventListener('click', handleConfirm);
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closeModal();
+        }
+      });
+      modal.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeModal();
+        }
+      });
+    })();
+  </script>
 {% endblock %}

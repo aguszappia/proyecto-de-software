@@ -41,7 +41,13 @@
                         <a href="{{ url_for('auth.logout') }}"
                            class="dropdown-item"
                            role="menuitem"
-                           onclick="return confirm('¿Estás seguro de cerrar sesión?');">
+                           data-confirm-trigger
+                           data-confirm-mode="href"
+                           data-confirm-href="{{ url_for('auth.logout') }}"
+                           data-confirm-title="Cerrar sesión"
+                           data-confirm-message="¿Seguro que querés cerrar sesión? Perderás el acceso hasta volver a iniciar."
+                           data-confirm-accept="Salir"
+                           data-confirm-variant="danger">
                            Cerrar sesión
                         </a>
                     </div>
@@ -145,6 +151,17 @@
         </div>
     </div>
 
+    <div id="confirm-modal" class="confirm-modal" hidden>
+        <div class="confirm-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+            <h2 id="confirm-modal-title" data-confirm-title>Confirmar acción</h2>
+            <p data-confirm-message>¿Deseás continuar con esta operación?</p>
+            <div class="confirm-modal__actions">
+                <button type="button" class="secondary-button" data-confirm-cancel>Cancelar</button>
+                <button type="button" class="danger-button confirm-modal__accept" data-confirm-accept>Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const menuToggle = document.getElementById('menu-toggle');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -206,6 +223,115 @@
                     }
                     userDropdownToggle.setAttribute('aria-expanded', 'false');
                 });
+            });
+        }
+        const confirmModal = document.getElementById('confirm-modal');
+        if (confirmModal) {
+            const titleEl = confirmModal.querySelector('[data-confirm-title]');
+            const messageEl = confirmModal.querySelector('[data-confirm-message]');
+            const acceptBtn = confirmModal.querySelector('[data-confirm-accept]');
+            const cancelBtn = confirmModal.querySelector('[data-confirm-cancel]');
+            const triggers = document.querySelectorAll('[data-confirm-trigger]');
+            let onConfirm = null;
+            let lastFocusedElement = null;
+
+            function setAcceptVariant(variant) {
+                if (!acceptBtn) {
+                    return;
+                }
+                acceptBtn.classList.remove('primary-button', 'danger-button');
+                if (variant === 'primary') {
+                    acceptBtn.classList.add('primary-button');
+                } else {
+                    acceptBtn.classList.add('danger-button');
+                }
+            }
+
+            function openConfirmModal(config, trigger) {
+                lastFocusedElement = trigger;
+                if (titleEl) {
+                    titleEl.textContent = config.title || 'Confirmar acción';
+                }
+                if (messageEl) {
+                    messageEl.textContent = config.message || '¿Deseás continuar con esta operación?';
+                }
+                if (acceptBtn) {
+                    acceptBtn.textContent = config.acceptLabel || 'Confirmar';
+                    setAcceptVariant(config.variant);
+                }
+                onConfirm = config.onConfirm || null;
+                confirmModal.hidden = false;
+                confirmModal.classList.add('is-open');
+                acceptBtn.focus();
+            }
+
+            function closeConfirmModal() {
+                confirmModal.classList.remove('is-open');
+                confirmModal.hidden = true;
+                onConfirm = null;
+                if (lastFocusedElement) {
+                    lastFocusedElement.focus();
+                    lastFocusedElement = null;
+                }
+            }
+
+            triggers.forEach(trigger => {
+                trigger.addEventListener('click', event => {
+                    event.preventDefault();
+                    const mode = trigger.dataset.confirmMode || 'submit';
+                    const variant = trigger.dataset.confirmVariant || 'danger';
+                    const title = trigger.dataset.confirmTitle || null;
+                    const message = trigger.dataset.confirmMessage || null;
+                    const acceptLabel = trigger.dataset.confirmAccept || null;
+
+                    let action = null;
+                    if (mode === 'submit') {
+                        const form = trigger.closest('form');
+                        if (!form) {
+                            return;
+                        }
+                        action = () => form.submit();
+                    } else if (mode === 'href') {
+                        const url = trigger.dataset.confirmHref || trigger.getAttribute('href');
+                        if (!url) {
+                            return;
+                        }
+                        action = () => {
+                            window.location.href = url;
+                        };
+                    } else {
+                        return;
+                    }
+
+                    openConfirmModal({ title, message, acceptLabel, variant, onConfirm: action }, trigger);
+                });
+            });
+
+            if (acceptBtn) {
+                acceptBtn.addEventListener('click', () => {
+                    const action = onConfirm;
+                    closeConfirmModal();
+                    if (typeof action === 'function') {
+                        action();
+                    }
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => closeConfirmModal());
+            }
+
+            confirmModal.addEventListener('click', event => {
+                if (event.target === confirmModal) {
+                    closeConfirmModal();
+                }
+            });
+
+            confirmModal.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeConfirmModal();
+                }
             });
         }
     </script>

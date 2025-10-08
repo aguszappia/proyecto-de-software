@@ -312,6 +312,7 @@ def export_sites():
             "Fecha de registro",
             "Latitud",
             "Longitud",
+            "Tags",
         ]
     )
 
@@ -327,6 +328,8 @@ def export_sites():
         if getattr(site, "longitude", None) is not None:
             lon_value = f"{site.longitude:.6f}"
 
+        tag_names = ", ".join(sorted(tag.name for tag in getattr(site, "tags", []) if tag and tag.name)) or "-"
+
         writer.writerow(
             [
                 site.id,
@@ -338,6 +341,7 @@ def export_sites():
                 created_value,
                 lat_value,
                 lon_value,
+                tag_names,
             ]
         )
 
