@@ -30,7 +30,16 @@
             {% for tag_id in filters.tags %}
                 <input type="hidden" name="tags" value="{{ tag_id }}">
             {% endfor %}
-            <button type="submit" class="secondary-button">Exportar sitios</button>
+            <button type="button"
+                    class="secondary-button export-button"
+                    data-confirm-trigger
+                    data-confirm-mode="submit"
+                    data-confirm-title="Exportar sitios"
+                    data-confirm-message="¿Generar el archivo CSV con los sitios filtrados?"
+                    data-confirm-accept="Exportar"
+                    data-confirm-variant="primary">
+                Exportar sitios
+            </button>
         </form>
     {% endif %}
 </div>
@@ -154,9 +163,17 @@
                             {% if can_delete_site %}
                                 <form method="post"
                                       action="{{ url_for('sites.remove', site_id=site.id) }}"
-                                      class="inline-form"
-                                      onsubmit="return confirm('¿Seguro que querés eliminar este sitio histórico?');">
-                                    <button type="submit" class="danger-button">Eliminar</button>
+                                      class="inline-form">
+                                    <button type="button"
+                                            class="danger-button"
+                                            data-confirm-trigger
+                                            data-confirm-mode="submit"
+                                            data-confirm-title="Eliminar sitio histórico"
+                                            data-confirm-message="¿Seguro que querés eliminar este sitio histórico?"
+                                            data-confirm-accept="Eliminar"
+                                            data-confirm-variant="danger">
+                                        Eliminar
+                                    </button>
                                 </form>
                             {% endif %}
                         </td>
