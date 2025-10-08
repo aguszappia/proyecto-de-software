@@ -39,9 +39,9 @@
                     <div class="user-dropdown-menu" role="menu">
                         <a href="{{ url_for('users.me') }}" role="menuitem">Ver perfil</a>
                         <a href="{{ url_for('auth.logout') }}"
-                           class="dropdown-item"
+                           class="dropdown-item logout-trigger"
                            role="menuitem"
-                           onclick="return confirm('¿Estás seguro de cerrar sesión?');">
+                           data-logout-url="{{ url_for('auth.logout') }}">
                            Cerrar sesión
                         </a>
                     </div>
@@ -145,6 +145,17 @@
         </div>
     </div>
 
+    <div id="logout-modal" class="confirm-modal" hidden>
+        <div class="confirm-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="logout-modal-title">
+            <h2 id="logout-modal-title">Cerrar sesión</h2>
+            <p>¿Seguro que querés cerrar sesión? Perderás el acceso hasta volver a iniciar.</p>
+            <div class="confirm-modal__actions">
+                <button type="button" class="secondary-button" data-cancel>Cancelar</button>
+                <button type="button" class="danger-button" data-confirm>Salir</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const menuToggle = document.getElementById('menu-toggle');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -207,6 +218,67 @@
                     userDropdownToggle.setAttribute('aria-expanded', 'false');
                 });
             });
+        }
+        const logoutModal = document.getElementById('logout-modal');
+        if (logoutModal) {
+            const logoutTriggers = document.querySelectorAll('.logout-trigger');
+            const confirmButton = logoutModal.querySelector('[data-confirm]');
+            const cancelButton = logoutModal.querySelector('[data-cancel]');
+            if (!confirmButton || !cancelButton) {
+                console.warn('Logout modal is missing buttons.');
+            } else {
+                let pendingUrl = null;
+                let lastFocused = null;
+
+                function openLogoutModal(url, trigger) {
+                    pendingUrl = url;
+                    lastFocused = trigger;
+                    logoutModal.hidden = false;
+                    logoutModal.classList.add('is-open');
+                    confirmButton.focus();
+                }
+
+                function closeLogoutModal() {
+                    logoutModal.classList.remove('is-open');
+                    logoutModal.hidden = true;
+                    pendingUrl = null;
+                    if (lastFocused) {
+                        lastFocused.focus();
+                        lastFocused = null;
+                    }
+                }
+
+                logoutTriggers.forEach(trigger => {
+                    trigger.addEventListener('click', event => {
+                        event.preventDefault();
+                        const url = trigger.dataset.logoutUrl || trigger.getAttribute('href');
+                        if (!url) {
+                            return;
+                        }
+                        openLogoutModal(url, trigger);
+                    });
+                });
+
+                confirmButton.addEventListener('click', () => {
+                    const url = pendingUrl;
+                    closeLogoutModal();
+                    if (url) {
+                        window.location.href = url;
+                    }
+                });
+                cancelButton.addEventListener('click', closeLogoutModal);
+                logoutModal.addEventListener('click', event => {
+                    if (event.target === logoutModal) {
+                        closeLogoutModal();
+                    }
+                });
+                logoutModal.addEventListener('keydown', event => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        closeLogoutModal();
+                    }
+                });
+            }
         }
     </script>
     {% block extra_scripts %}{% endblock %}

@@ -7,13 +7,13 @@ class Config:
     # Flask-Session: almacena server-side (evitá client-side)
     SESSION_TYPE = "filesystem"
     SESSION_PERMANENT = True
-    PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=1)  # duración de la sesión
     SESSION_REFRESH_EACH_REQUEST = True  # extiende expiración con actividad
 
     # Cookies más seguras
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"      
-    SESSION_COOKIE_SECURE = False       
+    SESSION_COOKIE_SECURE = True
 
     # SQLAlchemy (Base de datos)
     SQLALCHEMY_ENGINE_OPTIONS = {
