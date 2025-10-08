@@ -228,7 +228,7 @@ def deactivate(user_id: int):
     try:
         # Llama al service que valida "no desactivar Admin"
         deactivate_user(user)
-        flash("Usuario desactivado correctamente.", "error")
+        flash("Usuario desactivado correctamente.", "success")
     except ValueError as e:
         flash(str(e), "error")
 

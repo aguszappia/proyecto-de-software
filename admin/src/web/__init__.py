@@ -98,7 +98,7 @@ def create_app(env="development", static_folder="../../static"):
                 )
                 flash(
                     f"{flag.name} {'activado' if enabled else 'desactivado'}.",
-                    "success" if enabled else "error",
+                    "success",
                 )
             except FeatureFlagError as exc:
                 flash(str(exc), "error")

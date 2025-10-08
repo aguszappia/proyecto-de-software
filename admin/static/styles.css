@@ -478,9 +478,9 @@ a {
 }
 
 .secondary-button:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: #b91c1c;
-  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(34, 197, 94, 0.18);
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.35);
 }
 
 .secondary-button:disabled,

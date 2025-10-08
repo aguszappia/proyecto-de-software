@@ -30,7 +30,16 @@
             {% for tag_id in filters.tags %}
                 <input type="hidden" name="tags" value="{{ tag_id }}">
             {% endfor %}
-            <button type="submit" class="secondary-button">Exportar sitios</button>
+            <button type="button"
+                    class="secondary-button export-button"
+                    data-confirm-trigger
+                    data-confirm-mode="submit"
+                    data-confirm-title="Exportar sitios"
+                    data-confirm-message="¿Generar el archivo CSV con los sitios filtrados?"
+                    data-confirm-accept="Exportar"
+                    data-confirm-variant="primary">
+                Exportar sitios
+            </button>
         </form>
     {% endif %}
 </div>
