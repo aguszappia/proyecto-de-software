@@ -535,12 +535,20 @@ a {
   display: inline-flex;
 }
 
+.action-item {
+  display: inline-flex;
+  width: auto;
+}
+
 .table-wrapper {
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-surface-strong);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
@@ -569,13 +577,106 @@ a {
   background: rgba(37, 99, 235, 0.08);
 }
 
-.actions {
+td.actions {
   display: flex;
   gap: 10px;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
   min-width: 220px;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.data-table th.actions {
+  text-align: center;
+  vertical-align: middle;
+  min-width: 220px;
+}
+
+@media (max-width: 640px) {
+  .actions-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .actions-cell .inline-form,
+  .actions-cell a {
+    width: 100%;
+    display: flex;
+  }
+
+  .actions-cell button,
+  .actions-cell .secondary-button,
+  .actions-cell .danger-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  td.actions {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  td.actions .inline-form,
+  td.actions .action-item {
+    width: 100%;
+    display: flex;
+  }
+
+  td.actions a,
+  td.actions button {
+    width: 100%;
+  }
+
+  td.actions .action-button,
+  td.actions .primary-button,
+  td.actions .secondary-button,
+  td.actions .danger-button {
+    min-width: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  td.actions.actions--flag {
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 28px 18px;
+    min-height: 140px;
+  }
+
+  td.actions.actions--flag .flag-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  td.actions.actions--flag form,
+  td.actions.actions--flag button,
+  td.actions.actions--flag .primary-button,
+  td.actions.actions--flag .secondary-button {
+    width: auto;
+    min-width: 0;
+  }
 }
 
 .status-badge {
@@ -608,6 +709,9 @@ a {
   background: var(--color-surface-strong);
   border: 1px solid var(--color-border);
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .filters-row {
@@ -632,6 +736,7 @@ a {
 
 .filter-group input,
 .filter-group select {
+  width: 100%;
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.5);
@@ -765,6 +870,14 @@ a {
   gap: 12px;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.form-actions .primary-button,
+.form-actions .secondary-button {
+  min-width: 180px;
+  min-height: 52px;
+  padding: 14px 18px;
+  justify-content: center;
 }
 
 .site-form__form {
@@ -905,6 +1018,27 @@ a {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .tag-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .tag-actions .inline-form,
+  .tag-actions a {
+    width: 100%;
+    display: flex;
+  }
+
+  .tag-actions button,
+  .tag-actions .secondary-button,
+  .tag-actions .danger-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .flag-updated {
@@ -1081,6 +1215,10 @@ a {
 }
 
 @media (max-width: 640px) {
+  .main-content {
+    padding: 24px 16px;
+  }
+
   .module-header {
     flex-direction: column;
     align-items: flex-start;
@@ -1097,6 +1235,19 @@ a {
   .actions-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .filters {
+    padding: 20px 18px;
+    border-radius: 20px;
+  }
+
+  .filters-row {
+    width: 100%;
+  }
+
+  .filter-group {
+    min-width: 0;
   }
 
   .primary-button,

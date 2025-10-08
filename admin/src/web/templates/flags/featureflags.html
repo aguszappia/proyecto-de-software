@@ -44,7 +44,7 @@
                 {{ 'ON' if flag.enabled else 'OFF' }}
               </span>
             </td>
-            <td class="actions">
+            <td class="actions actions--flag">
               <div class="flag-actions">
                 {% if flag.enabled %}
                   <form method="post" action="{{ url_for('featureflags') }}">
