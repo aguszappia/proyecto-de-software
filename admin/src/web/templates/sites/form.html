@@ -20,8 +20,18 @@
 {% endblock %}
 
 {% block content %}
-<h1>{{ 'Editar sitio histórico' if is_edit else 'Nuevo sitio histórico' }}</h1>
-<div class="site-form">
+<section class="container content-stack">
+  <header class="section-heading">
+    <span class="section-kicker">Gestión de sitios</span>
+    <h1 class="page-title">
+      {{ 'Editar sitio histórico' if is_edit else 'Nuevo sitio histórico' }}
+    </h1>
+    <p class="section-subtitle">
+      Completá la información clave y seleccioná la ubicación para mantener el registro actualizado.
+    </p>
+  </header>
+
+  <div class="site-form">
     <form method="post" class="site-form__form">
         <div class="form-grid">
             <div class="form-field">
@@ -112,12 +122,13 @@
 </div>
 {% set can_view_history = has_permission('site_history_view') %}
 {% if is_edit and site_id and can_view_history %}
-<div class="site-history-panel">
-    <h2>Historial de cambios</h2>
-    <p>Podés revisar todos los movimientos realizados sobre este sitio.</p>
-    <a class="secondary-button" href="{{ url_for('sites_history.view_history', site_id=site_id) }}">Ver historial completo</a>
-</div>
+  <div class="site-history-panel">
+      <h2>Historial de cambios</h2>
+      <p>Podés revisar todos los movimientos realizados sobre este sitio.</p>
+      <a class="secondary-button" href="{{ url_for('sites_history.view_history', site_id=site_id) }}">Ver historial completo</a>
+  </div>
 {% endif %}
+</section>
 {% endblock %}
 
 {% block extra_scripts %}

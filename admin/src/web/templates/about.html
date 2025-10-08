@@ -3,9 +3,32 @@
 {% block title %}About{% endblock %}
 
 {% block content %}
+<section class="container content-stack">
+  <header class="section-heading">
+    <span class="section-kicker">Acerca de la plataforma</span>
+    <h1 class="page-title">Construyendo el ecosistema de Sitios Históricos</h1>
+  </header>
 
-<h1>About</h1>
-<p>Esta es la página about.</p>
+  <div class="text-block">
+    <h2>Nuestra misión</h2>
+    <p>
+      Este panel administra la información crítica sobre los sitios históricos del país.
+      Buscamos preservar el patrimonio cultural, ofrecer herramientas de gestión modernas
+      y asegurar que cada dato llegue al público correcto.
+    </p>
+  </div>
 
-<a href="{{ url_for('home') }}">Volver a inicio</a>
+  <div class="text-block">
+    <h2>Equipo</h2>
+    <p>
+      El desarrollo está a cargo del <strong>Grupo 28</strong> en el marco del Trabajo Integrador 2025.
+      Aplicamos metodologías colaborativas, revisiones cruzadas y despliegues controlados
+      para garantizar calidad y continuidad operativa.
+    </p>
+  </div>
+
+  <footer>
+    <a class="primary-button" href="{{ url_for('home') }}">Volver al inicio</a>
+  </footer>
+</section>
 {% endblock %}

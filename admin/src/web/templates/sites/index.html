@@ -130,7 +130,7 @@
                     <th>Provincia</th>
                     <th>Estado</th>
                     <th>Visibilidad</th>
-                    <th style="text-align: center;">Acciones</th>
+                    <th class="actions">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -152,7 +152,10 @@
                                 <a class="secondary-button" href="{{ url_for('sites.edit', site_id=site.id) }}">Editar</a>
                             {% endif %}
                             {% if can_delete_site %}
-                                <form method="post" action="{{ url_for('sites.remove', site_id=site.id) }}" onsubmit="return confirm('¿Seguro que querés eliminar este sitio histórico?');" style="display:inline;">
+                                <form method="post"
+                                      action="{{ url_for('sites.remove', site_id=site.id) }}"
+                                      class="inline-form"
+                                      onsubmit="return confirm('¿Seguro que querés eliminar este sitio histórico?');">
                                     <button type="submit" class="danger-button">Eliminar</button>
                                 </form>
                             {% endif %}
