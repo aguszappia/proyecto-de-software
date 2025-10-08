@@ -101,12 +101,22 @@
             </select>
         </div>
         <div class="filter-group">
-            <label for="tags">Etiquetas</label>
-            <select id="tags" name="tags" multiple size="3">
-                {% for tag in tags %}
-                    <option value="{{ tag.id }}" {% if tag.id in filters.tags %}selected{% endif %}>{{ tag.name }}</option>
-                {% endfor %}
-            </select>
+            <label for="tags-input">Etiquetas</label>
+            <div class="tag-selector" data-all-tags='[{% for tag in tags %}{"id":{{ tag.id }},"name":"{{ tag.name|e }}"}{% if not loop.last %},{% endif %}{% endfor %}]'>
+                <input type="text" id="tags-input" class="tag-selector__input" placeholder="Escribí para filtrar etiquetas" autocomplete="off">
+                <div class="tag-selector__list" role="listbox"></div>
+                <div class="tag-selector__chips" data-selected-tags>
+                    {% for tag in tags %}
+                        {% if tag.id in filters.tags %}
+                            <span class="tag-chip" data-tag-id="{{ tag.id }}">
+                                <span>{{ tag.name }}</span>
+                                <button type="button" aria-label="Quitar {{ tag.name }}">×</button>
+                                <input type="hidden" name="tags" value="{{ tag.id }}">
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
 
@@ -124,7 +134,7 @@
         <button type="submit" class="primary-button">Buscar</button>
         <a class="secondary-button" href="{{ url_for('sites.index') }}">Limpiar</a>
     </div>
-  </form>
+</form>
 
 {% if pagination.items %}
     <p class="results-summary">
@@ -194,7 +204,7 @@
         {% endif %}
     </div>
 {% else %}
-    <p>Sin resultados</p>
+    <p class="empty-state-message">Sin resultados</p>
 {% endif %}
 
 <section class="deleted-sites-section">
@@ -210,4 +220,160 @@
     </div>
 </section>
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ super() }}
+  <script>
+    (function() {
+      const selector = document.querySelector('.tag-selector');
+      if (!selector) {
+        return;
+      }
+
+      const input = selector.querySelector('.tag-selector__input');
+      const list = selector.querySelector('.tag-selector__list');
+      const chipsContainer = selector.querySelector('[data-selected-tags]');
+
+      let allTags = [];
+      try {
+        allTags = JSON.parse(selector.dataset.allTags || '[]');
+      } catch (error) {
+        allTags = [];
+      }
+
+      const selectedIds = new Set();
+
+      function createChip(tag) {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.dataset.tagId = String(tag.id);
+
+        const label = document.createElement('span');
+        label.textContent = tag.name;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.setAttribute('aria-label', `Quitar ${tag.name}`);
+        removeBtn.textContent = '×';
+
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'tags';
+        hidden.value = tag.id;
+
+        removeBtn.addEventListener('click', () => {
+          selectedIds.delete(String(tag.id));
+          chip.remove();
+          renderOptions(input.value.trim());
+        });
+
+        chip.append(label, removeBtn, hidden);
+        chipsContainer.append(chip);
+      }
+
+      function addTag(tag) {
+        const id = String(tag.id);
+        if (selectedIds.has(id)) {
+          return;
+        }
+        selectedIds.add(id);
+        createChip(tag);
+        input.value = '';
+        hideOptions();
+      }
+
+      function renderOptions(filterText) {
+        list.innerHTML = '';
+        const text = filterText.toLowerCase();
+        const available = allTags.filter(tag => {
+          if (selectedIds.has(String(tag.id))) {
+            return false;
+          }
+          if (!text) {
+            return true;
+          }
+          return tag.name.toLowerCase().includes(text);
+        });
+
+        if (!available.length) {
+          const empty = document.createElement('div');
+          empty.className = 'tag-selector__option';
+          empty.textContent = text ? 'Sin coincidencias' : 'No hay etiquetas disponibles';
+          empty.setAttribute('aria-disabled', 'true');
+          list.append(empty);
+          list.classList.add('is-visible');
+          return;
+        }
+
+        available.forEach(tag => {
+          const option = document.createElement('div');
+          option.className = 'tag-selector__option';
+          option.setAttribute('role', 'option');
+          option.dataset.tagId = tag.id;
+          option.textContent = tag.name;
+
+          option.addEventListener('mousedown', event => {
+            event.preventDefault();
+            addTag(tag);
+          });
+
+          list.append(option);
+        });
+        list.classList.add('is-visible');
+      }
+
+      function hideOptions() {
+        list.classList.remove('is-visible');
+      }
+
+      function initSelected() {
+        const existing = Array.from(chipsContainer.querySelectorAll('.tag-chip input[type="hidden"][name="tags"]')).map(input => input.value);
+        chipsContainer.innerHTML = '';
+        selectedIds.clear();
+
+        existing.forEach(id => {
+          const tag = allTags.find(item => String(item.id) === String(id));
+          if (tag) {
+            addTag(tag);
+          }
+        });
+        hideOptions();
+      }
+
+      input.addEventListener('focus', () => {
+        renderOptions(input.value.trim());
+      });
+
+      input.addEventListener('input', () => {
+        renderOptions(input.value.trim());
+      });
+
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          const firstOption = list.querySelector('.tag-selector__option[role="option"]');
+          if (firstOption) {
+            const tag = allTags.find(item => String(item.id) === String(firstOption.dataset.tagId));
+            if (tag) {
+              addTag(tag);
+              input.value = '';
+            }
+          }
+          hideOptions();
+        } else if (event.key === 'Escape') {
+          hideOptions();
+          input.blur();
+        }
+      });
+
+      document.addEventListener('click', event => {
+        if (!selector.contains(event.target)) {
+          hideOptions();
+        }
+      });
+
+      initSelected();
+    })();
+  </script>
 {% endblock %}
