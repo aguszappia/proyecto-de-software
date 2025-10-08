@@ -179,7 +179,7 @@
   <div id="flag-message-modal" class="flag-modal" hidden>
     <div class="flag-modal__dialog" role="dialog" aria-modal="true">
       <h2 class="flag-modal__title" data-modal-title>Activar modo mantenimiento</h2>
-      <p data-modal-description>Ingresá el mensaje que verán los usuarios al intentar acceder al panel de administración mientras el modo mantenimiento esté activo.</p>
+      <p data-modal-description>Ingresá un mensaje para activar este flag.</p>
       <textarea maxlength="{{ max_message_length }}"></textarea>
       <div class="flag-modal__counter" data-modal-counter>0/{{ max_message_length }}</div>
       <div class="flag-modal__error" data-modal-error></div>
@@ -233,7 +233,7 @@
             counter.style.display = 'none';
           }
           if (description) {
-            description.textContent = `¿Querés desactivar ${flagName}? Los usuarios volverán a acceder normalmente.`;
+            description.textContent = `¿Querés desactivar ${flagName}?`;
           }
           confirmBtn.textContent = 'Desactivar';
         } else {
@@ -244,7 +244,7 @@
           }
           textarea.setAttribute('maxlength', maxLength.toString());
           if (description) {
-            description.textContent = 'Ingresá el mensaje que verán los usuarios al intentar acceder al panel de administración mientras el modo mantenimiento esté activo.';
+            description.textContent = 'Ingresá un mensaje para activar este flag.';
           }
           confirmBtn.textContent = 'Activar';
         }
