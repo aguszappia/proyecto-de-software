@@ -200,7 +200,10 @@ def create_app(env="development", static_folder="../../static"):
             if message:
                 flash(message, "warning")
             session[ADMIN_MAINTENANCE_SESSION_KEY] = message
-            if path != "/login":
+            # nuevo control: solo redirigir si NO estamos ya en login
+            if not path.startswith("/login"):
+                # Limpia la sesión pública para evitar que el login reenvíe al home
+                session.clear()
                 return redirect(url_for("auth.login", next=request.url))
         else:
             session.pop(ADMIN_MAINTENANCE_SESSION_KEY, None)
