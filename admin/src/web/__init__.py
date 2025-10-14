@@ -179,7 +179,6 @@ def create_app(env="development", static_folder="../../static"):
             or path == "/logout"
             or path.startswith("/static/")
             or path.startswith("/about")
-            or path.startswith("/sites/public")
         )
 
         if allowed:
