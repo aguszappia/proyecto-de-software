@@ -1,3 +1,5 @@
+"""Modelos de permisos y relaciones con roles."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -10,7 +12,7 @@ from src.core.users.models import Role, User
 
 
 class Permission(Base):
-    """Permiso granular identificado como modulo_accion."""
+    """Modelo base de un permiso."""
 
     __tablename__ = "permissions"
     __table_args__ = (UniqueConstraint("code", name="uq_permissions_code"),)
@@ -41,7 +43,7 @@ class Permission(Base):
 
 
 class RolePermission(Base):
-    """Relación entre roles y permisos asignados."""
+    """Registro la asignación de un permiso a un rol determinado."""
 
     __tablename__ = "role_permissions"
     __table_args__ = (UniqueConstraint("role_id", "permission_id", name="uq_role_permissions"),)

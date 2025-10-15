@@ -1,4 +1,4 @@
-"""Blueprint exclusivamente para ver el historial de un sitio."""
+"""Blueprint para revisar el historial de cada sitio."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ history_bp = Blueprint("sites_history", __name__, url_prefix="/sites")
 @require_login
 @require_permissions("site_history_view")
 def view_history(site_id: int):
-    """Muestra el historial de un sitio con filtros y paginación (25)"""
+    """Consulto el historial del sitio con filtros y lo paso al template."""
 
     args = request.args
     user_email = clean_str(args.get("user"))

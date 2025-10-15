@@ -1,3 +1,5 @@
+"""Servicios para registrar y consultar el historial de sitios."""
+
 from __future__ import annotations
 
 import json
@@ -19,7 +21,7 @@ ACTIONS: List[str] = [
 
 
 def record_event(site_id: int, user_id: Optional[int], action_type: str, details: Optional[str]):
-    """Registra historial para sitio"""
+    """Guardo el evento del sitio con los datos mínimos."""
 
     event = SiteHistory(
         site_id=site_id,
@@ -31,6 +33,7 @@ def record_event(site_id: int, user_id: Optional[int], action_type: str, details
     db.session.commit()
 
 
+"""Listo el historial del sitio aplicando filtros y paginación."""
 def list_history(
     site_id: int,
     user_email: Optional[str] = None,
@@ -40,7 +43,6 @@ def list_history(
     page: int = 1,
     per_page: int = 25,
 ) -> Pagination[dict]:
-    """Lista historial de sitio con filtros y paginación (25)"""
 
     query = db.session.query(SiteHistory).filter(SiteHistory.site_id == site_id)
 
@@ -104,7 +106,7 @@ def list_history(
 
 
 def list_deleted_sites() -> List[Dict[str, object]]:
-    """Devuelve los eventos de eliminación con la metadata asociada."""
+    """Recorro el historial y devuelvo solo las eliminaciones con metadata."""
 
     events = (
         db.session.query(SiteHistory)

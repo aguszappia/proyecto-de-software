@@ -1,7 +1,10 @@
+"""Configuraciones de entorno para la app Flask."""
+
 from os import environ
 from datetime import timedelta
 
 class Config:
+    """Defino la configuración base compartida por todos los entornos."""
     TESTING = False
     SECRET_KEY = "your_secret_key"
     # Flask-Session: almacena server-side (evitá client-side)
@@ -23,9 +26,11 @@ class Config:
     } 
 
 class ProductionConfig(Config):
+    """Apunto a la base productiva usando variables de entorno."""
     SQLALCHEMY_ENGINES = {"default": environ.get('DATABASE_URL')}
 
 class DevelopmentConfig(Config):
+    """Configuro la base local y claves de desarrollo."""
     SECRET_KEY = "your_development_secret_key"
 
     # variables de entorno para cada miembro
@@ -41,6 +46,7 @@ class DevelopmentConfig(Config):
     }
 
 class TestingConfig(Config):
+    """Ajusto la app para correr tests sin efectos secundarios."""
     TESTING = True
 
 config={
