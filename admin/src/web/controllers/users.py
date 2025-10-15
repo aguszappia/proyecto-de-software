@@ -1,3 +1,5 @@
+"""Blueprint de gestión de usuarios del panel."""
+
 from dataclasses import dataclass
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for, session
@@ -11,6 +13,7 @@ bp = Blueprint("users", __name__, url_prefix="/users")
 
 @dataclass
 class UserFilters:
+    """Agrupo los filtros de listado de usuarios."""
     email: str = ""
     role: str = ""
     active: str = ""
@@ -19,11 +22,12 @@ class UserFilters:
 
 
 def _ensure_admin_access():
-    """Lugar reservado para validar permisos reales."""
+    """Dejo un hook para validar permisos extra cuando haga falta."""
     return None
 
 
 def _extract_filters():
+    """Parseo los filtros desde la query string."""
     args = request.args
     try:
         page = int(args.get("page", 1))
@@ -39,6 +43,7 @@ def _extract_filters():
 
 
 def _parse_active_filter(value):
+    """Traduzco el filtro de actividad a booleano o None."""
     if value == "true":
         return True
     if value == "false":
@@ -47,6 +52,7 @@ def _parse_active_filter(value):
 
 
 def _form_payload():
+    """Armo el payload del formulario de creación o edición."""
     form = request.form
     is_active = form.get("is_active")
     return {
@@ -63,6 +69,7 @@ def _form_payload():
 @require_login
 @require_permissions("user_index")
 def index():
+    """Listo usuarios aplicando filtros y mostrando la paginación."""
     _ensure_admin_access()
     filters = _extract_filters()
     pagination = list_users(
@@ -85,6 +92,7 @@ def index():
 @require_login
 @require_permissions("user_new")
 def new():
+    """Renderizo el formulario vacío para crear un usuario."""
     _ensure_admin_access()
     return render_template(
         "users/form.html",
@@ -98,6 +106,7 @@ def new():
 @require_login
 @require_permissions("user_new")
 def create():
+    """Intento crear el usuario y muestro errores si falló la validación."""
     _ensure_admin_access()
     success, user, errors = create_user(_form_payload(), allowed_roles=get_allowed_roles_for_admin())
     if not success:
@@ -117,7 +126,7 @@ def create():
 @bp.get("/me")
 @require_login
 def me():
-    """Vista de perfil para el propio usuario autenticado."""
+    """Muestro los datos del usuario autenticado."""
 
     user = get_user(session.get("user_id"))
     if not user:
@@ -130,7 +139,7 @@ def me():
 @require_login
 @require_permissions("user_show")
 def show(user_id: int):
-    """Muestra información detallada del usuario."""
+    """Presento el detalle de un usuario específico."""
 
     _ensure_admin_access()
     user = get_user(user_id)
@@ -145,6 +154,7 @@ def show(user_id: int):
 @require_login
 @require_permissions("user_update")
 def edit(user_id: int):
+    """Cargo el formulario de edición con los datos actuales."""
     _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
@@ -163,6 +173,7 @@ def edit(user_id: int):
 @require_login
 @require_permissions("user_update")
 def update(user_id: int):
+    """Actualizo el usuario elegido y manejo validaciones de rol y estado."""
     _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
@@ -199,6 +210,7 @@ def update(user_id: int):
 @require_login
 @require_permissions("user_destroy")
 def destroy(user_id: int):
+    """Elimino al usuario si no es un rol protegido."""
     _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
@@ -216,6 +228,7 @@ def destroy(user_id: int):
 @require_login
 @require_permissions("user_update")
 def deactivate(user_id: int):
+    """Desactivo al usuario si no es un rol protegido."""
     _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
@@ -236,6 +249,7 @@ def deactivate(user_id: int):
 @require_login
 @require_permissions("user_update")
 def activate(user_id: int):
+    """Activo nuevamente al usuario elegido."""
     _ensure_admin_access()
     user = get_user(user_id)
     if user is None:

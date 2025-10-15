@@ -1,9 +1,11 @@
-"""Core user domain package."""
+"""Defino roles de usuarios y valores por defecto."""
 
 from enum import StrEnum
 
 
 class UserRole(StrEnum):
+    """Enum donde defino los roles posibles del sistema."""
+
     PUBLIC = "public"
     EDITOR = "editor"
     ADMIN = "admin"

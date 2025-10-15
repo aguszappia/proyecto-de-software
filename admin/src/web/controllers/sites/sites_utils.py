@@ -1,4 +1,4 @@
-"""Funciones y constantes compartidas por los blueprints sites_"""
+"""Funciones auxiliares para el manejo de sitios históricos."""
 
 from __future__ import annotations
 
@@ -36,13 +36,13 @@ PROVINCES: List[str] = [
 
 
 def clean_str(value: Optional[str]) -> str:
-    """Devuelve cadena sin espacios o devuelve vacía cuando es None"""
+    """Limpio la cadena devolviendo vacío si viene None."""
 
     return (value or "").strip()
 
 
 def safe_int(value: Optional[str]) -> Optional[int]:
-    """Convierte string a intger o retorna none si no es un entero correcto """
+    """Intento convertir el valor a int o devuelvo None si falla."""
 
     try:
         return int(value) if value not in (None, "") else None
@@ -51,7 +51,7 @@ def safe_int(value: Optional[str]) -> Optional[int]:
 
 
 def safe_float(value: Optional[str]) -> Optional[float]:
-    """Convierte a float o retorna None si no es hay número válido"""
+    """Intento convertir a float para coordenadas o devuelvo None."""
 
     try:
         return float(value) if value not in (None, "") else None
@@ -60,7 +60,7 @@ def safe_float(value: Optional[str]) -> Optional[float]:
 
 
 def parse_date(value: str, *, end_of_day: bool = False) -> Optional[datetime]:
-    """Convierte YYYY-MM-DD a datetime con zona utc """
+    """Transformo una fecha YYYY-MM-DD en datetime UTC."""
 
     if not value:
         return None
@@ -73,7 +73,7 @@ def parse_date(value: str, *, end_of_day: bool = False) -> Optional[datetime]:
 
 
 def parse_enum(value: str, enum_cls: Type) -> Optional[object]:
-    """busca la opción del enum cuando coincide su nombre o valor"""
+    """Busco la opción del enum que coincida con nombre o valor."""
 
     if not value:
         return None
@@ -84,7 +84,7 @@ def parse_enum(value: str, enum_cls: Type) -> Optional[object]:
 
 
 def parse_tag_ids(raw_values: List[str]) -> List[int]:
-    """cnvierte la lista de ids recibidos desde el form a enteros"""
+    """Convierto la lista de ids en enteros válidos."""
 
     result: List[int] = []
     for raw in raw_values:
@@ -96,7 +96,7 @@ def parse_tag_ids(raw_values: List[str]) -> List[int]:
 
 
 def empty_site_form() -> Dict[str, object]:
-    """Estructura para renderizar el formulario vacío."""
+    """Preparo la estructura vacía para renderizar el formulario."""
 
     return {
         "name": "",
@@ -115,7 +115,7 @@ def empty_site_form() -> Dict[str, object]:
 
 
 def build_site_payload(form) -> Tuple[Dict[str, object], Dict[str, object], List[str]]:
-    """Arma payload y valores del formulario (devolviendo errores si existen)"""
+    """Valido los datos del formulario y devuelvo payload, valores y errores."""
 
     values = {
         "name": clean_str(form.get("name")),

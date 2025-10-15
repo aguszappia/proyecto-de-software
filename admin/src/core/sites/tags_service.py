@@ -1,4 +1,4 @@
-"""Funciones para gestionar etiquetas de sitios históricos."""
+"""Gestiono las etiquetas asociadas a sitios históricos."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from src.core.pagination import Pagination
 
 
 def clean_tag_name(raw_name: str) -> str:
+    """Normalizo el nombre eliminando espacios extra."""
     if raw_name is None:
         return ""
 
@@ -30,6 +31,7 @@ def clean_tag_name(raw_name: str) -> str:
 
 
 def slugify(text: str) -> str:
+    """Genero el slug ASCII y en minúsculas para la etiqueta."""
     if text is None:
         return "tag"
 
@@ -60,7 +62,7 @@ def _validate_tag_payload(
     *,
     existing_id: Optional[int] = None,
 ) -> Tuple[bool, Dict[str, List[str]], str, str]:
-    """Valida nombre y slug de la etiqueta."""
+    """Valido nombre y slug controlando longitud y unicidad."""
 
     errors: Dict[str, List[str]] = {}
 
@@ -111,6 +113,7 @@ def _validate_tag_payload(
 
 
 def list_tags() -> List[Dict[str, Any]]:
+    """Devuelvo las etiquetas ordenadas."""
     tags = db.session.query(SiteTag).order_by(SiteTag.name.asc()).all()
     return [{"id": tag.id, "name": tag.name} for tag in tags]
 
@@ -123,6 +126,7 @@ def paginate_tags(
     order_by: str = "name",
     order_dir: str = "asc",
 ) -> Pagination:
+    """Armo la paginación de etiquetas con búsqueda y orden."""
     session = db.session
     query = session.query(SiteTag)
 
@@ -142,10 +146,12 @@ def paginate_tags(
 
 
 def get_tag(tag_id: int) -> Optional[SiteTag]:
+    """Busco la etiqueta por id usando la sesión actual."""
     return db.session.get(SiteTag, tag_id)
 
 
 def create_tag(name: str):
+    """Creo la etiqueta si pasa las validaciones y devuelvo el resultado."""
     is_valid, errors, clean_name, slug = _validate_tag_payload(name)
     if not is_valid:
         return False, None, errors
@@ -157,6 +163,7 @@ def create_tag(name: str):
 
 
 def update_tag(tag: SiteTag, name: str):
+    """Actualizo la etiqueta existente respetando unicidad y formato."""
     is_valid, errors, clean_name, slug = _validate_tag_payload(name, existing_id=tag.id)
     if not is_valid:
         return False, None, errors
@@ -169,6 +176,7 @@ def update_tag(tag: SiteTag, name: str):
 
 
 def delete_tag(tag: SiteTag):
+    """Intento borrar la etiqueta y aviso si tiene sitios asociados."""
     if tag.sites:
         return False, {"delete": ["No se puede eliminar una etiqueta con sitios asociados."]}
     db.session.delete(tag)

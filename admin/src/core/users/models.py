@@ -1,4 +1,4 @@
-"""User persistence models."""
+"""Modelos de persistencia para roles y usuarios."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from src.core.users import DEFAULT_USER_ROLE
 
 
 class Role(Base):
-    """Rol de usuario (public, editor, admin, sysadmin)."""
+    """Modelo base de un rol de usuario."""
 
     __tablename__ = "roles"
     __table_args__ = (UniqueConstraint("slug", name="uq_roles_slug"),)
@@ -42,7 +42,7 @@ class Role(Base):
 
 
 class User(Base):
-    """Represents an application user."""
+    """Modelo base de un usuario."""
 
     __tablename__ = "users"
     __table_args__ = (UniqueConstraint("email", name="uq_users_email"),)
@@ -68,15 +68,18 @@ class User(Base):
 
     @property
     def role(self) -> str:
+        """Devuelvo el slug del rol o el default si falta relación."""
         if self.role_rel:
             return self.role_rel.slug
         return DEFAULT_USER_ROLE.value
 
     @property
     def role_name(self) -> str:
+        """Expongo el nombre legible del rol o el default."""
         if self.role_rel:
             return self.role_rel.name
         return DEFAULT_USER_ROLE.value
 
     def __repr__(self) -> str:
+        """Representación legible del usuario."""
         return f"<User id={self.id} email={self.email} role={self.role}>"

@@ -1,4 +1,4 @@
-"""Blueprint para administrar etiquetas de sitios históricos."""
+"""Blueprint para administrar las etiquetas de sitios históricos."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ bp = Blueprint("tags", __name__, url_prefix="/tags")
 
 @dataclass
 class TagFilters:
+    """Agrupo los filtros del listado de etiquetas."""
     q: str = ""
     order_by: str = "name"
     order_dir: str = "asc"
@@ -31,6 +32,7 @@ class TagFilters:
 
 
 def _extract_filters() -> TagFilters:
+    """Parseo la query string y dejo filtros normalizados."""
     args = request.args
     try:
         page = int(args.get("page", 1))
@@ -54,6 +56,7 @@ def _extract_filters() -> TagFilters:
 @require_login
 @require_roles("editor", "admin", "sysadmin")
 def index():
+    """Listo las etiquetas con paginado y enlaces prev/next."""
     filters = _extract_filters()
     pagination: Pagination[SiteTag] = paginate_tags(
         page=filters.page,
@@ -91,6 +94,7 @@ def index():
 @require_login
 @require_roles("editor", "admin", "sysadmin")
 def new():
+    """Renderizo el formulario vacío para crear una etiqueta."""
     return render_template("tags/form.html", form_values={"name": ""}, errors={}, is_edit=False)
 
 
@@ -98,6 +102,7 @@ def new():
 @require_login
 @require_roles("editor", "admin", "sysadmin")
 def create():
+    """Intento crear la etiqueta y muestro errores si hay problemas."""
     name = (request.form.get("name") or "").strip()
     success, tag, errors = create_tag(name)
     if not success:
@@ -120,6 +125,7 @@ def create():
 @require_login
 @require_roles("editor", "admin", "sysadmin")
 def edit(tag_id: int):
+    """Cargo el formulario de edición con la etiqueta existente."""
     tag = get_tag(tag_id)
     if tag is None:
         flash("La etiqueta no existe.", "error")
@@ -139,6 +145,7 @@ def edit(tag_id: int):
 @require_login
 @require_roles("editor", "admin", "sysadmin")
 def update(tag_id: int):
+    """Actualizo la etiqueta elegida respetando validaciones."""
     tag = get_tag(tag_id)
     if tag is None:
         flash("La etiqueta no existe.", "error")
@@ -168,6 +175,7 @@ def update(tag_id: int):
 @require_login
 @require_roles("editor", "admin", "sysadmin")
 def destroy(tag_id: int):
+    """Elimino la etiqueta si no está asociada a sitios."""
     tag = get_tag(tag_id)
     if tag is None:
         flash("La etiqueta no existe.", "error")
