@@ -1,11 +1,11 @@
 from functools import wraps
 
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from src.core.database import db
-from src.core.users.models import User
 from src.core.security.passwords import verify_password
 from src.core.flags import service as flags_service
 from src.core.permissions import service as permissions_service
+from src.core.users import service as users_service
+from src.core.users.models import User
 from src.core.users import UserRole
 
 auth_bp = Blueprint("auth", __name__) 
@@ -72,7 +72,7 @@ def login_post():
     password = request.form.get("password") or ""
     next_url = request.args.get("next") or url_for("home")
 
-    user = db.session.query(User).filter(User.email.ilike(email)).first()
+    user = users_service.find_user_by_email(email)
 
     if not user:
         flash("Credenciales inválidas.", "error")
