@@ -40,7 +40,7 @@ bp = Blueprint("sites", __name__, url_prefix="/sites")
 @require_login
 @require_permissions("site_index")
 def index():
-    """Lista los sitios con filtros y paginación para el panel de gestion"""
+    """Armo el listado de sitios con filtros, paginado y enlaces de navegación."""
 
     args = request.args
     tag_ids = parse_tag_ids(args.getlist("tags"))
@@ -116,10 +116,7 @@ def index():
 @require_login
 @require_permissions("site_new")
 def create():
-    """Funcion para crear un nuevo sitio histórico
-        Si el HTTP es GET renderiza el template de formulario vacío
-        Si el HTTP es POST procesa el formulario y crea el sitio histórico
-    """
+    """Creo un sitio nuevo o muestro el formulario con errores."""
 
     if request.method == "POST":
         payload, form_values, errors = build_site_payload(request.form)
@@ -154,10 +151,7 @@ def create():
 @require_login
 @require_permissions("site_update")
 def edit(site_id: int):
-    """Edita un sitio histórico existente
-        Si el HTTP es GET renderiza el template de formulario vacío
-        Si el HTTP es POST procesa el formulario y crea el sitio histórico
-    """
+    """Actualizo un sitio existente ajustando historial según los cambios."""
 
     site = get_site(site_id)
     if not site: # control si no existe 
@@ -236,7 +230,7 @@ def edit(site_id: int):
 @require_login
 @require_permissions("site_destroy")
 def remove(site_id: int):
-    """Elimina un sitio histórico (solo para admin o sysadmin)"""
+    """Elimino el sitio y notifico según el resultado."""
 
     if delete_site(site_id, performed_by=session.get("user_id")):
         flash("Sitio histórico eliminado correctamente.", "success")
@@ -249,7 +243,7 @@ def remove(site_id: int):
 @require_login
 @require_permissions("site_index")
 def deleted_list():
-    """Muestra el historial de sitios eliminados."""
+    """Muestro el historial de sitios que fueron eliminados."""
 
     deleted_sites = list_deleted_sites()
     return render_template(
@@ -262,6 +256,7 @@ def deleted_list():
 @require_login
 @require_permissions("site_export")
 def export_sites():
+    """Genero el CSV con los sitios filtrados y lo envío como descarga."""
     args = request.args
     tag_ids = parse_tag_ids(args.getlist("tags"))
     visibility_raw = clean_str(args.get("is_visible")) or ""

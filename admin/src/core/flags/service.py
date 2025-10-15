@@ -12,23 +12,25 @@ MAX_MESSAGE_LENGTH = 150
 
 
 class FeatureFlagError(ValueError):
-    """Errores de validación/negocio para flags."""
+    """Uso esta excepción para avisar errores con flags."""
 
 
 def _session() -> Session:
+    """Obtengo la sesión actual para operar sobre los flags."""
     return db.session
 
 
 def get_flag(key: str) -> Optional[FeatureFlag]:
-    """Devuelve el flag por clave o None si no existe."""
+    """Busco un flag por clave y devuelvo None si no lo encuentro."""
     return _session().query(FeatureFlag).filter_by(key=key).one_or_none()
 
 
 def list_flags() -> list[FeatureFlag]:
-    """Lista todos los flags ordenados alfabéticamente."""
+    """Listo todos los flags ordenados alfabéticamente por clave."""
     return _session().query(FeatureFlag).order_by(FeatureFlag.key.asc()).all()
 
 def load_flags() -> dict[str, FeatureFlag]:
+    """Armo un diccionario clave-flag para cachearlo en memoria."""
     return {flag.key: flag for flag in list_flags()}
 
 def ensure_flag(
@@ -39,10 +41,7 @@ def ensure_flag(
     enabled: bool = False,
     message: str = "",
 ) -> FeatureFlag:
-    """
-    Garantiza que exista un flag con los datos base.
-    Si no existe lo crea sin disparar validaciones extra.
-    """
+    """Creo el flag si falta y devuelvo la instancia persistida."""
     session = _session()
     flag = session.query(FeatureFlag).filter_by(key=key).one_or_none()
     if flag:
@@ -67,12 +66,7 @@ def set_flag(
     message: str,
     user_id: Optional[int],
 ) -> FeatureFlag:
-    """
-    Actualiza estado + mensaje del flag y registra auditoría.
-
-    - Si enabled es True → el mensaje es obligatorio y <= MAX_MESSAGE_LENGTH.
-    - Si enabled es False → se limpia el mensaje (evita valores viejos).
-    """
+    """Actualizo estado, mensaje y auditoría del flag indicado."""
     session = _session()
     flag = session.query(FeatureFlag).filter_by(key=key).one_or_none()
     if flag is None:

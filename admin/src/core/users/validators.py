@@ -1,4 +1,4 @@
-"""Helpers de validación para usuarios."""
+"""Valido y normalizo los datos que recibo para usuarios."""
 
 import re
 
@@ -9,10 +9,12 @@ _EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _add_error(errors, field, message):
+    """Acumulo el mensaje de error en el campo indicado."""
     errors.setdefault(field, []).append(message)
 
 
 def _normalize_bool(value):
+    """Convierto distintos formatos a booleano estándar."""
     if value is None:
         return True
     if isinstance(value, bool):
@@ -26,6 +28,7 @@ def _normalize_bool(value):
 
 
 def _normalize_role(value, allowed_roles):
+    """Confirmo que el rol esté permitido y devuelvo su slug."""
     if value is None:
         return DEFAULT_USER_ROLE.value
     role_value = value.strip().lower()
@@ -35,6 +38,7 @@ def _normalize_role(value, allowed_roles):
 
 
 def validate_user_payload(payload, session, existing_user=None, require_password=True, allowed_roles=None):
+    """Valido campos del usuario."""
     errors = {}
     clean = {}
 

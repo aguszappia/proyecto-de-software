@@ -1,3 +1,5 @@
+"""Servicios para crear, asignar y listar permisos."""
+
 from __future__ import annotations
 
 from typing import Iterable, Sequence
@@ -9,10 +11,11 @@ from src.core.users.models import Role
 
 
 class PermissionError(Exception):
-    """Errores para operaciones de permisos."""
+    """Uso esta excepción para comunicar errores con permisos."""
 
 
 def list_permissions(*, module: str | None = None) -> Sequence[Permission]:
+    """Devuelvo los permisos filtrando por módulo si hace falta."""
     query = db.session.query(Permission)
     if module:
         query = query.filter(Permission.module == module)
@@ -20,6 +23,7 @@ def list_permissions(*, module: str | None = None) -> Sequence[Permission]:
 
 
 def ensure_permission(code: str, *, description: str | None = None) -> Permission:
+    """Creo el permiso si falta y normalizo módulo y acción."""
     module, _, action = code.partition("_")
     if not module or not action:
         raise PermissionError("El código de permiso debe seguir el formato modulo_accion.")
@@ -39,6 +43,7 @@ def ensure_permission(code: str, *, description: str | None = None) -> Permissio
 
 
 def assign_permission(role: UserRole | str | Role, permission_code: str, *, assigned_by_id: int | None = None) -> RolePermission:
+    """Asigno el permiso al rol evitando duplicados y guardo auditoría básica."""
     permission = db.session.query(Permission).filter_by(code=permission_code).one_or_none()
     if not permission:
         raise PermissionError(f"No existe el permiso «{permission_code}».")
@@ -59,6 +64,7 @@ def assign_permission(role: UserRole | str | Role, permission_code: str, *, assi
 
 
 def revoke_permission(role: UserRole | str | Role, permission_code: str) -> bool:
+    """Quito el permiso del rol y devuelvo True si existía."""
     permission = db.session.query(Permission).filter_by(code=permission_code).one_or_none()
     if not permission:
         raise PermissionError(f"No existe el permiso «{permission_code}».")
@@ -76,6 +82,7 @@ def revoke_permission(role: UserRole | str | Role, permission_code: str) -> bool
 
 
 def list_role_permissions(role: UserRole | str | Role) -> Sequence[Permission]:
+    """Obtengo la lista de permisos asociados al rol dado."""
     role_obj = _resolve_role(role)
     query = (
         db.session.query(Permission)
@@ -87,11 +94,13 @@ def list_role_permissions(role: UserRole | str | Role) -> Sequence[Permission]:
 
 
 def bulk_assign(role: UserRole | str | Role, permission_codes: Iterable[str], *, assigned_by_id: int | None = None) -> None:
+    """Recorro los códigos recibidos y los asigno en lote al rol."""
     for code in permission_codes:
         assign_permission(role, code, assigned_by_id=assigned_by_id)
 
 
 def _resolve_role(role: UserRole | str | Role) -> Role:
+    """Resuelvo el objeto Role a partir del slug o enum recibido."""
     if isinstance(role, Role):
         return role
     slug = role.value if isinstance(role, UserRole) else str(role)

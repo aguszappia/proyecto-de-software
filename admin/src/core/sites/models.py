@@ -1,3 +1,5 @@
+"""Modelos y enums para sitios históricos y sus etiquetas."""
+
 from src.core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import DateTime, String, UniqueConstraint, Table, Column, Integer, ForeignKey
@@ -9,7 +11,7 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 
 class SiteHistory(Base):
-    """Tabla para historial de cambios"""
+    """Modelo base para un sitio Historico."""
 
     __tablename__ = "site_history"
 
@@ -23,6 +25,7 @@ class SiteHistory(Base):
     )
 
     def to_dict(self) -> dict:
+        """Devuelvo el evento listo para serializar en JSON."""
         return {
             "id": self.id,
             "site_id": self.site_id,
@@ -41,18 +44,22 @@ site_tag_association = Table(
 )
 
 class ConservationStatus(str, Enum):
+    """Defino los posibles estados de conservación de un sitio."""
+
     GOOD = "Bueno"
     REGULAR = "Regular" 
     BAD = "Malo"
 
 class SiteCategory(str, Enum):
+    """Enumero las categorías de sitios históricos disponibles."""
+
     ARCHITECTURE = "Arquitectura"
     INFRASTRUCTURE = "Infraestructura"
     ARCHAEOLOGICAL = "Sitio arqueológico"
     OTRO = "Otro" 
 
 class Historic_Site(Base):
-    """Represents an historic site"""
+    """Modelo base de un sitio histórico."""
 
     __tablename__ = "historic_sites"
     __table_args__ = (UniqueConstraint("name", name="uq_historic_sites_name"),)
@@ -84,6 +91,7 @@ class Historic_Site(Base):
     tags = relationship("SiteTag", secondary=site_tag_association, back_populates="sites") # type: ignore
 
     def to_dict(self) -> dict:
+        """Armo un dict con los datos del sitio listo para APIs."""
         return {
             "id": self.id,
             "name": self.name,
@@ -105,7 +113,7 @@ class Historic_Site(Base):
     # Inversion entre latitud longitud con postgis
     @property
     def latitude(self) -> float:
-        """Returns the latitude of the location."""
+        """Expongo la latitud calculada desde la geometría."""
         if self.location:
             point = to_shape(self.location)
             return point.y # latitude
@@ -113,7 +121,7 @@ class Historic_Site(Base):
 
     @property
     def longitude(self) -> float:
-        """Returns the longitude of the location."""
+        """Expongo la longitud calculada desde la geometría."""
         if self.location:
             point = to_shape(self.location)
             return point.x # longitud
@@ -121,6 +129,8 @@ class Historic_Site(Base):
 
 # Modelo para etiquetas
 class SiteTag(Base):
+    """Modelo base para una etiqueta de sitio histórico."""
+
     __tablename__ = "site_tags"
     __table_args__ = (
         UniqueConstraint("slug", name="uq_site_tags_slug"),

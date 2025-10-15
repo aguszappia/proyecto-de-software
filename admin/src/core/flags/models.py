@@ -1,3 +1,5 @@
+"""Modelos para manejar los feature flags de la app."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -10,7 +12,7 @@ from src.core.users.models import User
 
 
 class FeatureFlag(Base):
-    """Feature flag configurable desde la administración."""
+    """Modelo base de un featureFlag."""
 
     __tablename__ = "feature_flags"
     __table_args__ = (UniqueConstraint("key", name="uq_feature_flags_key"),)

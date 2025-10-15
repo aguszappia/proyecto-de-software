@@ -1,4 +1,4 @@
-"""Funciones sencillas para manejar usuarios."""
+"""Servicios CRUD simples para usuarios y roles."""
 
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import joinedload
@@ -12,6 +12,7 @@ from src.core.users.validators import validate_user_payload
 
 
 def list_users(page=1, per_page=25, search_email=None, active=None, role=None, order="-created_at"):
+    """Armo la consulta paginada con filtros de email, estado y rol."""
     session = db.session
     query = session.query(User).options(joinedload(User.role_rel))
 
@@ -35,11 +36,21 @@ def list_users(page=1, per_page=25, search_email=None, active=None, role=None, o
     return Pagination(items, total, page, per_page)
 
 
+def find_user_by_email(email: str) -> User | None:
+    """Busco el usuario por email sin importar mayúsculas."""
+    if not email:
+        return None
+    clean_email = email.strip().lower()
+    return db.session.query(User).filter(User.email.ilike(clean_email)).first()
+
+
 def get_user(user_id):
+    """Recupero el usuario por id desde la base."""
     return db.session.get(User, user_id)
 
 
 def create_user(payload, allowed_roles=None):
+    """Valido el payload, hasheo la contraseña y creo el usuario."""
     session = db.session
     is_valid, errors, data = validate_user_payload(payload, session, allowed_roles=allowed_roles)
     if not is_valid:
@@ -58,6 +69,7 @@ def create_user(payload, allowed_roles=None):
 
 
 def update_user(user, payload, allowed_roles=None):
+    """Actualizo datos del usuario respetando validaciones de rol y estado."""
     session = db.session
     is_valid, errors, data = validate_user_payload(
         payload,
@@ -94,8 +106,7 @@ def update_user(user, payload, allowed_roles=None):
 
 
 def delete_user(user) -> bool:
-    """ Elimina un usuario, excepto si tiene rol Administrador o System Admin.
-    Devuelve True si se eliminó, False si no se pudo eliminar """
+    """Borro al usuario salvo que sea admin o sysadmin."""
     if user.role in {UserRole.ADMIN.value, UserRole.SYSADMIN.value}:
         return False
     session = db.session
@@ -104,9 +115,7 @@ def delete_user(user) -> bool:
     return True
 
 def deactivate_user(user):
-    """
-    Desactiva (bloquea) un usuario, excepto si tiene rol Administrador.
-    """
+    """Desactivo al usuario salvo que sea admin o sysadmin."""
     if user.role in {UserRole.ADMIN.value, UserRole.SYSADMIN.value}:
         raise ValueError("No se puede desactivar a un usuario con rol Administrador o System Admin.")
     user.is_active = False
@@ -116,24 +125,24 @@ def deactivate_user(user):
 
 
 def activate_user(user):
-    """
-    Activa (desbloquea) un usuario.
-    """
+    """Activo nuevamente al usuario elegido."""
     user.is_active = True
     db.session.add(user)
     db.session.commit()
     return user
 
 def get_allowed_roles_for_admin():
+    """Expongo los roles que puede asignar un admin."""
     return (UserRole.PUBLIC, UserRole.EDITOR, UserRole.ADMIN)
 
 
 def _get_role_by_slug(session, slug):
+    """Resuelvo el rol por slug dentro de la sesión dada."""
     return session.query(Role).filter(Role.slug == slug).one_or_none()
 
 
 def ensure_role(slug: str, name: str) -> Role:
-    """Crea el rol si no existe y devuelve la instancia."""
+    """Creo el rol si falta o actualizo el nombre guardado."""
     session = db.session
     role = session.query(Role).filter(Role.slug == slug).one_or_none()
     if role:
@@ -150,22 +159,10 @@ def ensure_role(slug: str, name: str) -> Role:
 
 
 def get_role_by_slug(slug: str) -> Role | None:
+    """Busco el rol por slug usando la sesión global."""
     return db.session.query(Role).filter(Role.slug == slug).one_or_none()
 
 
 def list_roles():
+    """Devuelvo todos los roles ordenados por slug."""
     return db.session.query(Role).order_by(Role.slug).all()
-
-
-#Funcion para crear en seeds / no lo usamos mas
-"""
-def create_userSeed(**kgwargs):
-    password = kgwargs.pop("password_hash", None)
-    if not password:
-        raise ValueError("Falta 'password' en create_userSeed")
-    user = User(**kgwargs, password_hash=hash_password(password))
-    db.session.add(user)
-    db.session.commit() 
-
-    return user
-"""

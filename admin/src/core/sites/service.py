@@ -1,3 +1,5 @@
+"""Servicios CRUD y búsquedas para sitios históricos."""
+
 import json
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
@@ -10,10 +12,12 @@ from src.core.sites.history_service import record_event
 from src.core.database import db
 
 def list_sites():
+    """Devuelvo todos los sitios convertidos a diccionarios."""
     sites = db.session.query(Historic_Site).all()
     return [site.to_dict() for site in sites]
 
 def create_site(**kwargs):
+    """Creo un sitio con su ubicación y registro el evento de creación."""
     performed_by = kwargs.pop("performed_by", None)
     name = kwargs.get("name")
     short_description = kwargs.get("short_description")
@@ -53,6 +57,7 @@ def create_site(**kwargs):
 
 
 def get_site(site_id):
+    """Traigo un sitio por id y agrego los ids de tags."""
     site = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
     if not site:
         return None
@@ -62,6 +67,7 @@ def get_site(site_id):
 
 
 def update_site(site_id, **kwargs):
+    """Actualizo los campos permitidos y registro el evento correspondiente."""
     site = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
     if not site:
         return None
@@ -106,6 +112,7 @@ def update_site(site_id, **kwargs):
 
 
 def delete_site(site_id, performed_by: Optional[int] = None):
+    """Borro el sitio y guardo en historial la metadata de la eliminación."""
     site = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
     if not site:
         return False
@@ -153,6 +160,7 @@ def search_sites(
     page: int = 1,
     per_page: int = 25,
 ) -> Pagination:
+    """Armo el query con filtros, pagino y devuelvo un Pagination de dicts."""
     session = db.session
     query = session.query(Historic_Site)
 
@@ -226,6 +234,7 @@ def fetch_sites_for_export(
     sort_by: str = "created_at",
     sort_dir: str = "desc",
 ) -> List[Historic_Site]:
+    """Obtengo los sitios filtrados listos para exportar a CSV."""
     query = db.session.query(Historic_Site)
 
     if tag_ids:

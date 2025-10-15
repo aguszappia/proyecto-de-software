@@ -1,3 +1,5 @@
+"""Cargo datos iniciales de roles, permisos, usuarios, sitios y flags."""
+
 from src.core.users import UserRole
 from src.core.users import service as user_service
 from src.core.sites import service as sites_service
@@ -5,6 +7,9 @@ from src.core.flags import service as flags_service
 from src.core.permissions import service as permissions_service
 
 def run():
+    """Ejecuto todas las seeds y voy mostrando qué pasó en cada paso."""
+
+    # Seeds de roles y permisos
     default_roles = [
         (UserRole.PUBLIC.value, "Usuario público"),
         (UserRole.EDITOR.value, "Editor"),
@@ -48,6 +53,7 @@ def run():
 
     print(f"Seeds de permisos cargada")
 
+    # Seeds de usuarios iniciales
     users = [
         {
             "email":"user1@example.com",
@@ -138,10 +144,10 @@ def run():
             "is_visible": False,
         },
     ]
-    # evitar duplicados si ya existe el nombre
+
     existing_names = {site.get("name") for site in sites_service.list_sites()} if hasattr(sites_service, "list_sites") else set()
 
-    # payload desmpaqueta el dict payload
+    
     for site in historic_sites:
         name = site.get("name")
         if name in existing_names:

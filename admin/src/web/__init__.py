@@ -1,3 +1,5 @@
+"""Construyo y configuro la aplicación Flask del panel."""
+
 from flask import Flask, request, url_for, redirect, session, g
 from flask import render_template, flash
 from flask_session import Session
@@ -30,6 +32,7 @@ ADMIN_MAINTENANCE_FLAG_KEY = "admin_maintenance_mode"
 ADMIN_MAINTENANCE_SESSION_KEY = "admin_maintenance_message"
 
 def create_app(env="development", static_folder="../../static"):
+    """Armo la app con configuración, blueprints, seeds y middlewares."""
     app = Flask(__name__, static_folder=static_folder)
     app.config.from_object(config[env])
 
@@ -38,21 +41,23 @@ def create_app(env="development", static_folder="../../static"):
 
     @app.route("/")
     def home():
-    # Si el usuario ya inició sesión → va a home
+        # Si el usuario ya inició sesión → va a home
         if session.get("user_id"):
             return render_template("home.html")
-    # Si no tiene sesión → va al login
+        # Si no tiene sesión → va al login
         return redirect(url_for("auth.login"))
 
     @app.route('/about')
     @require_login
     def about():
+        """Muestro la página informativa solo para usuarios logueados."""
         return render_template("about.html")
 
     @app.route('/featureflags', methods=['GET', 'POST'])
     @require_login
     @require_roles("sysadmin")
     def featureflags():
+        """Permito a sysadmin ver y modificar los feature flags."""
         if request.method == "POST":
             key = request.form.get("flag_key")
             enabled = request.form.get("enabled") == "true"
@@ -110,10 +115,12 @@ def create_app(env="development", static_folder="../../static"):
     # Register commands
     @app.cli.command("reset-db")
     def reset_db():
+        """Reinicio la base usando los modelos actuales."""
         database.reset_db(app)
 
     @app.cli.command("seed-db")
     def seed_db():
+        """Ejecuto las seeds registradas para poblar datos."""
         seeds.run()
 
     with app.app_context():
@@ -133,6 +140,7 @@ def create_app(env="development", static_folder="../../static"):
 
     @app.before_request
     def load_user_permissions():
+        """Cargo los permisos del usuario en sesión antes de cada request."""
         user_id = session.get("user_id")
         perms = session.get("permissions")
         if user_id and perms is None:
@@ -146,6 +154,7 @@ def create_app(env="development", static_folder="../../static"):
 
     @app.context_processor
     def inject_admin_maintenance_message():
+        """Inyecto en templates el estado del flag de mantenimiento."""
         flag = flags_service.get_flag(ADMIN_MAINTENANCE_FLAG_KEY)
         enabled = bool(flag and flag.enabled)
         message = ""
@@ -158,6 +167,7 @@ def create_app(env="development", static_folder="../../static"):
 
     @app.context_processor
     def inject_permission_helpers():
+        """Expongo helpers en templates para consultar permisos."""
         permissions = getattr(g, "permissions", set())
 
         def has_permission(code: str) -> bool:
@@ -171,6 +181,7 @@ def create_app(env="development", static_folder="../../static"):
     # Middleware para proteger rutas privadas
     @app.before_request
     def protect_private_area():
+        """Bloqueo rutas privadas y aplico el modo mantenimiento."""
         path = request.path or ""
 
         # Rutas públicas (no piden login)
@@ -178,8 +189,6 @@ def create_app(env="development", static_folder="../../static"):
             path == "/login"
             or path == "/logout"
             or path.startswith("/static/")
-            or path.startswith("/about")
-            or path.startswith("/sites/public")
         )
 
         if allowed:
@@ -211,6 +220,7 @@ def create_app(env="development", static_folder="../../static"):
     # Middleware para evitar cache en páginas privadas
     @app.after_request
     def add_no_cache_headers(response):
+        """Agrego headers para evitar cachear vistas privadas."""
         try:
             # Solo si HAY sesión, solo en GET, y solo en 200 OK (no en redirects)
             if session.get("user_id") and request.method == "GET" and response.status_code == 200:

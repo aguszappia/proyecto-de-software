@@ -1,6 +1,6 @@
-from __future__ import annotations
+"""Blueprint público para mostrar los sitios visibles."""
 
-"""Blueprint público para mostrar sitios visibles en el portal."""
+from __future__ import annotations
 
 from flask import Blueprint, render_template
 
@@ -11,7 +11,7 @@ public_bp = Blueprint("public_sites", __name__, url_prefix="/sites")
 
 @public_bp.get("/public")
 def show_public_sites():
-    """Muestra los sitios marcados como visibles"""
+    """Filtro los sitios visibles y los muestro en la vista pública."""
 
     visible_sites = [site for site in list_sites() if site.get("is_visible")]
     for site in visible_sites:

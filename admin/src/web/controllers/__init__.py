@@ -1,5 +1,3 @@
-"""Application controllers registration."""
-
 from __future__ import annotations
 
 from flask import Flask
@@ -10,7 +8,7 @@ from . import users, tags_admin
 
 
 def register_controllers(app: Flask) -> None:
-    """Register application blueprints."""
+    """Adjunto los blueprints principales a la app recibida."""
     app.register_blueprint(users.bp)
     app.register_blueprint(sites_admin.bp)
     app.register_blueprint(sites_public.public_bp)
