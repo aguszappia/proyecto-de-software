@@ -35,6 +35,14 @@ def list_users(page=1, per_page=25, search_email=None, active=None, role=None, o
     return Pagination(items, total, page, per_page)
 
 
+def find_user_by_email(email: str) -> User | None:
+    """Devuelve el usuario cuyo email coincide (insensible a mayúsculas)."""
+    if not email:
+        return None
+    clean_email = email.strip().lower()
+    return db.session.query(User).filter(User.email.ilike(clean_email)).first()
+
+
 def get_user(user_id):
     return db.session.get(User, user_id)
 
