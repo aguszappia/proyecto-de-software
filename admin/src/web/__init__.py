@@ -12,6 +12,7 @@ from src.web.controllers.validation import  validation_bp
 from src.web.controllers.reviews import  reviews_bp
 
 from src.core import seeds
+from src.web.storage import storage
 
 from src.web.controllers.auth import require_login, require_roles, require_permissions
 
@@ -38,6 +39,7 @@ def create_app(env="development", static_folder="../../static"):
 
     # Inicializar base de datos
     database.init_db(app)
+    storage.init_app(app)
 
     @app.route("/")
     def home():
