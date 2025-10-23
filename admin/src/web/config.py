@@ -43,7 +43,7 @@ class DevelopmentConfig(Config):
     MINIO_ACCESS_KEY = "AsOGiJwynq9UDIrN7tf5"
     MINIO_SECRET_KEY = "Fy2p6U0THpWi27s9fy6ypH7RP1jSWRd4hFaarmPt"
     MINIO_SECURE = False
-    MINIO_BUCKER = "grupo28"
+    MINIO_BUCKET = "grupo28"
 
     # variables de entorno para cada miembro
     DB_USER = environ.get('DB_USER', 'postgres')
