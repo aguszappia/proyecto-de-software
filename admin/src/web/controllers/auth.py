@@ -23,23 +23,6 @@ def require_login(view):
         return view(*args, **kwargs)
     return wrapped
 
-def require_roles(*roles):
-    """Permito la vista solo a ciertos roles (con sysadmin libre)."""
-    def decorator(view):
-        @wraps(view)
-        def wrapped(*args, **kwargs):
-            if not session.get("user_id"):
-                return redirect(url_for("auth.login", next=request.url))
-            if session.get("user_role") == UserRole.SYSADMIN.value:
-                return view(*args, **kwargs)
-            if session.get("user_role") not in roles:
-                # flash de falta de permisos y redirige a la pagina anterior o al home si no hay referrer
-                flash("No tenés permisos para acceder a esa sección.", "error")
-                return redirect(request.referrer or url_for("home"))
-            return view(*args, **kwargs)
-        return wrapped
-    return decorator
-
 def require_permissions(*required):
     """Valido que el usuario tenga todos los permisos pedidos."""
     def decorator(view):

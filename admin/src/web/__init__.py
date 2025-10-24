@@ -14,7 +14,7 @@ from src.web.controllers.reviews import  reviews_bp
 from src.core import seeds
 from src.web.storage import storage
 
-from src.web.controllers.auth import require_login, require_roles, require_permissions
+from src.web.controllers.auth import require_login, require_permissions
 
 from src.core.flags import service as flags_service
 from src.core.flags.service import FeatureFlagError
@@ -57,7 +57,7 @@ def create_app(env="development", static_folder="../../static"):
 
     @app.route('/featureflags', methods=['GET', 'POST'])
     @require_login
-    @require_roles("sysadmin")
+    @require_permissions('featureflags_manage')
     def featureflags():
         """Permito a sysadmin ver y modificar los feature flags."""
         if request.method == "POST":

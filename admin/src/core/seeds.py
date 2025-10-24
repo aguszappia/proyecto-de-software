@@ -33,6 +33,12 @@ def run():
         {"code": "site_history_view", "description": "Ver historial de sitios", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
         {"code": "proposals_validate", "description": "Validar propuestas ciudadanas", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
         {"code": "reviews_moderate", "description": "Moderar reseñas", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "featureflags_manage", "description": "Gestionar y ver feature flags", "roles": [UserRole.SYSADMIN]},
+        {"code": "tags_index", "description": "Gestionar etiquetas de sitios históricos", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "tags_new", "description": "Crear etiquetas de sitios históricos", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "tags_edit", "description": "Cargar formulario de edición de etiquetas", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "tags_update", "description": "Actualizar etiquetas de sitios históricos", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
+        {"code": "tags_destroy", "description": "Eliminar etiquetas de sitios históricos", "roles": [UserRole.EDITOR, UserRole.ADMIN, UserRole.SYSADMIN]},
     ]
 
     for payload in permission_payloads:
