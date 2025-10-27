@@ -83,7 +83,7 @@ def login_post():
             message = maintenance_flag.message or "El panel de administración está en mantenimiento."
             flash(message, "warning")
             return redirect(url_for("auth.login", next=next_url))
-        next_url = url_for("featureflags")
+        next_url = url_for("featureflags.manage")
 
     session.clear()
     session.permanent = True
