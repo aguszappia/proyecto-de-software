@@ -119,8 +119,8 @@
                         {% endif %}
                         {% if role == 'sysadmin' %}
                             <li>
-                                <a {% if current_endpoint == 'featureflags' %}class="active"{% endif %}
-                                   href="{{ url_for('featureflags') }}">
+                                <a {% if current_endpoint.startswith('featureflags.') %}class="active"{% endif %}
+                                   href="{{ url_for('featureflags.manage') }}">
                                     <span>Feature Flags</span>
                                 </a>
                             </li>
