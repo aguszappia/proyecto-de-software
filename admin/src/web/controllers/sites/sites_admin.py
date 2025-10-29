@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 
@@ -22,16 +22,14 @@ from src.core.sites.service import (
 from src.core.sites.tags_service import list_tags
 from src.web.controllers.auth import require_login, require_permissions
 # Archivo helper - ruta relativa para evitar imports circulares
-from .sites_utils import (
-    PROVINCES,
+from src.core.sites.validators import (
     build_site_payload,
     clean_str,
-    empty_site_form,
-    parse_date,
     parse_enum,
     parse_tag_ids,
     safe_int,
 )
+from .sites_utils import PROVINCES, empty_site_form, parse_date
 
 bp = Blueprint("sites", __name__, url_prefix="/sites")
 
