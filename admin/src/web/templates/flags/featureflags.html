@@ -143,7 +143,7 @@
               <div class="flag-actions">
                 {% if flag.enabled %}
                   <form method="post"
-                        action="{{ url_for('featureflags') }}"
+                        action="{{ url_for('featureflags.manage') }}"
                         class="flag-form flag-form--disable">
                     <input type="hidden" name="flag_key" value="{{ flag.key }}">
                     <input type="hidden" name="enabled" value="false">
@@ -155,7 +155,7 @@
                   </form>
                 {% else %}
                   <form method="post"
-                        action="{{ url_for('featureflags') }}"
+                        action="{{ url_for('featureflags.manage') }}"
                         class="flag-form flag-form--enable">
                     <input type="hidden" name="flag_key" value="{{ flag.key }}">
                     <input type="hidden" name="enabled" value="true">

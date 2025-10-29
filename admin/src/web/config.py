@@ -28,10 +28,22 @@ class Config:
 class ProductionConfig(Config):
     """Apunto a la base productiva usando variables de entorno."""
     SQLALCHEMY_ENGINES = {"default": environ.get('DATABASE_URL')}
+    
+    MINIO_SERVER = environ.get('MINIO_SERVER')
+    MINIO_ACCESS_KEY = environ.get('MINIO_ACCESS_KEY')
+    MINIO_SECRET_KEY = environ.get('MINIO_SECRET_KEY')
+    MINIO_SECURE = True
+    MINIO_BUCKET = "grupo28"
 
 class DevelopmentConfig(Config):
     """Configuro la base local y claves de desarrollo."""
     SECRET_KEY = "your_development_secret_key"
+
+    MINIO_SERVER = "minio.localhost:9000"
+    MINIO_ACCESS_KEY = "AsOGiJwynq9UDIrN7tf5"
+    MINIO_SECRET_KEY = "Fy2p6U0THpWi27s9fy6ypH7RP1jSWRd4hFaarmPt"
+    MINIO_SECURE = False
+    MINIO_BUCKET = "grupo28"
 
     # variables de entorno para cada miembro
     DB_USER = environ.get('DB_USER', 'postgres')

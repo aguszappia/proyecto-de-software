@@ -8,28 +8,24 @@ from src.web.config import config
 from src.web.controllers import register_controllers
 from src.web.handlers import error
 from src.web.controllers.auth import auth_bp
-from src.web.controllers.validation import  validation_bp
-from src.web.controllers.reviews import  reviews_bp
+from src.web.controllers.validation import validation_bp
+from src.web.controllers.reviews import reviews_bp
 
 from src.core import seeds
+from src.web.storage import storage
 
-from src.web.controllers.auth import require_login, require_roles, require_permissions
+from src.web.controllers.auth import require_login
+from src.web.controllers.featureflags import (
+    ADMIN_MAINTENANCE_FLAG_KEY,
+    ADMIN_MAINTENANCE_SESSION_KEY,
+    DEFAULT_FLAG_MESSAGES,
+)
 
 from src.core.flags import service as flags_service
-from src.core.flags.service import FeatureFlagError
 from src.core.users.service import get_user
 from src.core.permissions import models as permissions_models  # noqa: F401
 from src.core.permissions import service as permissions_service
 
-
-DEFAULT_FLAG_MESSAGES = {
-    "admin_maintenance_mode": "El panel de administración está en mantenimiento.",
-    "portal_maintenance_mode": "El portal público está en mantenimiento.",
-    "reviews_enabled": "Las reseñas están disponibles.",
-}
-
-ADMIN_MAINTENANCE_FLAG_KEY = "admin_maintenance_mode"
-ADMIN_MAINTENANCE_SESSION_KEY = "admin_maintenance_message"
 
 def create_app(env="development", static_folder="../../static"):
     """Armo la app con configuración, blueprints, seeds y middlewares."""
@@ -38,6 +34,7 @@ def create_app(env="development", static_folder="../../static"):
 
     # Inicializar base de datos
     database.init_db(app)
+    storage.init_app(app)
 
     @app.route("/")
     def home():
@@ -53,53 +50,6 @@ def create_app(env="development", static_folder="../../static"):
         """Muestro la página informativa solo para usuarios logueados."""
         return render_template("about.html")
 
-    @app.route('/featureflags', methods=['GET', 'POST'])
-    @require_login
-    @require_roles("sysadmin")
-    def featureflags():
-        """Permito a sysadmin ver y modificar los feature flags."""
-        if request.method == "POST":
-            key = request.form.get("flag_key")
-            enabled = request.form.get("enabled") == "true"
-
-            if enabled:
-                message = (request.form.get("message") or "").strip()
-                if not message:
-                    flash("Ingresá un mensaje de mantenimiento para activar el flag.", "error")
-                    return redirect(url_for("featureflags"))
-                if len(message) > flags_service.MAX_MESSAGE_LENGTH:
-                    flash(
-                        f"El mensaje no puede superar {flags_service.MAX_MESSAGE_LENGTH} caracteres.",
-                        "error",
-                    )
-                    return redirect(url_for("featureflags"))
-            else:
-                message = ""
-
-            try:
-                flag = flags_service.set_flag(
-                    key,
-                    enabled=enabled,
-                    message=message,
-                    user_id=session.get("user_id"),
-                )
-                flash(
-                    f"{flag.name} {'activado' if enabled else 'desactivado'}.",
-                    "success",
-                )
-            except FeatureFlagError as exc:
-                flash(str(exc), "error")
-
-            return redirect(url_for("featureflags"))
-
-        flags = flags_service.list_flags()
-        return render_template(
-            "flags/featureflags.html",
-            flags=flags,
-            default_messages=DEFAULT_FLAG_MESSAGES,
-            max_message_length=flags_service.MAX_MESSAGE_LENGTH,
-        )
-    
     app.register_error_handler(404, error.not_found)
 
     app.register_error_handler(401, error.unauthorized)

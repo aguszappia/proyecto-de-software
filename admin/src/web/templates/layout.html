@@ -72,6 +72,7 @@
                         {% set role = session.get('user_role') %}
                         {% set can_manage_users = has_permission('user_index') %}
                         {% set can_manage_sites = has_permission('site_index') %}
+                        {% set can_manage_tags = has_permission('tags_index') %}
                         {% set can_validate_proposals = has_permission('proposals_validate') %}
                         {% set can_moderate_reviews = has_permission('reviews_moderate') %}
 
@@ -100,7 +101,7 @@
                             </li>
                         {% endif %}
 
-                        {% if role in ['sysadmin', 'admin'] %}
+                        {% if can_manage_tags %}
                             <li>
                                 <a {% if current_endpoint.startswith('tags.') %}class="active"{% endif %}
                                    href="{{ url_for('tags.index') }}">
@@ -118,8 +119,8 @@
                         {% endif %}
                         {% if role == 'sysadmin' %}
                             <li>
-                                <a {% if current_endpoint == 'featureflags' %}class="active"{% endif %}
-                                   href="{{ url_for('featureflags') }}">
+                                <a {% if current_endpoint.startswith('featureflags.') %}class="active"{% endif %}
+                                   href="{{ url_for('featureflags.manage') }}">
                                     <span>Feature Flags</span>
                                 </a>
                             </li>

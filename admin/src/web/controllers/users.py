@@ -20,12 +20,6 @@ class UserFilters:
     order: str = "-created_at"
     page: int = 1
 
-
-def _ensure_admin_access():
-    """Dejo un hook para validar permisos extra cuando haga falta."""
-    return None
-
-
 def _extract_filters():
     """Parseo los filtros desde la query string."""
     args = request.args
@@ -70,7 +64,6 @@ def _form_payload():
 @require_permissions("user_index")
 def index():
     """Listo usuarios aplicando filtros y mostrando la paginación."""
-    _ensure_admin_access()
     filters = _extract_filters()
     pagination = list_users(
         page=filters.page,
@@ -93,7 +86,6 @@ def index():
 @require_permissions("user_new")
 def new():
     """Renderizo el formulario vacío para crear un usuario."""
-    _ensure_admin_access()
     return render_template(
         "users/form.html",
         user=None,
@@ -107,7 +99,6 @@ def new():
 @require_permissions("user_new")
 def create():
     """Intento crear el usuario y muestro errores si falló la validación."""
-    _ensure_admin_access()
     success, user, errors = create_user(_form_payload(), allowed_roles=get_allowed_roles_for_admin())
     if not success:
         flash("No se pudo crear el usuario. Revisá los errores.", "error")
@@ -141,7 +132,6 @@ def me():
 def show(user_id: int):
     """Presento el detalle de un usuario específico."""
 
-    _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
         flash("El usuario no existe.", "error")
@@ -155,7 +145,6 @@ def show(user_id: int):
 @require_permissions("user_update")
 def edit(user_id: int):
     """Cargo el formulario de edición con los datos actuales."""
-    _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
         flash("El usuario no existe.", "error")
@@ -174,7 +163,6 @@ def edit(user_id: int):
 @require_permissions("user_update")
 def update(user_id: int):
     """Actualizo el usuario elegido y manejo validaciones de rol y estado."""
-    _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
         flash("El usuario no existe.", "error")
@@ -211,7 +199,6 @@ def update(user_id: int):
 @require_permissions("user_destroy")
 def destroy(user_id: int):
     """Elimino al usuario si no es un rol protegido."""
-    _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
         flash("El usuario no existe.", "error")
@@ -229,7 +216,6 @@ def destroy(user_id: int):
 @require_permissions("user_update")
 def deactivate(user_id: int):
     """Desactivo al usuario si no es un rol protegido."""
-    _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
         flash("El usuario no existe.", "error")
@@ -250,7 +236,6 @@ def deactivate(user_id: int):
 @require_permissions("user_update")
 def activate(user_id: int):
     """Activo nuevamente al usuario elegido."""
-    _ensure_admin_access()
     user = get_user(user_id)
     if user is None:
         flash("El usuario no existe.", "error")

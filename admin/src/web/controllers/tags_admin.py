@@ -16,7 +16,7 @@ from src.core.sites.tags_service import (
     paginate_tags,
     update_tag,
 )
-from src.web.controllers.auth import require_login, require_roles
+from src.web.controllers.auth import require_login, require_permissions
 
 
 bp = Blueprint("tags", __name__, url_prefix="/tags")
@@ -54,7 +54,7 @@ def _extract_filters() -> TagFilters:
 
 @bp.get("/")
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions('tags_index')
 def index():
     """Listo las etiquetas con paginado y enlaces prev/next."""
     filters = _extract_filters()
@@ -92,7 +92,7 @@ def index():
 
 @bp.get("/new")
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions('tags_new')
 def new():
     """Renderizo el formulario vacío para crear una etiqueta."""
     return render_template("tags/form.html", form_values={"name": ""}, errors={}, is_edit=False)
@@ -100,7 +100,6 @@ def new():
 
 @bp.post("/new")
 @require_login
-@require_roles("editor", "admin", "sysadmin")
 def create():
     """Intento crear la etiqueta y muestro errores si hay problemas."""
     name = (request.form.get("name") or "").strip()
@@ -123,7 +122,7 @@ def create():
 
 @bp.get("/<int:tag_id>/edit")
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions('tags_edit')
 def edit(tag_id: int):
     """Cargo el formulario de edición con la etiqueta existente."""
     tag = get_tag(tag_id)
@@ -143,7 +142,7 @@ def edit(tag_id: int):
 
 @bp.post("/<int:tag_id>/edit")
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions('tags_update')
 def update(tag_id: int):
     """Actualizo la etiqueta elegida respetando validaciones."""
     tag = get_tag(tag_id)
@@ -173,7 +172,7 @@ def update(tag_id: int):
 
 @bp.post("/<int:tag_id>/delete")
 @require_login
-@require_roles("editor", "admin", "sysadmin")
+@require_permissions('tags_destroy')
 def destroy(tag_id: int):
     """Elimino la etiqueta si no está asociada a sitios."""
     tag = get_tag(tag_id)
