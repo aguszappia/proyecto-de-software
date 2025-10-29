@@ -7,7 +7,8 @@ from flask import Blueprint, render_template, request
 from src.core.sites.history_service import ACTIONS, list_history
 from src.core.sites.service import get_site
 from src.web.controllers.auth import require_login, require_permissions
-from .sites_utils import clean_str, parse_date, safe_int
+from src.core.sites.validators import clean_str, safe_int
+from .sites_utils import parse_date
 
 history_bp = Blueprint("sites_history", __name__, url_prefix="/sites")
 
