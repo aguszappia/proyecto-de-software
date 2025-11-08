@@ -9,6 +9,7 @@ from src.web.controllers import register_controllers
 from src.web.handlers import error
 from src.web.controllers.auth import auth_bp
 from src.web.controllers.reviews import reviews_bp
+from flask_cors import CORS
 
 from src.core import seeds
 # from src.web.storage import storage
@@ -34,6 +35,7 @@ def create_app(env="development", static_folder="../../static"):
     # Inicializar base de datos
     database.init_db(app)
     # storage.init_app(app)
+    CORS(app)
 
     @app.route("/")
     def home():
