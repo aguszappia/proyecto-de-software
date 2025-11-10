@@ -12,7 +12,7 @@ from src.web.controllers.reviews import reviews_bp
 from flask_cors import CORS
 
 from src.core import seeds
-# from src.web.storage import storage
+from src.web.storage import storage
 
 from src.web.controllers.auth import require_login
 from src.web.controllers.featureflags import (
@@ -34,7 +34,7 @@ def create_app(env="development", static_folder="../../static"):
 
     # Inicializar base de datos
     database.init_db(app)
-    # storage.init_app(app)
+    storage.init_app(app)
     CORS(app)
 
     @app.route("/")

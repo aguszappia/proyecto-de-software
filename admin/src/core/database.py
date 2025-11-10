@@ -13,7 +13,7 @@ def init_db(app):
 def reset_db(app):
     """Reseteo las tablas para dejar la base limpia de datos previos."""
     from src.core.users.models import User, Role
-    from src.core.sites.models import Historic_Site, SiteTag
+    from src.core.sites.models import Historic_Site, SiteTag, SiteImage
     from src.core.permissions.models import Permission, RolePermission
     from src.core.flags.models import FeatureFlag
 
