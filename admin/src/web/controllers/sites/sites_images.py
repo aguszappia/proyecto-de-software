@@ -152,6 +152,10 @@ def set_cover(site_id: int, image_id: int):
 @require_permissions("site_update")
 def delete(site_id: int, image_id: int):
     image = get_image_or_404(site_id, image_id)
+    images = list_images(site_id)
+    if image.is_cover:
+        flash("No podés eliminar la portada. Elegí otra portada antes.", "error")
+        return _redirect(site_id)
     try:
         delete_site_image(image_id)
         flash("Imagen eliminada correctamente.", "success")
