@@ -25,6 +25,7 @@ from src.core.flags import service as flags_service
 from src.core.users.service import get_user
 from src.core.permissions import models as permissions_models  # noqa: F401
 from src.core.permissions import service as permissions_service
+from src.web.api.sites import bp as sites_api_bp, auth_bp as public_auth_bp
 
 
 def create_app(env="development", static_folder="../../static"):
@@ -85,6 +86,9 @@ def create_app(env="development", static_folder="../../static"):
 
     register_controllers(app)
 
+    app.register_blueprint(public_auth_bp)
+    app.register_blueprint(sites_api_bp)
+
     Session(app)  # inicializa Flask-Session
 
     @app.before_request
@@ -138,6 +142,7 @@ def create_app(env="development", static_folder="../../static"):
             path == "/login"
             or path == "/logout"
             or path.startswith("/static/")
+            or path.startswith("/api/")
         )
 
         if allowed:

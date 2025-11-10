@@ -18,6 +18,9 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = environ.get("SESSION_COOKIE_SECURE", "true").strip().lower() == "true"
 
+    API_TOKEN_TTL_SECONDS = int(environ.get("API_TOKEN_TTL_SECONDS", 60 * 60 * 24))
+    API_TOKEN_SALT = environ.get("API_TOKEN_SALT", "public-api-token")
+
     CORS_RESOURCES = [
         r"/api/*"
     ]
