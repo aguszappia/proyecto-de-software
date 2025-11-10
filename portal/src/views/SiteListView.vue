@@ -79,6 +79,9 @@ watchEffect(async () => {
         Esta pantalla reutilizará el componente de tarjetas públicas y aplicará los filtros que
         definas desde el buscador o las secciones destacadas.
       </p>
+      <div class="view-panel__actions">
+        <RouterLink class="primary-button" to="/sitios/nuevo">Proponer un sitio</RouterLink>
+      </div>
       <div class="listing__filters">
         <span v-if="activeFilters.search">Búsqueda: “{{ activeFilters.search }}”</span>
         <span v-if="activeFilters.sort">Orden: {{ activeFilters.sort }}</span>
@@ -136,6 +139,10 @@ watchEffect(async () => {
   font-size: 0.85rem;
   color: #374151;
   margin-top: 1rem;
+}
+
+.view-panel__actions {
+  margin-top: 1.25rem;
 }
 
 .listing__placeholder {

@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 from flask import Blueprint, current_app, jsonify, request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from marshmallow import ValidationError
 from sqlalchemy import func, or_
 
 from src.core.database import db
@@ -14,9 +15,7 @@ from src.core.sites.validators import clean_str, safe_float, safe_int
 from src.core.security.passwords import verify_password
 from src.core.users import UserRole
 from src.core.users import service as users_service
-
-bp = Blueprint("sites_api", __name__, url_prefix="/api/sites")
-auth_bp = Blueprint("public_auth_api", __name__, url_prefix="/api")
+from src.web.schemas.sites import single_site_schema, site_create_schema, site_schema
 
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 100
@@ -87,16 +86,6 @@ def _parse_float_arg(name: str) -> float | None:
     if raw_value not in (None, "") and parsed is None:
         raise QueryParamError(f"El parámetro '{name}' debe ser numérico.")
     return parsed
-
-
-def _normalize_site(site: Dict[str, Any]) -> Dict[str, Any]:
-    normalized = dict(site)
-    for field in ("conservation_status", "category"):
-        value = normalized.get(field)
-        if hasattr(value, "value"):
-            normalized[field] = value.value
-    normalized.setdefault("tags", [])
-    return normalized
 
 
 def _filter_by_text(items: Iterable[Dict[str, Any]], field: str, needle: str) -> List[Dict[str, Any]]:
@@ -222,100 +211,6 @@ def _issue_api_token(user_id: int) -> str:
     return serializer.dumps({"user_id": int(user_id)})
 
 
-def _decode_api_token(token: str) -> int:
-    serializer = _get_token_serializer()
-    max_age = current_app.config.get("API_TOKEN_TTL_SECONDS", 60 * 60 * 24)
-    try:
-        data = serializer.loads(token, max_age=max_age)
-    except SignatureExpired as exc:
-        raise AuthError("El token expiró.") from exc
-    except BadSignature as exc:
-        raise AuthError("Token inválido.") from exc
-    user_id = data.get("user_id")
-    if not isinstance(user_id, int):
-        raise AuthError("Token inválido.")
-    return user_id
-
-
-def _extract_bearer_token() -> str:
-    header = request.headers.get("Authorization", "")
-    if not header:
-        raise AuthError("Falta el encabezado Authorization.")
-    prefix = "Bearer "
-    if not header.startswith(prefix):
-        raise AuthError("El encabezado Authorization debe usar el esquema Bearer.")
-    token = header[len(prefix):].strip()
-    if not token:
-        raise AuthError("Token ausente.")
-    return token
-
-
-def _require_api_user(require_public: bool = True):
-    token = _extract_bearer_token()
-    user_id = _decode_api_token(token)
-    user = users_service.get_user(user_id)
-    if not user or not user.is_active:
-        raise AuthError("Token inválido o usuario inactivo.")
-    if require_public and user.role != UserRole.PUBLIC.value:
-        raise AuthError("Solo usuarios públicos pueden acceder a este recurso.")
-    return user
-
-
-@bp.get("/")
-def index():
-    """Implementa el endpoint público GET /api/sites."""
-    try:
-        name = clean_str(request.args.get("name"))
-        description = clean_str(request.args.get("description"))
-        city = clean_str(request.args.get("city"))
-        province = clean_str(request.args.get("province"))
-        tags_raw = clean_str(request.args.get("tags"))
-        tags = [tag.strip() for tag in tags_raw.split(",") if tag.strip()]
-        order_by = clean_str(request.args.get("order_by")) or "latest"
-
-        latitude = _parse_float_arg("lat")
-        longitude = _parse_float_arg("long")
-        radius_km = _parse_float_arg("radius")
-
-        if radius_km is not None:
-            if radius_km <= 0:
-                raise QueryParamError("El parámetro 'radius' debe ser mayor a 0.")
-            if latitude is None or longitude is None:
-                raise QueryParamError("Los filtros geoespaciales requieren 'lat' y 'long'.")
-            base_sites = get_sites_by_location(latitude, longitude, radius_km * 1000)
-        else:
-            if latitude is not None or longitude is not None:
-                raise QueryParamError("Para filtrar por coordenadas debés incluir 'radius'.")
-            base_sites = list_sites()
-
-        normalized_sites = [_normalize_site(site) for site in base_sites]
-        filtered_sites = _apply_filters(
-            normalized_sites,
-            name=name,
-            description=description,
-            city=city,
-            province=province,
-            tags=tags,
-        )
-
-        sorted_sites = _sort_sites(filtered_sites, order_by or "latest")
-
-        page = _parse_int_arg("page", default=1, minimum=1) or 1
-        per_page = _parse_int_arg(
-            "per_page",
-            default=DEFAULT_PER_PAGE,
-            minimum=1,
-            maximum=MAX_PER_PAGE,
-        ) or DEFAULT_PER_PAGE
-
-        payload = _paginate(sorted_sites, page, per_page)
-        return jsonify(payload), 200
-    except QueryParamError as error:
-        return _handle_query_error(error)
-    except Exception:
-        return _error_response(500, "server_error", "An unexpected error occurred")
-
-
 def _parse_state_of_conservation(value: str | None) -> ConservationStatus:
     if not value:
         raise QueryParamError("El campo 'state_of_conservation' es obligatorio.")
@@ -387,63 +282,112 @@ def _parse_tags(raw_tags: Any) -> Tuple[List[str], List[int]]:
     return normalized, tag_ids
 
 
-def _serialize_site(site, *, country: str | None = None) -> Dict[str, Any]:
-    tags = []
-    if hasattr(site, "tags"):
-        tags = [getattr(tag, "slug", getattr(tag, "name", "")).strip() for tag in site.tags]
-        tags = [tag for tag in tags if tag]
-    conservation = (
-        site.conservation_status.value
-        if hasattr(site.conservation_status, "value")
-        else site.conservation_status
-    )
-    category = (
-        site.category.value
-        if hasattr(site.category, "value")
-        else site.category
-    )
-    payload = {
-        "id": site.id,
-        "name": site.name,
-        "short_description": site.short_description,
-        "description": site.full_description,
-        "city": site.city,
-        "province": site.province,
-        "country": country or "AR",
-        "lat": site.latitude,
-        "long": site.longitude,
-        "tags": tags,
-        "state_of_conservation": conservation,
-        "category": category,
-        "inaguration_year": getattr(site, "inaguration_year", None),
-        "inserted_at": site.created_at.isoformat() if site.created_at else None,
-        "updated_at": site.updated_at.isoformat() if site.updated_at else None,
-    }
-    return payload
+def _error_response(status_code: int, code: str, message: str, details: Dict[str, List[str]] | None = None):
+    payload: Dict[str, Any] = {"error": {"code": code, "message": message}}
+    if details:
+        payload["error"]["details"] = details
+    return jsonify(payload), status_code
+
+
+def _handle_query_error(error: QueryParamError):
+    details = getattr(error, "details", None)
+    if not details:
+        details = {"general": [str(error)]}
+    return _error_response(400, "invalid_query", "Parameter validation failed", details)
+
+
+def _invalid_data_response(details: Dict[str, List[str]] | None = None):
+    if details is None:
+        details = {"general": ["Invalid input data"]}
+    return _error_response(400, "invalid_data", "Invalid input data", details)
+
+
+bp = Blueprint("sites_api", __name__, url_prefix="/api/sites")
+auth_bp = Blueprint("public_auth_api", __name__, url_prefix="/api")
+
+
+@bp.get("/")
+def index():
+    """Implementa el endpoint público GET /api/sites."""
+    try:
+        name = clean_str(request.args.get("name"))
+        description = clean_str(request.args.get("description"))
+        city = clean_str(request.args.get("city"))
+        province = clean_str(request.args.get("province"))
+        tags_raw = clean_str(request.args.get("tags")) or ""
+        tags = [tag.strip() for tag in tags_raw.split(",") if tag.strip()]
+        order_by = clean_str(request.args.get("order_by")) or "latest"
+
+        latitude = _parse_float_arg("lat")
+        longitude = _parse_float_arg("long")
+        radius_km = _parse_float_arg("radius")
+
+        if radius_km is not None:
+            if radius_km <= 0:
+                raise QueryParamError("El parámetro 'radius' debe ser mayor a 0.")
+            if latitude is None or longitude is None:
+                raise QueryParamError("Los filtros geoespaciales requieren 'lat' y 'long'.")
+            base_sites = get_sites_by_location(latitude, longitude, radius_km * 1000)
+        else:
+            if latitude is not None or longitude is not None:
+                raise QueryParamError("Para filtrar por coordenadas debés incluir 'radius'.")
+            base_sites = list_sites()
+
+        filtered_sites = _apply_filters(
+            base_sites,
+            name=name,
+            description=description,
+            city=city,
+            province=province,
+            tags=tags,
+        )
+
+        sorted_sites = _sort_sites(filtered_sites, order_by or "latest")
+
+        page = _parse_int_arg("page", default=1, minimum=1) or 1
+        per_page = _parse_int_arg(
+            "per_page",
+            default=DEFAULT_PER_PAGE,
+            minimum=1,
+            maximum=MAX_PER_PAGE,
+        ) or DEFAULT_PER_PAGE
+
+        serialized_sites = site_schema.dump(sorted_sites)
+        payload = _paginate(serialized_sites, page, per_page)
+        return jsonify(payload), 200
+    except QueryParamError as error:
+        return _handle_query_error(error)
+    except Exception:
+        return _error_response(500, "server_error", "An unexpected error occurred")
 
 
 @bp.post("/")
 def create_site_endpoint():
     """Permite a la app pública proponer un nuevo sitio histórico."""
     try:
-        api_user = _require_api_user()
         if not request.is_json:
-            raise QueryParamError("El cuerpo debe ser JSON válido.")
-        payload = request.get_json(silent=True)
-        if not isinstance(payload, dict):
-            raise QueryParamError("El cuerpo JSON debe ser un objeto.")
+            return _invalid_data_response({"general": ["Request body must be JSON."]})
 
-        name = clean_str(payload.get("name"))
-        short_description = clean_str(payload.get("short_description"))
-        description = clean_str(payload.get("description"))
-        city = clean_str(payload.get("city"))
-        province = clean_str(payload.get("province"))
-        country = clean_str(payload.get("country")) or "AR"
-        latitude = safe_float(payload.get("lat"))
-        longitude = safe_float(payload.get("long"))
-        state_of_conservation = _parse_state_of_conservation(payload.get("state_of_conservation"))
-        category = _parse_category(payload.get("category"))
-        inauguration_raw = payload.get("inaguration_year") or payload.get("inauguration_year")
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict):
+            return _invalid_data_response({"general": ["The JSON body must be an object."]})
+
+        try:
+            data = site_create_schema.load(payload)
+        except ValidationError as error:
+            # Marshmallow already organiza las claves por campo
+            return _invalid_data_response(error.messages)
+
+        name = clean_str(data.get("name"))
+        short_description = clean_str(data.get("short_description"))
+        description = clean_str(data.get("description"))
+        city = clean_str(data.get("city"))
+        province = clean_str(data.get("province"))
+        latitude = safe_float(data.get("lat"))
+        longitude = safe_float(data.get("long"))
+        state_of_conservation = _parse_state_of_conservation(data.get("state_of_conservation"))
+        category = _parse_category(data.get("category"))
+        inauguration_raw = data.get("inaguration_year")
         inaguration_year = safe_int(inauguration_raw)
 
         missing_fields = [
@@ -458,14 +402,14 @@ def create_site_endpoint():
             if not value
         ]
         if missing_fields:
-            raise QueryParamError(f"Los campos obligatorios faltantes son: {', '.join(missing_fields)}.")
+            return _invalid_data_response({field: ["This field is required"] for field in missing_fields})
         if latitude is None or longitude is None:
-            raise QueryParamError("Los campos 'lat' y 'long' son obligatorios y deben ser numéricos.")
+            return _invalid_data_response({"general": ["'lat' and 'long' must be numeric."]})
 
         if inauguration_raw not in (None, "") and inaguration_year is None:
-            raise QueryParamError("El campo 'inaguration_year' debe ser numérico.")
+            return _invalid_data_response({"inaguration_year": ["Must be a number."]})
 
-        _, tag_ids = _parse_tags(payload.get("tags"))
+        _, tag_ids = _parse_tags(data.get("tags"))
 
         site = create_site(
             name=name,
@@ -480,20 +424,17 @@ def create_site_endpoint():
             category=category,
             is_visible=False,
             tag_ids=tag_ids,
-            performed_by=api_user.id,
         )
         db.session.refresh(site)
-        response_payload = _serialize_site(site, country=country)
+        response_payload = single_site_schema.dump(site)
         return jsonify(response_payload), 201
-    except AuthError as error:
-        response = jsonify({"error": str(error)})
-        response.status_code = 401
-        response.headers["WWW-Authenticate"] = "Bearer"
-        return response
     except QueryParamError as error:
-        return jsonify({"error": str(error)}), 400
-    except Exception as error:  # pragma: no cover - defensive fallback
-        return jsonify({"error": "No se pudo crear el sitio histórico.", "details": str(error)}), 500
+        details = getattr(error, "details", None) or {"general": [str(error)]}
+        return _invalid_data_response(details)
+    except ValidationError as error:  # Defensive: por si aparece fuera del load principal
+        return _invalid_data_response(error.messages)
+    except Exception:  # pragma: no cover - defensive fallback
+        return _error_response(500, "server_error", "An unexpected error occurred")
 
 
 @auth_bp.post("/login")
@@ -537,16 +478,3 @@ def api_login():
         return response
     except Exception as error:  # pragma: no cover - defensive fallback
         return jsonify({"error": "No se pudo generar el token.", "details": str(error)}), 500
-    
-def _error_response(status_code: int, code: str, message: str, details: Dict[str, List[str]] | None = None):
-    payload: Dict[str, Any] = {"error": {"code": code, "message": message}}
-    if details:
-        payload["error"]["details"] = details
-    return jsonify(payload), status_code
-
-
-def _handle_query_error(error: QueryParamError):
-    details = getattr(error, "details", None)
-    if not details:
-        details = {"general": [str(error)]}
-    return _error_response(400, "invalid_query", "Parameter validation failed", details)
