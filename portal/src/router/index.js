@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import MapView from '../views/MapView.vue'
+import SiteDetailView from '../views/SiteDetailView.vue'
+import SiteListView from '../views/SiteListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,6 +16,16 @@ const router = createRouter({
       path: '/map/',
       name: 'map',
       component: MapView,
+    },
+    {
+      path: '/sitios',
+      name: 'sites',
+      component: SiteListView,
+    },
+    {
+      path: '/sitios/:id',
+      name: 'site-detail',
+      component: SiteDetailView,
     },
     {
       path: '/about',
