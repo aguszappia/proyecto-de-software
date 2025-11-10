@@ -1171,7 +1171,13 @@ img.cover-thumb {
 .site-images__grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 960px) {
+  .site-images__grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .site-image-card {

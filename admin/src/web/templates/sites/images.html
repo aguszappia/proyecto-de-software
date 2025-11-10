@@ -15,7 +15,6 @@
 
   <div class="site-images__toolbar">
     <a class="secondary-button" href="{{ url_for('sites.edit', site_id=site['id']) }}">Volver a la edición</a>
-    <a class="secondary-button" href="{{ url_for('sites.index') }}">Ver listado</a>
   </div>
 
   <section class="site-images__upload-card">
@@ -32,7 +31,7 @@
         <form class="site-images__upload-form"
               method="post"
               enctype="multipart/form-data"
-              action="{{ url_for('sites.upload_image', site_id=site['id']) }}">
+              action="{{ url_for('site_images.upload', site_id=site['id']) }}">
           <div class="form-field">
             <label for="new-image-file">Archivo</label>
             <input type="file"
@@ -92,14 +91,14 @@
                 </div>
                 <div class="site-image-card__reorder">
                   <form method="post"
-                        action="{{ url_for('sites.move_image', site_id=site['id'], image_id=image.id) }}">
+                        action="{{ url_for('site_images.move', site_id=site['id'], image_id=image.id) }}">
                     <input type="hidden" name="direction" value="up">
                     <button type="submit" class="secondary-button"
                             {% if loop.first %}disabled{% endif %}
                             title="Mover hacia arriba">▲</button>
                   </form>
                   <form method="post"
-                        action="{{ url_for('sites.move_image', site_id=site['id'], image_id=image.id) }}">
+                        action="{{ url_for('site_images.move', site_id=site['id'], image_id=image.id) }}">
                     <input type="hidden" name="direction" value="down">
                     <button type="submit" class="secondary-button"
                             {% if loop.last %}disabled{% endif %}
@@ -110,7 +109,7 @@
               <form class="site-image-card__form"
                     method="post"
                     enctype="multipart/form-data"
-                    action="{{ url_for('sites.update_image', site_id=site['id'], image_id=image.id) }}">
+                    action="{{ url_for('site_images.update', site_id=site['id'], image_id=image.id) }}">
                 <div class="form-field">
                   <label for="title-{{ image.id }}">Título / alt</label>
                   <input type="text"
@@ -142,14 +141,14 @@
               <div class="site-image-card__footer">
                 {% if not image.is_cover %}
                   <form method="post"
-                        action="{{ url_for('sites.set_cover_image', site_id=site['id'], image_id=image.id) }}">
+                        action="{{ url_for('site_images.set_cover', site_id=site['id'], image_id=image.id) }}">
                     <button type="submit" class="link-button">Marcar como portada</button>
                   </form>
                 {% else %}
                   <span class="site-image-card__cover-note">Portada actual</span>
                 {% endif %}
                 <form method="post"
-                      action="{{ url_for('sites.delete_image', site_id=site['id'], image_id=image.id) }}">
+                      action="{{ url_for('site_images.delete', site_id=site['id'], image_id=image.id) }}">
                   <button type="button"
                           class="danger-button"
                           data-confirm-trigger

@@ -135,7 +135,7 @@
   <div class="site-images-panel">
       <h2>Galería del sitio</h2>
       <p>Subí, ordená y definí la portada antes de publicar el sitio en el portal.</p>
-      <a class="secondary-button" href="{{ url_for('sites.manage_images', site_id=site_id) }}">Administrar imágenes</a>
+      <a class="secondary-button" href="{{ url_for('site_images.manage', site_id=site_id) }}">Administrar imágenes</a>
   </div>
 {% endif %}
 {% if is_edit and site_id and can_view_history %}

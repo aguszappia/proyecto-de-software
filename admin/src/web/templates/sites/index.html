@@ -178,7 +178,6 @@
                         </td>
                         <td class="actions-cell">
                             {% if can_update_site %}
-                                <a class="link-button" href="{{ url_for('sites.manage_images', site_id=site.id) }}">Imágenes</a>
                                 <a class="secondary-button" href="{{ url_for('sites.edit', site_id=site.id) }}">Editar</a>
                             {% endif %}
                             {% if can_delete_site %}

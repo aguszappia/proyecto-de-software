@@ -1,3 +1,5 @@
+import json
+
 from minio import Minio
 from minio.error import S3Error
 
@@ -30,12 +32,33 @@ class Storage:
         try:
             if not self.client.bucket_exists(bucket):
                 self.client.make_bucket(bucket)
+            self._ensure_public_policy(bucket)
         except S3Error as exc:
             raise RuntimeError("No se pudo inicializar el bucket de MinIO.") from exc
 
         app.storage = self.client
         app.storage_bucket = bucket
         return app
+
+    def _ensure_public_policy(self, bucket: str) -> None:
+        """Configuro el bucket para permitir lectura pública de objetos."""
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": ["*"]},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket}/*"],
+                }
+            ],
+        }
+        policy_json = json.dumps(policy)
+        try:
+            self.client.set_bucket_policy(bucket, policy_json)
+        except S3Error:
+            # Si falla dejamos un warning silencioso; la app seguirá funcionando
+            pass
 
 
 storage = Storage()

@@ -11,7 +11,6 @@ from src.core.sites.models import SiteImage
 
 MAX_IMAGES_PER_SITE = 10
 
-
 class SiteImageError(ValueError):
     """Errores controlados para informar a la capa web."""
 
@@ -118,7 +117,9 @@ def delete_image(image_id: int) -> bool:
     if not image:
         return False
     if image.is_cover:
-        raise SiteImageError("No podés eliminar la portada. Elegí otra portada antes.")
+        total = count_images(image.site_id)
+        if total > 1:
+            raise SiteImageError("No podés eliminar la portada. Elegí otra portada antes.")
     site_id = image.site_id # guardo el site de la imagen a eliminar
     db.session.delete(image)
     db.session.flush()
@@ -133,20 +134,32 @@ def move_image(image_id: int, direction: str) -> Optional[SiteImage]:
     if not image:
         return None
     direction = (direction or "").lower()
-    siblings = list_images(image.site_id)
-    positions = {item.id: index for index, item in enumerate(siblings)}
-    current_pos = positions.get(image_id)
-    if current_pos is None:
+    ordered = list_images(image.site_id)
+    if not ordered:
         return None
-    if direction == "up" and current_pos > 0:
-        swap_with = siblings[current_pos - 1]
-    elif direction == "down" and current_pos < len(siblings) - 1:
-        swap_with = siblings[current_pos + 1]
+    positions = {item.id: idx for idx, item in enumerate(ordered)}
+    current_idx = positions.get(image_id)
+    if current_idx is None:
+        return None
+
+    if direction == "up" and current_idx > 0:
+        swap_idx = current_idx - 1
+    elif direction == "down" and current_idx < len(ordered) - 1:
+        swap_idx = current_idx + 1
     else:
         return None
-    image.order_index, swap_with.order_index = swap_with.order_index, image.order_index
+
+    target = ordered[swap_idx]
+    current_order = image.order_index
+    target_order = target.order_index
+
+    image.order_index = -1
     db.session.flush()
-    _resequence_orders(image.site_id)
+
+    target.order_index = current_order
+    db.session.flush()
+
+    image.order_index = target_order
     db.session.commit()
     return image
 
@@ -177,5 +190,8 @@ def _resequence_orders(site_id: int) -> None:
         .order_by(SiteImage.order_index.asc(), SiteImage.created_at.asc(), SiteImage.id.asc())
         .all()
     )
+    for position, image in enumerate(ordered, start=1):
+        image.order_index = -position
+    db.session.flush()
     for position, image in enumerate(ordered, start=1):
         image.order_index = position
