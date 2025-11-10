@@ -1,86 +1,46 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <div class="public-shell">
+    <div class="public-shell__glow public-shell__glow--one" aria-hidden="true"></div>
+    <div class="public-shell__glow public-shell__glow--two" aria-hidden="true"></div>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+    <div class="public-shell__inner">
+      <header class="public-header">
+        <RouterLink class="public-brand" to="/">
+          <img alt="Logo Sitios Históricos" src="@/assets/logo.svg" />
+          <div>
+            <span>Sitios Históricos</span>
+            <p>Portal público</p>
+          </div>
+        </RouterLink>
 
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-        <RouterLink to="/map">Map</RouterLink>
-      </nav>
+        <nav class="public-nav" aria-label="Navegación principal">
+          <RouterLink to="/">Inicio</RouterLink>
+          <RouterLink to="/sitios">Sitios</RouterLink>
+          <RouterLink to="/map">Mapa</RouterLink>
+          <RouterLink to="/about">Nosotros</RouterLink>
+        </nav>
+
+        <button class="public-cta" type="button">
+          Ingresar
+        </button>
+      </header>
+
+      <main class="public-main">
+        <RouterView />
+      </main>
+
+      <footer class="public-footer">
+        <p>© {{ new Date().getFullYear() }} Sitios Históricos.</p>
+        <nav aria-label="Navegación secundaria">
+          <RouterLink to="/sitios">Sitios</RouterLink>
+          <RouterLink to="/map">Mapa interactivo</RouterLink>
+          <RouterLink to="/about">Nosotros</RouterLink>
+        </nav>
+      </footer>
     </div>
-  </header>
-
-  <RouterView />
+  </div>
 </template>
-
-<style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
-}
-</style>

@@ -1,15 +1,25 @@
 <template>
-  <div class="about">
-    <h1>This is an about page</h1>
-  </div>
+  <section class="view-panel">
+    <div class="view-panel__card">
+      <p class="view-panel__subtitle">Proyecto Integrador 2025</p>
+      <h1><strong>Sitios Históricos · Grupo 28</strong></h1>
+      <p class="about__description">
+        Aplicación pública para explorar y descubrir sitios históricos de Argentina. Este portal
+        ofrece a los usuarios una experiencia intuitiva para buscar, filtrar y visualizar sitios de
+        interés cultural e histórico.
+      </p>
+    </div>
+  </section>
 </template>
 
-<style>
-@media (min-width: 1024px) {
-  .about {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-  }
+<style scoped>
+.view-panel__card {
+  text-align: center;
+}
+
+.about__description {
+  max-width: 640px;
+  margin: 0 auto;
+  color: #475569;
 }
 </style>
