@@ -17,7 +17,6 @@ const sectionsConfig = [
     ctaParams: { sort: 'visits' },
     emptyMessage: 'Todavía no registramos sitios populares aquí.',
     skeletonItems: 3,
-    perPage: 3,
     orderBy: 'latest',
   },
   {
@@ -27,7 +26,6 @@ const sectionsConfig = [
     ctaParams: { sort: 'rating' },
     emptyMessage: 'Aún no hay calificaciones cargadas.',
     skeletonItems: 3,
-    perPage: 3,
     orderBy: 'rating-5-1',
   },
   {
@@ -37,7 +35,6 @@ const sectionsConfig = [
     ctaParams: { filter: 'favorites' },
     emptyMessage: 'Inicia sesión para comenzar a guardar tus favoritos.',
     requiresAuth: true,
-    perPage: 3,
     skeletonItems: 3,
     orderBy: 'latest',
   },
@@ -48,7 +45,6 @@ const sectionsConfig = [
     ctaParams: { sort: 'recent' },
     emptyMessage: 'Pronto verás novedades aquí.',
     skeletonItems: 3,
-    perPage: 3,
     orderBy: 'latest',
   },
 ]
@@ -142,7 +138,7 @@ const mapSiteToCard = (site) => ({
 
 const fetchSitesForSection = async (sectionKey) => {
   const config = sectionsConfig.find((section) => section.key === sectionKey)
-  const perPage = config?.perPage || config?.skeletonItems || 3
+  const perPage = config?.perPage ?? 100
   const params = new URLSearchParams({
     page: '1',
     per_page: String(perPage),
