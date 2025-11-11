@@ -2,12 +2,7 @@
 import { reactive, ref, onMounted } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-
-const API_BASE_URL =
-  import.meta.env.VITE_PUBLIC_API_BASE_URL ||
-  (window.location.origin.includes('localhost:5173')
-    ? 'http://localhost:5050/api'
-    : 'https://admin-grupo28.proyecto2025.linti.unlp.edu.ar/api')
+import API_BASE_URL from '@/constants/api'
 
 const defaultCoords = { lat: -34.6037, long: -58.3816 }
 

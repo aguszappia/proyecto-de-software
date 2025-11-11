@@ -16,6 +16,7 @@ DEFAULT_FLAG_MESSAGES = {
 
 ADMIN_MAINTENANCE_FLAG_KEY = "admin_maintenance_mode"
 ADMIN_MAINTENANCE_SESSION_KEY = "admin_maintenance_message"
+PORTAL_MAINTENANCE_FLAG_KEY = "portal_maintenance_mode"
 
 
 @bp.route("/", methods=["GET", "POST"])
@@ -72,4 +73,5 @@ __all__ = [
     "DEFAULT_FLAG_MESSAGES",
     "ADMIN_MAINTENANCE_FLAG_KEY",
     "ADMIN_MAINTENANCE_SESSION_KEY",
+    "PORTAL_MAINTENANCE_FLAG_KEY",
 ]
