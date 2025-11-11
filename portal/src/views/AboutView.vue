@@ -1,6 +1,6 @@
 <template>
   <section class="view-panel">
-    <div class="view-panel__card">
+    <div class="view-panel__card about-card">
       <p class="view-panel__subtitle">Proyecto Integrador 2025</p>
       <h1><strong>Sitios Históricos · Grupo 28</strong></h1>
       <p class="about__description">
@@ -11,15 +11,3 @@
     </div>
   </section>
 </template>
-
-<style scoped>
-.view-panel__card {
-  text-align: center;
-}
-
-.about__description {
-  max-width: 640px;
-  margin: 0 auto;
-  color: #475569;
-}
-</style>

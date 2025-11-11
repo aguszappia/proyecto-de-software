@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
+import SiteCard from '@/components/SiteCard.vue'
 import API_BASE_URL from '@/constants/api'
 
 const route = useRoute()
@@ -15,11 +16,62 @@ const sites = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-const formatState = (value) => {
-  if (!value) return 'Sin dato'
+const GENERIC_SITE_IMAGE_URL =
+  'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=60'
+
+const formatStateLabel = (value) => {
+  if (!value) return 'Estado sin datos'
   const normalized = String(value).replace(/_/g, ' ').toLowerCase()
   return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
+
+const formatUpdatedAtLabel = (value) => {
+  if (!value) return 'hace poco'
+  const parsedDate = new Date(value)
+  if (Number.isNaN(parsedDate.getTime())) {
+    return 'hace poco'
+  }
+
+  const now = new Date()
+  const diffMs = Math.max(0, now.getTime() - parsedDate.getTime())
+  const diffMinutes = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMinutes / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffMinutes < 60) {
+    return diffMinutes <= 1 ? 'hace un minuto' : `hace ${diffMinutes} minutos`
+  }
+  if (diffHours < 24) {
+    return diffHours === 1 ? 'hace 1 hora' : `hace ${diffHours} horas`
+  }
+  if (diffDays < 7) {
+    return diffDays === 1 ? 'hace 1 día' : `hace ${diffDays} días`
+  }
+  return parsedDate.toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'long',
+  })
+}
+
+const preparedSites = computed(() =>
+  sites.value.map((site) => ({
+    id: site.id,
+    name: site.name,
+    city: site.city,
+    province: site.province,
+    category: site.category || null,
+    state: formatStateLabel(site.state_of_conservation),
+    badge: site.badge || null,
+    rating:
+      typeof site.rating === 'number'
+        ? site.rating
+        : site.average_rating ?? site.averageRating ?? null,
+    updatedAt: formatUpdatedAtLabel(site.updated_at || site.updatedAt),
+    image: GENERIC_SITE_IMAGE_URL,
+    tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
+    href: site.id ? { name: 'site-detail', params: { id: site.id } } : null,
+  })),
+)
 
 const buildQueryString = (filters) => {
   const params = new URLSearchParams()
@@ -96,124 +148,18 @@ watchEffect(async () => {
         <p class="listing__note">{{ error }}</p>
       </template>
       <template v-else>
-        <h2 v-if="sites.length === 0">Sin resultados</h2>
-        <p v-if="sites.length === 0" class="listing__note">
+        <h2 v-if="preparedSites.length === 0">Sin resultados</h2>
+        <p v-if="preparedSites.length === 0" class="listing__note">
           Probá modificando los filtros para encontrar otros sitios históricos.
         </p>
-        <ul v-else class="listing__grid">
-          <li v-for="site in sites" :key="site.id" class="listing__item">
-            <h3>{{ site.name }}</h3>
-            <p class="listing__location">
-              {{ site.city }}, {{ site.province }}
-              <template v-if="site.country">({{ site.country }})</template>
-            </p>
-            <p class="listing__description">{{ site.short_description }}</p>
-            <div class="listing__details">
-              <p><span>Ciudad:</span> {{ site.city }}, {{ site.province }}</p>
-              <p><span>Estado:</span> {{ formatState(site.state_of_conservation) }}</p>
-              <p><span>Categoría:</span> {{ site.category || 'Sin dato' }}</p>
-              <p>
-                <span>Año de inauguración:</span>
-                {{ site.inaguration_year ?? 'Sin dato' }}
-              </p>
-            </div>
-            <p class="listing__full">{{ site.description || site.full_description }}</p>
-            <ul class="listing__tags" v-if="(site.tags || []).length">
-              <li v-for="tag in site.tags" :key="`${site.id}-${tag}`">#{{ tag }}</li>
-            </ul>
-          </li>
-        </ul>
+        <div v-else class="listing__cards">
+          <SiteCard
+            v-for="site in preparedSites"
+            :key="site.id || site.name"
+            :site="site"
+          />
+        </div>
       </template>
     </div>
   </section>
 </template>
-
-<style scoped>
-.listing__filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  font-size: 0.85rem;
-  color: #374151;
-  margin-top: 1rem;
-}
-
-.view-panel__actions {
-  margin-top: 1.25rem;
-}
-
-.listing__placeholder {
-  text-align: center;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.listing__note {
-  margin-top: 0.75rem;
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.listing__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-  text-align: left;
-}
-
-.listing__item {
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  background: #fff;
-  box-shadow: 0 5px 15px rgba(15, 23, 42, 0.08);
-}
-
-.listing__location {
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.listing__description {
-  margin: 0.75rem 0;
-  font-size: 0.95rem;
-  color: #374151;
-}
-
-.listing__details {
-  text-align: left;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
-  color: #4b5563;
-}
-
-.listing__details span {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.listing__full {
-  font-size: 0.95rem;
-  color: #1f2937;
-  margin-bottom: 0.75rem;
-}
-
-.listing__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  list-style: none;
-  padding: 0;
-  margin: 0.75rem 0 0;
-}
-
-.listing__tags li {
-  background: #f3f4f6;
-  border-radius: 999px;
-  padding: 0.2rem 0.75rem;
-  font-size: 0.75rem;
-  color: #1f2937;
-}
-</style>

@@ -30,15 +30,3 @@ const center = ref([-34.6037, -58.3816])
     </div>
   </section>
 </template>
-
-<style scoped>
-.map-card {
-  padding: 0;
-  overflow: hidden;
-}
-
-.map-card :deep(.leaflet-container) {
-  height: 420px;
-  width: 100%;
-}
-</style>

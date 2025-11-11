@@ -25,16 +25,3 @@ const route = useRoute()
     </div>
   </section>
 </template>
-
-<style scoped>
-.detail__content {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-}
-
-.detail__note {
-  margin-top: 0.75rem;
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-</style>
