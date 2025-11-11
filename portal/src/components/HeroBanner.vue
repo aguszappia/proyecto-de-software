@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   title: {
@@ -26,6 +26,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  variant: {
+    type: String,
+    default: 'default',
+  },
 })
 
 const emit = defineEmits(['search'])
@@ -35,10 +39,12 @@ const searchTerm = ref('')
 const handleSubmit = () => {
   emit('search', searchTerm.value.trim())
 }
+
+const heroClasses = computed(() => ['hero', props.variant ? `hero--${props.variant}` : null])
 </script>
 
 <template>
-  <section class="hero">
+  <section :class="heroClasses">
     <div class="hero__content">
       <p v-if="eyebrow" class="hero__eyebrow">
         {{ eyebrow }}
@@ -51,15 +57,19 @@ const handleSubmit = () => {
       </p>
 
       <form class="hero__search" @submit.prevent="handleSubmit">
-        <input
-          v-model="searchTerm"
-          class="hero__input"
-          type="search"
-          :placeholder="searchPlaceholder"
-        />
-        <button class="hero__button" type="submit">
-          {{ ctaLabel }}
-        </button>
+        <div class="hero__search-bar">
+          <input
+            id="hero-search-input"
+            v-model="searchTerm"
+            class="hero__input"
+            type="search"
+            :placeholder="searchPlaceholder"
+            aria-label="Buscar sitios históricos"
+          />
+          <button class="hero__button" type="submit">
+            {{ ctaLabel }}
+          </button>
+        </div>
       </form>
 
       <p v-if="hint" class="hero__hint">

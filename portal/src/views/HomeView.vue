@@ -74,7 +74,7 @@ const heroCopy = {
   title: 'Descubrí sitios históricos',
   description:
     'Explora nuestro catálogo de sitios históricos.',
-  hint: 'Tip: se puede buscar por ciudad, provincia o palabra clave.',
+  hint: 'Tip: se puede buscar por nombre, ciudad, provincia o palabra clave.',
 }
 
 const buildCtaTo = (params = {}) => ({
@@ -180,7 +180,7 @@ const loadSection = async (sectionKey, { force = false } = {}) => {
 const handleHeroSearch = (term) => {
   router.push({
     name: 'sites',
-    query: term ? { search: term } : {},
+    query: term ? { q: term } : {},
   })
 }
 
@@ -209,6 +209,7 @@ watch(
       :title="heroCopy.title"
       :description="heroCopy.description"
       :hint="heroCopy.hint"
+      variant="map"
       cta-label="Buscar"
       @search="handleHeroSearch"
     />
