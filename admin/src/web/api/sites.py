@@ -506,18 +506,7 @@ def public_status():
     portal_flag = flags.get(PORTAL_MAINTENANCE_FLAG_KEY)
 
     admin_state = _serialize_flag_state(admin_flag, flag_key=ADMIN_MAINTENANCE_FLAG_KEY)
-
-    portal_enabled = admin_state["enabled"] or bool(portal_flag and portal_flag.enabled)
-    if portal_enabled:
-        source_flag = portal_flag if portal_flag and portal_flag.enabled else admin_flag
-        message_key = (source_flag.key if source_flag else PORTAL_MAINTENANCE_FLAG_KEY)
-        message = source_flag.message if source_flag and source_flag.message else DEFAULT_FLAG_MESSAGES.get(message_key, "")
-    else:
-        message = ""
-    portal_state = {
-        "enabled": portal_enabled,
-        "message": message,
-    }
+    portal_state = _serialize_flag_state(portal_flag, flag_key=PORTAL_MAINTENANCE_FLAG_KEY)
 
     payload = {
         "maintenance": {
