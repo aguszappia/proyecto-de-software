@@ -9,6 +9,7 @@ from marshmallow import ValidationError
 from sqlalchemy import func, or_
 
 from src.core.database import db
+from src.core.flags import service as flags_service
 from src.core.sites.models import ConservationStatus, SiteCategory, SiteTag
 from src.core.sites.service import create_site, get_sites_by_location, list_sites
 from src.core.sites.validators import clean_str, safe_float, safe_int
@@ -16,6 +17,11 @@ from src.core.security.passwords import verify_password
 from src.core.users import UserRole
 from src.core.users import service as users_service
 from src.web.schemas.sites import single_site_schema, site_create_schema, site_schema
+from src.web.controllers.featureflags import (
+    ADMIN_MAINTENANCE_FLAG_KEY,
+    DEFAULT_FLAG_MESSAGES,
+    PORTAL_MAINTENANCE_FLAG_KEY,
+)
 
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 100
@@ -33,6 +39,18 @@ class QueryParamError(ValueError):
 
 class AuthError(RuntimeError):
     """Errores de autenticación para endpoints públicos."""
+
+
+def _serialize_flag_state(flag, *, flag_key: str) -> Dict[str, Any]:
+    """Devuelvo el estado simplificado de un flag con mensaje por defecto."""
+    enabled = bool(flag and flag.enabled)
+    message = ""
+    if enabled:
+        message = flag.message or DEFAULT_FLAG_MESSAGES.get(flag_key, "")
+    return {
+        "enabled": enabled,
+        "message": message,
+    }
 
 
 def _normalize_text(value: str) -> str:
@@ -478,3 +496,33 @@ def api_login():
         return response
     except Exception as error:  # pragma: no cover - defensive fallback
         return jsonify({"error": "No se pudo generar el token.", "details": str(error)}), 500
+
+
+@auth_bp.get("/status")
+def public_status():
+    """Expongo el estado de mantenimiento para las apps pública y privada."""
+    flags = flags_service.load_flags()
+    admin_flag = flags.get(ADMIN_MAINTENANCE_FLAG_KEY)
+    portal_flag = flags.get(PORTAL_MAINTENANCE_FLAG_KEY)
+
+    admin_state = _serialize_flag_state(admin_flag, flag_key=ADMIN_MAINTENANCE_FLAG_KEY)
+
+    portal_enabled = admin_state["enabled"] or bool(portal_flag and portal_flag.enabled)
+    if portal_enabled:
+        source_flag = portal_flag if portal_flag and portal_flag.enabled else admin_flag
+        message_key = (source_flag.key if source_flag else PORTAL_MAINTENANCE_FLAG_KEY)
+        message = source_flag.message if source_flag and source_flag.message else DEFAULT_FLAG_MESSAGES.get(message_key, "")
+    else:
+        message = ""
+    portal_state = {
+        "enabled": portal_enabled,
+        "message": message,
+    }
+
+    payload = {
+        "maintenance": {
+            "admin": admin_state,
+            "portal": portal_state,
+        }
+    }
+    return jsonify(payload), 200

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
+import API_BASE_URL from '@/constants/api'
 
 const route = useRoute()
 
@@ -9,10 +10,6 @@ const activeFilters = computed(() => ({
   sort: route.query.sort || 'latest',
   filter: route.query.filter || null,
 }))
-
-const API_BASE_URL =
-  import.meta.env.VITE_PUBLIC_API_BASE_URL ||
-  (window.location.origin.includes('localhost:5173') ? 'http://localhost:5050/api' : 'https://admin-grupo28.proyecto2025.linti.unlp.edu.ar/api')
 
 const sites = ref([])
 const loading = ref(false)

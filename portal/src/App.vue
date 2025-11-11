@@ -1,5 +1,49 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
+import API_BASE_URL from '@/constants/api'
+
+const maintenanceState = ref({
+  pending: true,
+  enabled: false,
+  message: '',
+})
+
+const MAINTENANCE_FALLBACK_MESSAGE =
+  'Estamos realizando tareas de mantenimiento. Volvé a intentarlo en unos minutos.'
+
+const loadMaintenanceStatus = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/status`, {
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch maintenance status')
+    }
+    const payload = await response.json()
+    const portalState = payload?.maintenance?.portal || {}
+    const isEnabled = Boolean(portalState.enabled)
+    maintenanceState.value = {
+      pending: false,
+      enabled: isEnabled,
+      message: isEnabled
+        ? portalState.message || MAINTENANCE_FALLBACK_MESSAGE
+        : '',
+    }
+  } catch (error) {
+    maintenanceState.value = {
+      pending: false,
+      enabled: false,
+      message: '',
+    }
+  }
+}
+
+onMounted(() => {
+  loadMaintenanceStatus()
+})
 </script>
 
 <template>
@@ -29,9 +73,25 @@ import { RouterLink, RouterView } from 'vue-router'
         </button>
       </header>
 
-      <main class="public-main">
+      <main
+        v-if="!maintenanceState.pending && !maintenanceState.enabled"
+        class="public-main"
+      >
         <RouterView />
       </main>
+
+      <section v-else-if="maintenanceState.enabled" class="maintenance-view" role="alert">
+        <div class="maintenance-view__icon" aria-hidden="true">⚠️</div>
+        <h1>Portal en mantenimiento</h1>
+        <p>{{ maintenanceState.message }}</p>
+        <p class="maintenance-view__note">Nuestro equipo está trabajando para restablecer el servicio.</p>
+      </section>
+
+      <section v-else class="maintenance-loading" aria-busy="true">
+        <div class="maintenance-view__icon" aria-hidden="true">⏱️</div>
+        <h1>Verificando estado del portal…</h1>
+        <p>Por favor aguardá un momento.</p>
+      </section>
 
       <footer class="public-footer">
         <p>© {{ new Date().getFullYear() }} Sitios Históricos.</p>
@@ -44,3 +104,40 @@ import { RouterLink, RouterView } from 'vue-router'
     </div>
   </div>
 </template>
+
+<style scoped>
+.maintenance-view,
+.maintenance-loading {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 1.5rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  margin-top: 2rem;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.16);
+}
+
+.maintenance-view h1,
+.maintenance-loading h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #0f172a;
+}
+
+.maintenance-view__icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.maintenance-view p,
+.maintenance-loading p {
+  color: #334155;
+  font-size: 1rem;
+}
+
+.maintenance-view__note {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #64748b;
+}
+</style>
