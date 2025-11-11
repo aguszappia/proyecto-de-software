@@ -1,13 +1,8 @@
-"""Blueprint para moderar reseñas dentro del panel."""
+"""Re-export del blueprint de moderación de reseñas.
 
-from flask import Blueprint, render_template
-from src.web.controllers.auth import require_login, require_permissions
+Se mantiene este módulo para no modificar los imports existentes en la app.
+"""
 
-reviews_bp = Blueprint("reviews", __name__, url_prefix="/moderacion_reseñas")
+from src.web.controllers.sites.sites_reviews import bp as reviews_bp
 
-@reviews_bp.get("/")
-@require_login
-@require_permissions("reviews_moderate")
-def index():
-    """Renderizo la vista de moderación para usuarios autorizados."""
-    return render_template("moderacionReseñas.html")
+__all__ = ["reviews_bp"]

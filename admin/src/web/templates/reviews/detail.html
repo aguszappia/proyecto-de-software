@@ -1,0 +1,146 @@
+{% extends "layout.html" %}
+
+{% block title %}Detalle de reseña{% endblock %}
+
+{% block content %}
+<section class="container content-stack review-detail">
+  <a href="{{ return_url }}" class="secondary-button back-link">← Volver al listado</a>
+
+  <article class="detail-card">
+    <header class="detail-card__header">
+      <div>
+        <p class="section-kicker">Reseña #{{ presenter.review.id }}</p>
+        <h1 class="page-title">{{ presenter.site_name }}</h1>
+      </div>
+      <span class="{{ status_chip_classes.get(presenter.review.status.value, 'status-chip') }}">
+        {{ presenter.review.status.value }}
+      </span>
+    </header>
+
+    <div class="meta-grid">
+      <div>
+        <span class="meta-label">Usuario</span>
+        <p class="meta-value">{{ presenter.user_display }}</p>
+        <small class="meta-hint">{{ presenter.user_email or 'Sin email' }}</small>
+      </div>
+      <div>
+        <span class="meta-label">Calificación</span>
+        <p class="meta-value">{{ presenter.review.rating }}/5</p>
+      </div>
+      <div>
+        <span class="meta-label">Creada</span>
+        <p class="meta-value">
+          {% if presenter.review.created_at %}
+            {{ presenter.review.created_at.strftime('%d/%m/%Y %H:%M') }}
+          {% else %}
+            -
+          {% endif %}
+        </p>
+      </div>
+      <div>
+        <span class="meta-label">Última actualización</span>
+        <p class="meta-value">
+          {% if presenter.review.updated_at %}
+            {{ presenter.review.updated_at.strftime('%d/%m/%Y %H:%M') }}
+          {% else %}
+            -
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h2>Contenido de la reseña</h2>
+      {% if presenter.review.comment %}
+        <p class="review-text">{{ presenter.review.comment }}</p>
+      {% else %}
+        <p class="review-text text-muted">Sin comentario</p>
+      {% endif %}
+    </div>
+
+    {% if presenter.review.status == ReviewStatus.REJECTED and presenter.review.rejection_reason %}
+      <div class="detail-section">
+        <h2>Motivo de rechazo registrado</h2>
+        <p class="review-text">{{ presenter.review.rejection_reason }}</p>
+      </div>
+    {% endif %}
+  </article>
+
+  <article class="detail-card">
+    <h2>Acciones disponibles</h2>
+    <div class="detail-actions">
+      <div class="detail-actions__row">
+        <form method="post" action="{{ url_for('reviews.approve', review_id=presenter.review.id) }}">
+          <input type="hidden" name="return_to" value="{{ return_url }}">
+          <button type="submit" class="success-button">Aprobar</button>
+        </form>
+        <button type="button"
+                class="secondary-button"
+                data-toggle-reject
+                data-target="detail-reject-panel"
+                aria-controls="detail-reject-panel"
+                aria-expanded="false">
+          Rechazar
+        </button>
+        <form method="post" action="{{ url_for('reviews.destroy', review_id=presenter.review.id) }}">
+          <input type="hidden" name="return_to" value="{{ return_url }}">
+          <button type="button"
+                  class="danger-button"
+                  data-confirm-trigger
+                  data-confirm-mode="submit"
+                  data-confirm-title="Eliminar reseña"
+                  data-confirm-message="Esta acción no se puede deshacer. ¿Eliminar la reseña?"
+                  data-confirm-accept="Eliminar"
+                  data-confirm-variant="danger">
+            Eliminar definitivamente
+          </button>
+        </form>
+      </div>
+      <div id="detail-reject-panel" class="reject-panel" hidden>
+        <form method="post" action="{{ url_for('reviews.reject', review_id=presenter.review.id) }}" class="reject-form">
+          <label for="detail-reason" class="meta-label">Motivo de rechazo</label>
+          <textarea id="detail-reason"
+                    name="reason"
+                    rows="3"
+                    maxlength="{{ max_reason_length }}"
+                    required
+                    placeholder="Ingresá el motivo (máx. {{ max_reason_length }} caracteres)"></textarea>
+          <small class="text-muted">El motivo queda registrado para auditoría.</small>
+          <input type="hidden" name="return_to" value="{{ return_url }}">
+          <div class="reject-form__actions">
+            <button type="submit" class="danger-button">Confirmar rechazo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </article>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const buttons = document.querySelectorAll('[data-toggle-reject]');
+  buttons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetId = button.getAttribute('data-target');
+      if (!targetId) {
+        return;
+      }
+      const panel = document.getElementById(targetId);
+      if (!panel) {
+        return;
+      }
+      const isHidden = panel.hasAttribute('hidden');
+      if (isHidden) {
+        panel.removeAttribute('hidden');
+        button.setAttribute('aria-expanded', 'true');
+      } else {
+        panel.setAttribute('hidden', '');
+        button.setAttribute('aria-expanded', 'false');
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}
