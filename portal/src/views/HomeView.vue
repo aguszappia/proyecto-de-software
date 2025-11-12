@@ -1,8 +1,9 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import FeaturedSection from '@/components/FeaturedSection.vue'
 import HeroBanner from '@/components/HeroBanner.vue'
+import API_BASE_URL from '@/constants/api'
 
 const router = useRouter()
 
@@ -15,7 +16,8 @@ const sectionsConfig = [
     subtitle: 'Tendencias entre los usuarios.',
     ctaParams: { sort: 'visits' },
     emptyMessage: 'Todavía no registramos sitios populares aquí.',
-    skeletonItems: 4,
+    skeletonItems: 3,
+    orderBy: 'latest',
   },
   {
     key: 'topRated',
@@ -24,6 +26,7 @@ const sectionsConfig = [
     ctaParams: { sort: 'rating' },
     emptyMessage: 'Aún no hay calificaciones cargadas.',
     skeletonItems: 3,
+    orderBy: 'rating-5-1',
   },
   {
     key: 'favorites',
@@ -32,6 +35,8 @@ const sectionsConfig = [
     ctaParams: { filter: 'favorites' },
     emptyMessage: 'Inicia sesión para comenzar a guardar tus favoritos.',
     requiresAuth: true,
+    skeletonItems: 3,
+    orderBy: 'latest',
   },
   {
     key: 'recent',
@@ -40,6 +45,7 @@ const sectionsConfig = [
     ctaParams: { sort: 'recent' },
     emptyMessage: 'Pronto verás novedades aquí.',
     skeletonItems: 3,
+    orderBy: 'latest',
   },
 ]
 
@@ -47,7 +53,9 @@ const sectionsState = reactive(
   sectionsConfig.reduce((acc, config) => {
     acc[config.key] = {
       items: [],
-      loading: !config.requiresAuth,
+      loading: false,
+      loaded: false,
+      error: null,
     }
     return acc
   }, {}),
@@ -62,7 +70,7 @@ const heroCopy = {
   title: 'Descubrí sitios históricos',
   description:
     'Explora nuestro catálogo de sitios históricos.',
-  hint: 'Tip: se puede buscar por ciudad, provincia o palabra clave.',
+  hint: 'Tip: se puede buscar por nombre, ciudad, provincia o palabra clave.',
 }
 
 const buildCtaTo = (params = {}) => ({
@@ -70,189 +78,121 @@ const buildCtaTo = (params = {}) => ({
   query: params,
 })
 
-const mockDataBySection = {
-  mostVisited: [
-    {
-      id: 'museo-arte-moderno',
-      name: 'Museo de Arte Moderno',
-      city: 'CABA',
-      province: 'Buenos Aires',
-      rating: 4.9,
-      badge: 'Destacado',
-      category: 'Museo',
-      updatedAt: 'hace 2 días',
-      image:
-        'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'museo-arte-moderno' } },
-    },
-    {
-      id: 'delta-tigre',
-      name: 'Delta del Tigre',
-      city: 'Tigre',
-      province: 'Buenos Aires',
-      rating: 4.7,
-      category: 'Reservas Naturales',
-      updatedAt: 'hace 5 días',
-      image:
-        'https://images.unsplash.com/photo-1470246973918-29a93221c455?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'delta-tigre' } },
-    },
-    {
-      id: 'cataratas-iguazu',
-      name: 'Parque Nacional Iguazú',
-      city: 'Puerto Iguazú',
-      province: 'Misiones',
-      rating: 4.8,
-      category: 'Parques',
-      updatedAt: 'hace 1 semana',
-      image:
-        'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'cataratas-iguazu' } },
-    },
-  ],
-  topRated: [
-    {
-      id: 'observatorio-cordoba',
-      name: 'Observatorio Astronómico',
-      city: 'Córdoba',
-      province: 'Córdoba',
-      rating: 5,
-      badge: 'Mejor Valoración',
-      category: 'Centro Científico',
-      updatedAt: 'hace 12 h',
-      image:
-        'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'observatorio-cordoba' } },
-    },
-    {
-      id: 'teatro-san-martin',
-      name: 'Teatro San Martín',
-      city: 'CABA',
-      province: 'Buenos Aires',
-      rating: 4.9,
-      category: 'Teatro',
-      updatedAt: 'hace 3 días',
-      image:
-        'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'teatro-san-martin' } },
-    },
-    {
-      id: 'casa-historica-tucuman',
-      name: 'Casa Histórica de Tucumán',
-      city: 'San Miguel de Tucumán',
-      province: 'Tucumán',
-      rating: 4.8,
-      category: 'Historia',
-      updatedAt: 'hace 4 días',
-      image:
-        'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'casa-historica-tucuman' } },
-    },
-  ],
-  favorites: [
-    {
-      id: 'anfiteatro-rosario',
-      name: 'Anfiteatro Municipal',
-      city: 'Rosario',
-      province: 'Santa Fe',
-      rating: 4.6,
-      category: 'Eventos',
-      updatedAt: 'hace 8 h',
-      image:
-        'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'anfiteatro-rosario' } },
-    },
-    {
-      id: 'atelier-salta',
-      name: 'Atelier Salta',
-      city: 'Salta',
-      province: 'Salta',
-      rating: 4.7,
-      category: 'Galería de arte',
-      updatedAt: 'ayer',
-      image:
-        'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'atelier-salta' } },
-    },
-  ],
-  recent: [
-    {
-      id: 'sendero-norte',
-      name: 'Sendero Norte',
-      city: 'San Martín de los Andes',
-      province: 'Neuquén',
-      rating: 4.5,
-      badge: 'Nuevo',
-      category: 'Naturaleza',
-      updatedAt: 'esta semana',
-      image:
-        'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'sendero-norte' } },
-    },
-    {
-      id: 'mercado-del-puerto',
-      name: 'Mercado del Puerto',
-      city: 'Bahía Blanca',
-      province: 'Buenos Aires',
-      rating: 4.4,
-      category: 'Gastronomía',
-      updatedAt: 'hace 2 días',
-      image:
-        'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'mercado-del-puerto' } },
-    },
-    {
-      id: 'centro-interpretacion-chaco',
-      name: 'Centro de Interpretación del Chaco',
-      city: 'Resistencia',
-      province: 'Chaco',
-      rating: 4.3,
-      category: 'Centros culturales',
-      updatedAt: 'hoy',
-      image:
-        'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=800&q=60',
-      href: { name: 'site-detail', params: { id: 'centro-interpretacion-chaco' } },
-    },
-  ],
+const GENERIC_SITE_IMAGE_URL =
+  'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=60'
+
+const formatStateLabel = (value) => {
+  if (!value) return 'Estado sin datos'
+  const normalized = String(value).replace(/_/g, ' ').toLowerCase()
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
-const loadSection = async (sectionKey) => {
+const formatUpdatedAtLabel = (value) => {
+  if (!value) return 'hace poco'
+  const parsedDate = new Date(value)
+  if (Number.isNaN(parsedDate.getTime())) {
+    return 'hace poco'
+  }
+
+  const now = new Date()
+  const diffMs = Math.max(0, now.getTime() - parsedDate.getTime())
+  const diffMinutes = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMinutes / 60)
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffMinutes < 60) {
+    return diffMinutes <= 1 ? 'hace un minuto' : `hace ${diffMinutes} minutos`
+  }
+  if (diffHours < 24) {
+    return diffHours === 1 ? 'hace 1 hora' : `hace ${diffHours} horas`
+  }
+  if (diffDays < 7) {
+    return diffDays === 1 ? 'hace 1 día' : `hace ${diffDays} días`
+  }
+  return parsedDate.toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'long',
+  })
+}
+
+const mapSiteToCard = (site) => ({
+  id: site.id,
+  name: site.name,
+  city: site.city,
+  province: site.province,
+  state: formatStateLabel(
+    site.state_of_conservation ??
+      site.conservation_status ??
+      site.conservationStatus ??
+      null,
+  ),
+  rating:
+    typeof site.rating === 'number'
+      ? site.rating
+      : site.average_rating ?? site.averageRating ?? null,
+  updatedAt: formatUpdatedAtLabel(site.updated_at || site.updatedAt),
+  image: GENERIC_SITE_IMAGE_URL,
+  tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
+  href: site.id ? { name: 'site-detail', params: { id: site.id } } : null,
+})
+
+const fetchSitesForSection = async (sectionKey) => {
+  const config = sectionsConfig.find((section) => section.key === sectionKey)
+  const perPage = config?.perPage ?? 100
+  const params = new URLSearchParams({
+    page: '1',
+    per_page: String(perPage),
+    order_by: config?.orderBy || 'latest',
+  })
+  const response = await fetch(`${API_BASE_URL}/sites?${params.toString()}`)
+  if (!response.ok) {
+    throw new Error('No se pudieron cargar los sitios.')
+  }
+  const payload = await response.json()
+  return Array.isArray(payload?.data) ? payload.data : []
+}
+
+const loadSection = async (sectionKey, { force = false } = {}) => {
   const state = sectionsState[sectionKey]
-  if (!state) return
+  if (!state || (!force && (state.loading || state.loaded))) {
+    return
+  }
 
   state.loading = true
+  state.error = null
 
-  await new Promise((resolve) => {
-    const latency = 300 + Math.random() * 600
-    setTimeout(resolve, latency)
-  })
-
-  state.items = mockDataBySection[sectionKey] || []
-  state.loading = false
-}
-
-const bootstrapSections = () => {
-  visibleSections.value.forEach((section) => {
-    loadSection(section.key)
-  })
+  try {
+    const rawItems = await fetchSitesForSection(sectionKey)
+    state.items = rawItems.map(mapSiteToCard)
+    state.loaded = true
+  } catch (error) {
+    state.items = []
+    state.error = error.message || 'Hubo un inconveniente al cargar esta sección.'
+  } finally {
+    state.loading = false
+  }
 }
 
 const handleHeroSearch = (term) => {
   router.push({
     name: 'sites',
-    query: term ? { search: term } : {},
+    query: term ? { q: term } : {},
   })
 }
 
-onMounted(() => {
-  bootstrapSections()
-})
+watch(
+  visibleSections,
+  (sections) => {
+    sections.forEach((section) => loadSection(section.key))
+  },
+  { immediate: true },
+)
 
 watch(
   () => isAuthenticated.value,
   (loggedIn) => {
     if (loggedIn) {
-      loadSection('favorites')
+      loadSection('favorites', { force: true })
     }
   },
 )
@@ -265,6 +205,7 @@ watch(
       :title="heroCopy.title"
       :description="heroCopy.description"
       :hint="heroCopy.hint"
+      variant="map"
       cta-label="Buscar"
       @search="handleHeroSearch"
     />
@@ -285,18 +226,3 @@ watch(
     </div>
   </section>
 </template>
-
-<style scoped>
-.home {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-  padding: 1.5rem 0 3rem;
-}
-
-.home__sections {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-}
-</style>

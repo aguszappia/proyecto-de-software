@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Dict
 
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
+from sqlalchemy.exc import IntegrityError
 
 from src.core.sites.models import ConservationStatus, SiteCategory
 from src.core.sites.history_service import list_deleted_sites
@@ -29,9 +30,11 @@ from src.core.sites.validators import (
     parse_tag_ids,
     safe_int,
 )
+from src.core.database import db
 from .sites_utils import PROVINCES, empty_site_form, parse_date
 
 bp = Blueprint("sites", __name__, url_prefix="/sites")
+
 
 
 @bp.get("/")
@@ -130,7 +133,20 @@ def create():
                 provinces=PROVINCES,
                 is_edit=False,
             )
-        create_site(performed_by=session.get("user_id"), **payload)
+        try:
+            create_site(performed_by=session.get("user_id"), **payload)
+        except IntegrityError:
+            db.session.rollback()
+            flash("Ya existe un sitio histórico con ese nombre. Elegí otro antes de guardar.", "error")
+            return render_template(
+                "sites/form.html",
+                form_values=form_values,
+                tags=list_tags(),
+                conservation_statuses=list(ConservationStatus),
+                categories=list(SiteCategory),
+                provinces=PROVINCES,
+                is_edit=False,
+            )
         flash("Sitio histórico creado correctamente.", "success")
         return redirect(url_for("sites.index"))
 
@@ -179,13 +195,27 @@ def edit(site_id: int):
             action_type = "Cambio de estado"
             details = "Visibilidad editada"
 
-        update_site(
-            site_id,
-            performed_by=session.get("user_id"),
-            action_type=action_type,
-            details=details,
-            **payload,
-        )
+        try:
+            update_site(
+                site_id,
+                performed_by=session.get("user_id"),
+                action_type=action_type,
+                details=details,
+                **payload,
+            )
+        except IntegrityError:
+            db.session.rollback()
+            flash("Ya existe un sitio histórico con ese nombre. Elegí otro antes de guardar.", "error")
+            return render_template(
+                "sites/form.html",
+                form_values=form_values,
+                tags=list_tags(),
+                conservation_statuses=list(ConservationStatus),
+                categories=list(SiteCategory),
+                provinces=PROVINCES,
+                is_edit=True,
+                site_id=site_id,
+            )
         flash("Sitio histórico actualizado correctamente.", "success")
         return redirect(url_for("sites.index"))
 

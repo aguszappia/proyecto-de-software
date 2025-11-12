@@ -28,6 +28,7 @@ def init_db(app):
 
 def reset_db(app):
     """Reseteo las tablas para dejar la base limpia de datos previos."""
+
     _load_models()
     with app.app_context():
         print("Resetting database...")
@@ -36,6 +37,11 @@ def reset_db(app):
         Base.metadata.drop_all(bind=db.engine)
         Base.metadata.create_all(bind=db.engine)
         print("Database reset complete")
+
+    from src.core.users.models import User, Role
+    from src.core.sites.models import Historic_Site, SiteTag, SiteImage
+    from src.core.permissions.models import Permission, RolePermission
+    from src.core.flags.models import FeatureFlag
 
 
 class Base(DeclarativeBase):

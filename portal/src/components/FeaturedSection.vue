@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import SiteCard from './SiteCard.vue'
 
@@ -38,8 +38,81 @@ const props = defineProps({
   },
 })
 
+const ITEMS_PER_PAGE = 3
+const PLACEHOLDER_COUNT = ITEMS_PER_PAGE
+const currentPage = ref(0)
+const isMobile = ref(false)
+let mediaQuery
+
 const showSkeletons = computed(() => props.loading)
 const hasItems = computed(() => props.items && props.items.length > 0)
+const totalPages = computed(() =>
+  !props.items || props.items.length === 0 ? 0 : Math.ceil(props.items.length / ITEMS_PER_PAGE),
+)
+const needsCarousel = computed(() => totalPages.value > 1)
+const showPrevButton = computed(() => !isMobile.value && needsCarousel.value && currentPage.value > 0)
+const showNextButton = computed(
+  () => !isMobile.value && needsCarousel.value && currentPage.value < totalPages.value - 1,
+)
+
+const pageItems = computed(() => {
+  const items = props.items || []
+  const start = currentPage.value * ITEMS_PER_PAGE
+  const slice = items.slice(start, start + ITEMS_PER_PAGE)
+  return slice
+})
+
+const visibleItems = computed(() => {
+  if (isMobile.value) {
+    return props.items || []
+  }
+  return pageItems.value
+})
+
+watch(
+  () => props.items,
+  () => {
+    currentPage.value = 0
+  },
+)
+
+const handleMediaChange = (event) => {
+  isMobile.value = event.matches
+}
+
+onMounted(() => {
+  if (typeof window === 'undefined' || !window.matchMedia) {
+    return
+  }
+  mediaQuery = window.matchMedia('(max-width: 640px)')
+  isMobile.value = mediaQuery.matches
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener('change', handleMediaChange)
+  } else if (mediaQuery.addListener) {
+    mediaQuery.addListener(handleMediaChange)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (!mediaQuery) {
+    return
+  }
+  if (mediaQuery.removeEventListener) {
+    mediaQuery.removeEventListener('change', handleMediaChange)
+  } else if (mediaQuery.removeListener) {
+    mediaQuery.removeListener(handleMediaChange)
+  }
+})
+
+const goToPrevPage = () => {
+  if (currentPage.value === 0) return
+  currentPage.value -= 1
+}
+
+const goToNextPage = () => {
+  if (currentPage.value >= totalPages.value - 1) return
+  currentPage.value += 1
+}
 </script>
 
 <template>
@@ -63,8 +136,35 @@ const hasItems = computed(() => props.items && props.items.length > 0)
       <article v-for="index in skeletonItems" :key="index" class="featured__skeleton" />
     </div>
 
-    <div v-else-if="hasItems" class="featured__grid">
-      <SiteCard v-for="site in items" :key="site.id" :site="site" />
+    <div v-else-if="hasItems" class="featured__grid-wrapper">
+      <button
+        v-if="showPrevButton"
+        type="button"
+        class="featured__arrow featured__arrow--left"
+        @click="goToPrevPage"
+        aria-label="Ver tarjetas anteriores"
+      >
+        ‹
+      </button>
+      <div class="featured__grid">
+        <div
+          v-for="(site, index) in visibleItems"
+          :key="site?.id ?? `placeholder-${index}`"
+          class="featured__slot"
+        >
+          <SiteCard v-if="site" :site="site" />
+          <div v-else class="site-card site-card--placeholder"></div>
+        </div>
+      </div>
+      <button
+        v-if="showNextButton"
+        type="button"
+        class="featured__arrow featured__arrow--right"
+        @click="goToNextPage"
+        aria-label="Ver más tarjetas"
+      >
+        ›
+      </button>
     </div>
 
     <p v-else class="featured__empty">
@@ -72,82 +172,3 @@ const hasItems = computed(() => props.items && props.items.length > 0)
     </p>
   </section>
 </template>
-
-<style scoped>
-.featured {
-  padding: 1.25rem;
-  border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
-}
-
-.featured__header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-}
-
-.featured__title {
-  font-size: 1.4rem;
-  margin: 0;
-  color: #0f172a;
-}
-
-.featured__subtitle {
-  color: #374151;
-  margin: 0.2rem 0 0;
-}
-
-.featured__cta {
-  align-self: flex-start;
-  font-weight: 600;
-  color: var(--color-primary);
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid rgba(37, 99, 235, 0.2);
-  background: rgba(37, 99, 235, 0.08);
-}
-
-.featured__grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-}
-
-.featured__empty {
-  padding: 1.25rem;
-  background-color: #f9fafb;
-  border: 1px dashed #d1d5db;
-  border-radius: 0.75rem;
-  color: #475569;
-  text-align: center;
-}
-
-.featured__skeleton {
-  min-height: 190px;
-  border-radius: 1rem;
-  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
-  background-size: 400% 100%;
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0 50%;
-  }
-}
-
-@media (min-width: 768px) {
-  .featured__header {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-</style>

@@ -4,7 +4,7 @@ from typing import Optional
 
 from src.core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import DateTime, String, UniqueConstraint, Table, Column, Integer, ForeignKey
+from sqlalchemy import DateTime, String, UniqueConstraint, Table, Column, Integer, ForeignKey, Boolean
 from datetime import datetime, timezone
 from geoalchemy2.types import Geometry
 from geoalchemy2.shape import to_shape
@@ -92,6 +92,12 @@ class Historic_Site(Base):
         nullable=False,
     )
     tags = relationship("SiteTag", secondary=site_tag_association, back_populates="sites") # type: ignore
+    images = relationship(
+        "SiteImage",
+        back_populates="site",
+        cascade="all, delete-orphan",
+        order_by="SiteImage.order_index",
+    )
 
     def to_dict(self) -> dict:
         """Armo un dict con los datos del sitio listo para APIs."""
@@ -109,6 +115,8 @@ class Historic_Site(Base):
             "category": self.category,
             "is_visible": self.is_visible,
             "tags": [tag.name for tag in self.tags],
+            "cover_image_url": self.cover_image_url,
+            "cover_image_title": self.cover_image_title,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -131,6 +139,30 @@ class Historic_Site(Base):
         return None
 
 # --- Etiquetas para sitios --- 
+
+    @property
+    def cover_image(self):
+        """Devuelvo la imagen marcada como portada si existe."""
+        if not getattr(self, "images", None):
+            return None
+        for image in self.images:
+            if image.is_cover:
+                return image
+        return None
+
+    @property
+    def cover_image_url(self) -> str | None:
+        """atajo para conseguir URL pública de la portada"""
+        cover = self.cover_image
+        return cover.url if cover else None
+
+    @property
+    def cover_image_title(self) -> str | None:
+        """atajo para conseguir el título/alt de la portada."""
+        cover = self.cover_image
+        return cover.title if cover else None
+
+# Modelo para etiquetas
 
 class SiteTag(Base):
     """Modelo base para una etiqueta de sitio histórico."""
@@ -156,6 +188,7 @@ class SiteTag(Base):
     # Relación con sitios
     sites = relationship("Historic_Site", secondary=site_tag_association, back_populates="tags")
 
+
 # --- Reseñas de sitios históricos ---
 
 class ReviewStatus(str, Enum):
@@ -180,6 +213,25 @@ class SiteReview(Base):
         SQLAlchemyEnum(ReviewStatus), default=ReviewStatus.PENDING, nullable=False
     )
     rejection_reason: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+
+
+class SiteImage(Base):
+    """Imagen asociada a un sitio"""
+
+    __tablename__ = "site_images"
+    __table_args__ = (
+        UniqueConstraint("site_id", "order_index", name="uq_site_images_order"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    site_id: Mapped[int] = mapped_column(Integer, ForeignKey("historic_sites.id", ondelete="CASCADE"), nullable=False)
+    object_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_cover: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -189,4 +241,21 @@ class SiteReview(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
     site = relationship("Historic_Site")
+
+    site = relationship("Historic_Site", back_populates="images")
+
+    def to_dict(self) -> dict:
+        """Serializo los datos básicos de la imagen."""
+        return {
+            "id": self.id,
+            "site_id": self.site_id,
+            "url": self.url,
+            "title": self.title,
+            "description": self.description,
+            "order_index": self.order_index,
+            "is_cover": self.is_cover,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }

@@ -7,6 +7,24 @@ import SiteCreateView from '../views/SiteCreateView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+
+    const isSitesView = to.name === 'sites' && from?.name === 'sites'
+    const onlyQueryChanged = to.path === from?.path && to.hash === from?.hash
+
+    if (isSitesView && onlyQueryChanged) {
+      return false
+    }
+
+    return {
+      top: 0,
+      left: 0,
+      behavior: 'smooth',
+    }
+  },
   routes: [
     {
       path: '/',
