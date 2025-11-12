@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import SiteCard from './SiteCard.vue'
 
@@ -41,6 +41,8 @@ const props = defineProps({
 const ITEMS_PER_PAGE = 3
 const PLACEHOLDER_COUNT = ITEMS_PER_PAGE
 const currentPage = ref(0)
+const isMobile = ref(false)
+let mediaQuery
 
 const showSkeletons = computed(() => props.loading)
 const hasItems = computed(() => props.items && props.items.length > 0)
@@ -48,6 +50,10 @@ const totalPages = computed(() =>
   !props.items || props.items.length === 0 ? 0 : Math.ceil(props.items.length / ITEMS_PER_PAGE),
 )
 const needsCarousel = computed(() => totalPages.value > 1)
+const showPrevButton = computed(() => !isMobile.value && needsCarousel.value && currentPage.value > 0)
+const showNextButton = computed(
+  () => !isMobile.value && needsCarousel.value && currentPage.value < totalPages.value - 1,
+)
 
 const pageItems = computed(() => {
   const items = props.items || []
@@ -56,12 +62,47 @@ const pageItems = computed(() => {
   return slice
 })
 
+const visibleItems = computed(() => {
+  if (isMobile.value) {
+    return props.items || []
+  }
+  return pageItems.value
+})
+
 watch(
   () => props.items,
   () => {
     currentPage.value = 0
   },
 )
+
+const handleMediaChange = (event) => {
+  isMobile.value = event.matches
+}
+
+onMounted(() => {
+  if (typeof window === 'undefined' || !window.matchMedia) {
+    return
+  }
+  mediaQuery = window.matchMedia('(max-width: 640px)')
+  isMobile.value = mediaQuery.matches
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener('change', handleMediaChange)
+  } else if (mediaQuery.addListener) {
+    mediaQuery.addListener(handleMediaChange)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (!mediaQuery) {
+    return
+  }
+  if (mediaQuery.removeEventListener) {
+    mediaQuery.removeEventListener('change', handleMediaChange)
+  } else if (mediaQuery.removeListener) {
+    mediaQuery.removeListener(handleMediaChange)
+  }
+})
 
 const goToPrevPage = () => {
   if (currentPage.value === 0) return
@@ -97,7 +138,7 @@ const goToNextPage = () => {
 
     <div v-else-if="hasItems" class="featured__grid-wrapper">
       <button
-        v-if="needsCarousel && currentPage > 0"
+        v-if="showPrevButton"
         type="button"
         class="featured__arrow featured__arrow--left"
         @click="goToPrevPage"
@@ -107,7 +148,7 @@ const goToNextPage = () => {
       </button>
       <div class="featured__grid">
         <div
-          v-for="(site, index) in pageItems"
+          v-for="(site, index) in visibleItems"
           :key="site?.id ?? `placeholder-${index}`"
           class="featured__slot"
         >
@@ -116,7 +157,7 @@ const goToNextPage = () => {
         </div>
       </div>
       <button
-        v-if="needsCarousel && currentPage < totalPages - 1"
+        v-if="showNextButton"
         type="button"
         class="featured__arrow featured__arrow--right"
         @click="goToNextPage"
