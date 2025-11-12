@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
 
 const props = defineProps({
   site: {
@@ -24,7 +25,11 @@ const destination = computed(() => {
   return '#'
 })
 
-const imageUrl = computed(() => props.site?.image || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=60')
+const FALLBACK_CARD_IMAGE =
+  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=60'
+
+const imageUrl = computed(() => props.site?.image || resolveSiteImageSrc(props.site, FALLBACK_CARD_IMAGE))
+const imageAlt = computed(() => props.site?.imageAlt || resolveSiteImageAlt(props.site))
 
 const cityLabel = computed(() => props.site?.city || 'Ciudad sin datos')
 const provinceLabel = computed(() => props.site?.province || 'Provincia sin datos')
@@ -47,7 +52,7 @@ const tags = computed(() => {
 <template>
   <RouterLink class="site-card" :to="destination">
     <div class="site-card__media">
-      <img :src="imageUrl" :alt="site.name" loading="lazy" />
+      <img :src="imageUrl" :alt="imageAlt" loading="lazy" />
       <span v-if="site.badge" class="site-card__badge">
         {{ site.badge }}
       </span>

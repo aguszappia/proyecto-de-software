@@ -17,6 +17,8 @@ class SiteSchema(Schema):
     inaguration_year = fields.Int(allow_none=True)
     inserted_at = fields.Method("get_inserted_at")
     updated_at = fields.Method("get_updated_at")
+    cover_image_url = fields.Method("get_cover_image_url")
+    cover_image_title = fields.Method("get_cover_image_title")
 
     def _get_value(self, obj, attr, default=None):
         if isinstance(obj, dict):
@@ -63,6 +65,12 @@ class SiteSchema(Schema):
     def get_updated_at(self, obj):
         value = self._get_value(obj, "updated_at")
         return self._format_datetime(value)
+
+    def get_cover_image_url(self, obj):
+        return self._get_value(obj, "cover_image_url")
+
+    def get_cover_image_title(self, obj):
+        return self._get_value(obj, "cover_image_title")
 
 
 site_schema = SiteSchema(many=True)
