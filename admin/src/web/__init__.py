@@ -8,11 +8,11 @@ from src.web.config import config
 from src.web.controllers import register_controllers
 from src.web.handlers import error
 from src.web.controllers.auth import auth_bp
-from src.web.controllers.validation import validation_bp
 from src.web.controllers.reviews import reviews_bp
+from flask_cors import CORS
 
 from src.core import seeds
-# from src.web.storage import storage
+from src.web.storage import storage
 
 from src.web.controllers.auth import require_login
 from src.web.controllers.featureflags import (
@@ -25,6 +25,7 @@ from src.core.flags import service as flags_service
 from src.core.users.service import get_user
 from src.core.permissions import models as permissions_models  # noqa: F401
 from src.core.permissions import service as permissions_service
+from src.web.api.sites import bp as sites_api_bp, auth_bp as public_auth_bp
 
 
 def create_app(env="development", static_folder="../../static"):
@@ -34,7 +35,8 @@ def create_app(env="development", static_folder="../../static"):
 
     # Inicializar base de datos
     database.init_db(app)
-    # storage.init_app(app)
+    storage.init_app(app)
+    CORS(app)
 
     @app.route("/")
     def home():
@@ -57,8 +59,6 @@ def create_app(env="development", static_folder="../../static"):
     app.register_error_handler(500, error.internal_server_error)
 
     app.register_blueprint(auth_bp)
-
-    app.register_blueprint(validation_bp)
 
     app.register_blueprint(reviews_bp)
 
@@ -85,6 +85,9 @@ def create_app(env="development", static_folder="../../static"):
             seed_db()
 
     register_controllers(app)
+
+    app.register_blueprint(public_auth_bp)
+    app.register_blueprint(sites_api_bp)
 
     Session(app)  # inicializa Flask-Session
 
@@ -139,6 +142,7 @@ def create_app(env="development", static_folder="../../static"):
             path == "/login"
             or path == "/logout"
             or path.startswith("/static/")
+            or path.startswith("/api/")
         )
 
         if allowed:

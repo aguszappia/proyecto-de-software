@@ -1,0 +1,169 @@
+{% extends "layout.html" %}
+
+{% block title %}Moderación de reseñas{% endblock %}
+
+{% block content %}
+<section class="container content-stack">
+  <header class="section-heading">
+    <span class="section-kicker">Calidad del contenido</span>
+    <h1 class="page-title">Moderación de reseñas</h1>
+    <p class="section-subtitle">
+      Revisá, filtrá y actuá sobre las opiniones enviadas desde el portal público.
+    </p>
+  </header>
+
+  <form class="filters" method="get" action="{{ url_for('reviews.index') }}">
+    <div class="filters-row">
+      <div class="filter-group">
+        <label for="status">Estado</label>
+        <select id="status" name="status">
+          <option value="">Todos</option>
+          {% for status in status_options %}
+            <option value="{{ status.value }}" {% if filters.status == status.value %}selected{% endif %}>
+              {{ status.value }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="site_id">Sitio</label>
+        <select id="site_id" name="site_id">
+          <option value="">Todos</option>
+          {% for site in sites %}
+            <option value="{{ site.id }}" {% if filters.site_id == site.id %}selected{% endif %}>
+              {{ site.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="rating_min">Calificación mínima</label>
+        <select id="rating_min" name="rating_min">
+          <option value="">Cualquiera</option>
+          {% for value in rating_values %}
+            <option value="{{ value }}" {% if filters.rating_min == value %}selected{% endif %}>{{ value }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="rating_max">Calificación máxima</label>
+        <select id="rating_max" name="rating_max">
+          <option value="">Cualquiera</option>
+          {% for value in rating_values %}
+            <option value="{{ value }}" {% if filters.rating_max == value %}selected{% endif %}>{{ value }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="filters-row">
+      <div class="filter-group">
+        <label for="created_from">Fecha desde</label>
+        <input type="date" id="created_from" name="created_from" value="{{ filters.created_from }}">
+      </div>
+      <div class="filter-group">
+        <label for="created_to">Fecha hasta</label>
+        <input type="date" id="created_to" name="created_to" value="{{ filters.created_to }}">
+      </div>
+      <div class="filter-group">
+        <label for="user">Usuario (email o nombre)</label>
+        <input type="text" id="user" name="user" placeholder="usuario@correo.com" value="{{ filters.user_query }}">
+      </div>
+      <div class="filter-group">
+        <label for="order_by">Ordenar por</label>
+        <select id="order_by" name="order_by">
+          <option value="created_at" {% if filters.order_by == 'created_at' %}selected{% endif %}>Fecha</option>
+          <option value="rating" {% if filters.order_by == 'rating' %}selected{% endif %}>Calificación</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="order_dir">Orden</label>
+        <select id="order_dir" name="order_dir">
+          <option value="desc" {% if filters.order_dir == 'desc' %}selected{% endif %}>Descendente</option>
+          <option value="asc" {% if filters.order_dir == 'asc' %}selected{% endif %}>Ascendente</option>
+        </select>
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button type="submit" class="primary-button">Aplicar filtros</button>
+      <a class="secondary-button" href="{{ url_for('reviews.index') }}">Limpiar</a>
+    </div>
+  </form>
+
+  {% if pagination.items %}
+    <div class="results-summary">
+      {{ pagination.total }} reseñas encontradas
+    </div>
+
+    <div class="table-wrapper">
+      <table class="data-table reviews-table">
+        <thead>
+          <tr>
+            <th>Sitio</th>
+            <th>Usuario</th>
+            <th>Calificación</th>
+            <th>Contenido</th>
+            <th>Estado</th>
+            <th>Creada</th>
+            <th class="actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in pagination.items %}
+            <tr>
+              <td>{{ item.site_name }}</td>
+              <td>
+                <div class="user-badge">
+                  <strong>{{ item.user_display }}</strong>
+                  <small>{{ item.user_email or 'Sin email' }}</small>
+                </div>
+              </td>
+              <td>{{ item.review.rating }}/5</td>
+              <td class="comment-cell">
+                {% if item.review.comment %}
+                  {{ item.review.comment }}
+                {% else %}
+                  <span class="text-muted">Sin comentario</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="{{ status_chip_classes.get(item.review.status.value, 'status-chip') }}">
+                  {{ item.review.status.value }}
+                </span>
+              </td>
+              <td>
+                {% if item.review.created_at %}
+                  {{ item.review.created_at.strftime('%d/%m/%Y %H:%M') }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="actions">
+                <div class="review-actions">
+                  <div class="review-actions__row">
+                    <a class="secondary-button" href="{{ url_for('reviews.detail', review_id=item.review.id, return_to=return_path) }}">Ver</a>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      {% if prev_url %}
+        <a href="{{ prev_url }}">Anterior</a>
+      {% endif %}
+      <span>Página {{ pagination.page }} de {{ pagination.pages }}</span>
+      {% if next_url %}
+        <a href="{{ next_url }}">Siguiente</a>
+      {% endif %}
+    </div>
+{% else %}
+    <div class="empty-state">
+      <p class="section-kicker">Sin resultados</p>
+      <p>No se encontraron reseñas para los filtros seleccionados.</p>
+    </div>
+{% endif %}
+</section>
+{% endblock %}

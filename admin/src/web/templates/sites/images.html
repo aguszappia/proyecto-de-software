@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+
+{% block title %}Imágenes de {{ site["name"] }}{% endblock %}
+
+{% block content %}
+<section class="container content-stack site-images">
+  <header class="section-heading">
+    <span class="section-kicker">Gestión de sitios</span>
+    <h1 class="page-title">Imágenes de {{ site["name"] }}</h1>
+    <p class="section-subtitle">
+      Podés cargar hasta {{ max_images }} archivos ({{ total_images }}/{{ max_images }}).
+      Formatos aceptados: {{ allowed_extensions | join(', ') }}. Tamaño máximo {{ max_file_size_mb }} MB.
+    </p>
+  </header>
+
+  <div class="site-images__toolbar">
+    <a class="secondary-button" href="{{ url_for('sites.edit', site_id=site['id']) }}">Volver a la edición</a>
+  </div>
+
+  <section class="site-images__upload-card">
+    <div class="site-images__upload-card-body">
+      <div>
+        <h2>Cargar nueva imagen</h2>
+        <p>Recordá completar el título/alt porque se muestra como descripción alternativa.</p>
+      </div>
+      {% if limit_reached %}
+        <p class="site-images__limit-message">
+          Llegaste al máximo de imágenes permitido. Eliminá una imagen para poder subir otra.
+        </p>
+      {% else %}
+        <form class="site-images__upload-form"
+              method="post"
+              enctype="multipart/form-data"
+              action="{{ url_for('site_images.upload', site_id=site['id']) }}">
+          <div class="form-field">
+            <label for="new-image-file">Archivo</label>
+            <input type="file"
+                   id="new-image-file"
+                   name="image_file"
+                   accept="image/png,image/jpeg,image/webp"
+                   required>
+          </div>
+          <div class="form-field">
+            <label for="new-image-title">Título / alt</label>
+            <input type="text" id="new-image-title" name="title" maxlength="150" required>
+          </div>
+          <div class="form-field">
+            <label for="new-image-description">Descripción corta (opcional)</label>
+            <input type="text" id="new-image-description" name="description" maxlength="250">
+          </div>
+          <div class="form-field form-field--checkbox">
+            <label>
+              <input type="checkbox" name="is_cover">
+              Usar como portada
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="primary-button">Subir imagen</button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="site-images__list">
+    <div class="site-images__list-header">
+      <h2>Galería del sitio</h2>
+      <span class="results-count">{{ total_images }} / {{ max_images }}</span>
+    </div>
+    {% if images %}
+      <div class="site-images__grid">
+        {% for image in images %}
+          <article class="site-image-card{% if image.is_cover %} site-image-card--cover{% endif %}">
+            <div class="site-image-card__preview">
+              {% if image.url %}
+                <img src="{{ image.url }}" alt="{{ image.title }}">
+              {% else %}
+                <div class="site-image-card__preview--empty">Sin vista previa</div>
+              {% endif %}
+              {% if image.is_cover %}
+                <span class="site-image-card__badge">Portada</span>
+              {% endif %}
+            </div>
+            <div class="site-image-card__content">
+              <div class="site-image-card__heading">
+                <div>
+                  <p class="site-image-card__order">Orden {{ image.order_index }}</p>
+                  <p class="site-image-card__meta">
+                    Actualizado {{ image.updated_at.strftime('%d/%m/%Y %H:%M') if image.updated_at else 'sin datos' }}
+                  </p>
+                </div>
+                <div class="site-image-card__reorder">
+                  <form method="post"
+                        action="{{ url_for('site_images.move', site_id=site['id'], image_id=image.id) }}">
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit" class="secondary-button"
+                            {% if loop.first %}disabled{% endif %}
+                            title="Mover hacia arriba">▲</button>
+                  </form>
+                  <form method="post"
+                        action="{{ url_for('site_images.move', site_id=site['id'], image_id=image.id) }}">
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit" class="secondary-button"
+                            {% if loop.last %}disabled{% endif %}
+                            title="Mover hacia abajo">▼</button>
+                  </form>
+                </div>
+              </div>
+              <form class="site-image-card__form"
+                    method="post"
+                    enctype="multipart/form-data"
+                    action="{{ url_for('site_images.update', site_id=site['id'], image_id=image.id) }}">
+                <div class="form-field">
+                  <label for="title-{{ image.id }}">Título / alt</label>
+                  <input type="text"
+                         id="title-{{ image.id }}"
+                         name="title"
+                         maxlength="150"
+                         required
+                         value="{{ image.title }}">
+                </div>
+                <div class="form-field">
+                  <label for="description-{{ image.id }}">Descripción corta (opcional)</label>
+                  <textarea id="description-{{ image.id }}"
+                            name="description"
+                            rows="2"
+                            maxlength="250">{{ image.description or '' }}</textarea>
+                </div>
+                <div class="form-field">
+                  <label for="file-{{ image.id }}">Reemplazar archivo (opcional)</label>
+                  <input type="file"
+                         id="file-{{ image.id }}"
+                         name="image_file"
+                         accept="image/png,image/jpeg,image/webp">
+                  <small>Dejá vacío si no necesitás actualizar la imagen.</small>
+                </div>
+                <div class="site-image-card__form-actions">
+                  <button type="submit" class="secondary-button">Guardar cambios</button>
+                </div>
+              </form>
+              <div class="site-image-card__footer">
+                {% if not image.is_cover %}
+                  <form method="post"
+                        action="{{ url_for('site_images.set_cover', site_id=site['id'], image_id=image.id) }}">
+                    <button type="submit" class="link-button">Marcar como portada</button>
+                  </form>
+                {% else %}
+                  <span class="site-image-card__cover-note">Portada actual</span>
+                {% endif %}
+                <form method="post"
+                      action="{{ url_for('site_images.delete', site_id=site['id'], image_id=image.id) }}">
+                  <button type="button"
+                          class="danger-button"
+                          data-confirm-trigger
+                          data-confirm-mode="submit"
+                          data-confirm-title="Eliminar imagen"
+                          data-confirm-message="¿Seguro que querés eliminar esta imagen?">
+                    Eliminar
+                  </button>
+                </form>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-state-message">
+        Este sitio todavía no tiene imágenes cargadas.
+      </p>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

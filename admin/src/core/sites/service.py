@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 
 from geoalchemy2 import WKTElement
+from geoalchemy2 import functions as geofunctions, elements as geoelements, Geography
 from sqlalchemy import asc, desc, or_
 from src.core.pagination import Pagination
 from src.core.sites.models import Historic_Site, SiteTag, ConservationStatus, SiteCategory
@@ -275,3 +276,10 @@ def fetch_sites_for_export(
     query = query.order_by(order_fn(order_column))
 
     return query.all()
+
+def get_sites_by_location(lat, lon, redius):
+    center = geoelements.WKTElement(f'POINT({lon} {lat})', srid=4326)
+    sites = db.session.query(Historic_Site).filter(
+        geofunctions.ST_DWithin(Historic_Site.location.cast(Geography), center, redius)
+    ).all()
+    return [site.to_dict() for site in sites]

@@ -18,6 +18,13 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = environ.get("SESSION_COOKIE_SECURE", "true").strip().lower() == "true"
 
+    API_TOKEN_TTL_SECONDS = int(environ.get("API_TOKEN_TTL_SECONDS", 60 * 60 * 24))
+    API_TOKEN_SALT = environ.get("API_TOKEN_SALT", "public-api-token")
+
+    CORS_RESOURCES = [
+        r"/api/*"
+    ]
+
     # SQLAlchemy (Base de datos)
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": 10,        # tamaño máximo del pool
@@ -34,7 +41,9 @@ class ProductionConfig(Config):
     MINIO_SECRET_KEY = environ.get('MINIO_SECRET_KEY')
     MINIO_SECURE = True
     MINIO_BUCKET = "grupo28"
-
+    CORS_ORIGINS = [
+        "https://grupo28.proyecto2025.linti.unlp.edu.ar/"
+    ]
 class DevelopmentConfig(Config):
     """Configuro la base local y claves de desarrollo."""
     SECRET_KEY = "your_development_secret_key"
