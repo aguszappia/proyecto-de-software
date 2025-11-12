@@ -24,3 +24,11 @@ GRANT ALL PRIVILEGES ON DATABASE grupo28 TO postgres;
 \q
 ```
 ## run: poetry run flask --app src.web:create_app run --debug
+
+# Comando para docker
+    docker run -p 9000:9000 -p 9090:9090 \
+    -e MINIO_ROOT_USER=AsOGiJwynq9UDIrN7tf5 \
+    -e MINIO_ROOT_PASSWORD=Fy2p6U0THpWi27s9fy6ypH7RP1jSWRd4hFaarmPt \
+    --name minio-dev \
+    -v minio-data:/data \
+    quay.io/minio/minio server /data --console-address ":9090"

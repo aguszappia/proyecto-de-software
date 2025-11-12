@@ -36,6 +36,7 @@ from .sites_utils import PROVINCES, empty_site_form, parse_date
 bp = Blueprint("sites", __name__, url_prefix="/sites")
 
 
+
 @bp.get("/")
 @require_login
 @require_permissions("site_index")

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import Flask
 
-from .sites import sites_admin, sites_public, sites_history
+from .sites import sites_admin, sites_public, sites_history, sites_images
 
 from . import users, tags_admin, featureflags
 
@@ -14,6 +14,7 @@ def register_controllers(app: Flask) -> None:
     app.register_blueprint(sites_admin.bp)
     app.register_blueprint(sites_public.public_bp)
     app.register_blueprint(sites_history.history_bp)
+    app.register_blueprint(sites_images.bp)
     app.register_blueprint(tags_admin.bp)
 
 

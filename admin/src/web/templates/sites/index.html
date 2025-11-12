@@ -146,6 +146,7 @@
         <table class="data-table">
             <thead>
                 <tr>
+                    <th class="cover-column">Portada</th>
                     <th>Nombre</th>
                     <th>Ciudad</th>
                     <th>Provincia</th>
@@ -157,6 +158,13 @@
             <tbody>
                 {% for site in pagination.items %}
                     <tr>
+                        <td class="cover-column">
+                            {% if site.cover_image_url %}
+                                <img class="cover-thumb" src="{{ site.cover_image_url }}" alt="{{ site.cover_image_title or site.name }}">
+                            {% else %}
+                                <span class="cover-thumb cover-thumb--empty">Sin portada</span>
+                            {% endif %}
+                        </td>
                         <td>{{ site.name }}</td>
                         <td>{{ site.city }}</td>
                         <td>{{ site.province }}</td>
