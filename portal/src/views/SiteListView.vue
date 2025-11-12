@@ -186,14 +186,6 @@ watchEffect(async () => {
     const desiredTags = (filters.tags || []).map((tag) => tag.trim().toLowerCase()).filter(Boolean)
     const rawItems = Array.isArray(payload?.data) ? payload.data : []
 
-    availableTags.value = Array.from(
-      new Set(
-        rawItems
-          .flatMap((site) => site.tags || [])
-          .filter((tag) => typeof tag === 'string' && tag.trim().length),
-      ),
-    )
-
     const filteredItems = rawItems.filter((site) => {
       const shortDescription =
         site.short_description ?? site.shortDescription ?? site.shortDesc ?? ''
@@ -305,6 +297,7 @@ const handleClickOutside = (event) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  loadAvailableTags()
 })
 
 onBeforeUnmount(() => {
@@ -320,6 +313,22 @@ watch(
 )
 
 const DEFAULT_MAP_CENTER = [-34.6037, -58.3816]
+
+const loadAvailableTags = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/tags`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch tags')
+    }
+    const payload = await response.json()
+    const mapped = Array.isArray(payload?.data) ? payload.data : []
+    availableTags.value = mapped
+      .map((tag) => (typeof tag?.name === 'string' ? tag.name.trim() : ''))
+      .filter(Boolean)
+  } catch (error) {
+    availableTags.value = []
+  }
+}
 
 const resolveCoordinate = (source, keys) => {
   for (const key of keys) {
@@ -498,7 +507,9 @@ watch(
                 <span v-if="formFilters.tags.length">
                   {{ formFilters.tags.length }} seleccionada{{ formFilters.tags.length === 1 ? '' : 's' }}
                 </span>
-                <span v-else>Seleccionar etiquetas</span>
+                <span v-else>
+                  {{ availableTags.length ? 'Seleccionar etiquetas' : 'No hay etiquetas disponibles' }}
+                </span>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     d="M6 9l6 6 6-6"
