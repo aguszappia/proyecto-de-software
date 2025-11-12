@@ -11,6 +11,14 @@ const router = createRouter({
     if (savedPosition) {
       return savedPosition
     }
+
+    const isSitesView = to.name === 'sites' && from?.name === 'sites'
+    const onlyQueryChanged = to.path === from?.path && to.hash === from?.hash
+
+    if (isSitesView && onlyQueryChanged) {
+      return false
+    }
+
     return {
       top: 0,
       left: 0,

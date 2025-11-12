@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { LMap, LMarker, LPopup, LTileLayer } from '@vue-leaflet/vue-leaflet'
+import 'leaflet/dist/leaflet.css'
 import SiteCard from '@/components/SiteCard.vue'
 import API_BASE_URL from '@/constants/api'
 
@@ -62,6 +64,7 @@ const error = ref(null)
 const availableTags = ref([])
 const tagsDropdownOpen = ref(false)
 const tagsDropdownRef = ref(null)
+const showingMap = ref(route.query.view === 'map')
 
 const formFilters = ref({
   q: '',
@@ -167,7 +170,6 @@ watchEffect(async () => {
   const filters = activeFilters.value
   loading.value = true
   error.value = null
-  sites.value = []
   try {
     const query = buildQueryString(filters)
     const response = await fetch(`${API_BASE_URL}/sites?${query}`)
@@ -254,14 +256,19 @@ const serializeFilters = (filters) => {
 }
 
 const handleFiltersSubmit = () => {
+  const nextQuery = serializeFilters(formFilters.value)
+  if (showingMap.value) {
+    nextQuery.view = 'map'
+  }
   router.push({
     name: 'sites',
-    query: serializeFilters(formFilters.value),
+    query: nextQuery,
   })
 }
 
 const handleFiltersReset = () => {
-  router.push({ name: 'sites' })
+  const query = showingMap.value ? { view: 'map' } : {}
+  router.push({ name: 'sites', query })
 }
 
 const toggleTag = (tag) => {
@@ -301,6 +308,115 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
 })
+
+watch(
+  () => route.query.view,
+  (value) => {
+    showingMap.value = value === 'map'
+  },
+  { immediate: true },
+)
+
+const DEFAULT_MAP_CENTER = [-34.6037, -58.3816]
+
+const resolveCoordinate = (source, keys) => {
+  for (const key of keys) {
+    if (!(key in source)) continue
+    const value = source[key]
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value
+    }
+    if (typeof value === 'string' && value.trim().length) {
+      const parsed = Number(value)
+      if (Number.isFinite(parsed)) {
+        return parsed
+      }
+    }
+  }
+  return null
+}
+
+const mapSites = computed(() =>
+  sites.value
+    .map((site) => {
+      const latitude = resolveCoordinate(site, ['lat', 'latitude', 'latitud'])
+      const longitude = resolveCoordinate(site, ['long', 'lon', 'longitude', 'longitud'])
+      return {
+        id: site.id,
+        name: site.name,
+        city: site.city,
+        province: site.province,
+        latitude,
+        longitude,
+        summary:
+          site.short_description ??
+          site.shortDescription ??
+          site.full_description ??
+          site.fullDescription ??
+          '',
+      }
+    })
+    .filter((site) => typeof site.latitude === 'number' && typeof site.longitude === 'number'),
+)
+
+const mapCenter = computed(() => {
+  if (mapSites.value.length === 1) {
+    return [mapSites.value[0].latitude, mapSites.value[0].longitude]
+  }
+  if (mapSites.value.length > 1) {
+    const latitudes = mapSites.value.map((site) => site.latitude)
+    const longitudes = mapSites.value.map((site) => site.longitude)
+    return [
+      (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
+      (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
+    ]
+  }
+  return DEFAULT_MAP_CENTER
+})
+
+const mapBounds = computed(() => {
+  if (mapSites.value.length < 2) {
+    return null
+  }
+  const latitudes = mapSites.value.map((site) => site.latitude)
+  const longitudes = mapSites.value.map((site) => site.longitude)
+  return [
+    [Math.min(...latitudes), Math.min(...longitudes)],
+    [Math.max(...latitudes), Math.max(...longitudes)],
+  ]
+})
+
+const mapZoom = computed(() => (mapSites.value.length > 1 ? 6 : 13))
+
+const synchronizeViewQuery = (mode) => {
+  const nextQuery = { ...route.query }
+  if (mode === 'map') {
+    if (nextQuery.view === 'map') return
+    nextQuery.view = 'map'
+  } else {
+    if (!nextQuery.view) return
+    delete nextQuery.view
+  }
+  router.push({
+    name: 'sites',
+    query: nextQuery,
+  })
+}
+
+const toggleMapMode = (enabled) => {
+  if (enabled && !mapSites.value.length) return
+  synchronizeViewQuery(enabled ? 'map' : 'list')
+}
+
+watch(
+  mapSites,
+  (value) => {
+    if (!value.length && showingMap.value && !loading.value) {
+      synchronizeViewQuery('list')
+    }
+  },
+  { flush: 'post' },
+)
 </script>
 
 <template>
@@ -439,7 +555,37 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="view-panel__card listing__placeholder">
-      <template v-if="loading">
+      <div v-if="!loading && !error && preparedSites.length" class="listing__header">
+        <div>
+          <h2>{{ showingMap ? 'Mapa de sitios' : 'Resultados' }}</h2>
+          <p class="listing__note">
+            {{
+              showingMap
+                ? 'Mostramos únicamente los sitios que cuentan con coordenadas para los filtros activos.'
+                : 'Visualizá los resultados como tarjetas o usá el mapa para ubicarlos geográficamente.'
+            }}
+          </p>
+        </div>
+        <button
+          v-if="!showingMap"
+          type="button"
+          class="secondary-button listing__toggle-button"
+          :disabled="!mapSites.length"
+          @click="toggleMapMode(true)"
+        >
+          Ver mapa
+        </button>
+        <button
+          v-else
+          type="button"
+          class="secondary-button listing__toggle-button"
+          @click="toggleMapMode(false)"
+        >
+          Volver al listado
+        </button>
+      </div>
+
+      <template v-if="loading && !preparedSites.length">
         <h2>Cargando sitios...</h2>
         <p>Buscando resultados con los filtros seleccionados.</p>
       </template>
@@ -448,17 +594,58 @@ onBeforeUnmount(() => {
         <p class="listing__note">{{ error }}</p>
       </template>
       <template v-else>
-        <h2 v-if="preparedSites.length === 0">Sin resultados</h2>
-        <p v-if="preparedSites.length === 0" class="listing__note">
-          Ajustá los criterios o probá con otras palabras clave.
-        </p>
-        <div v-else class="listing__cards">
-          <SiteCard
-            v-for="site in preparedSites"
-            :key="site.id || site.name"
-            :site="site"
-          />
+        <div v-if="loading" class="listing__status" role="status" aria-live="polite">
+          <span class="listing__spinner" aria-hidden="true"></span>
+          Actualizando resultados…
         </div>
+        <template v-if="showingMap">
+          <p v-if="!mapSites.length" class="listing__note">
+            No hay sitios con coordenadas para estos filtros. Volvé al listado para explorar otras opciones.
+          </p>
+          <div v-else class="listing__map-card">
+            <l-map
+              :key="`map-${mapSites.length}`"
+              class="listing__leaflet"
+              :center="mapCenter"
+              :zoom="mapZoom"
+              :bounds="mapBounds || undefined"
+              style="width: 100%; min-height: 320px;"
+            >
+              <l-tile-layer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <l-marker
+                v-for="site in mapSites"
+                :key="site.id || site.name"
+                :lat-lng="[site.latitude, site.longitude]"
+              >
+                <l-popup>
+                  <strong>{{ site.name }}</strong>
+                  <p>{{ site.city ? `${site.city}, ${site.province}` : site.province }}</p>
+                  <p v-if="site.summary">{{ site.summary }}</p>
+                  <RouterLink
+                    v-if="site.id"
+                    class="map-popup__link"
+                    :to="{ name: 'site-detail', params: { id: site.id } }"
+                  >
+                    Ver detalle
+                  </RouterLink>
+                </l-popup>
+              </l-marker>
+            </l-map>
+          </div>
+        </template>
+        <template v-else>
+          <h2 v-if="preparedSites.length === 0">Sin resultados</h2>
+          <p v-if="preparedSites.length === 0" class="listing__note">
+            Ajustá los criterios o probá con otras palabras clave.
+          </p>
+          <div v-else class="listing__cards">
+            <SiteCard
+              v-for="site in preparedSites"
+              :key="site.id || site.name"
+              :site="site"
+            />
+          </div>
+        </template>
       </template>
     </div>
   </section>

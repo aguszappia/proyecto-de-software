@@ -26,13 +26,8 @@ const destination = computed(() => {
 
 const imageUrl = computed(() => props.site?.image || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=60')
 
-const locationLabel = computed(() => {
-  const city = props.site?.city
-  const province = props.site?.province
-
-  if (city && province) return `${city}, ${province}`
-  return city || province || 'Ubicación por confirmar'
-})
+const cityLabel = computed(() => props.site?.city || 'Ciudad sin datos')
+const provinceLabel = computed(() => props.site?.province || 'Provincia sin datos')
 
 const ratingLabel = computed(() => {
   const rating = props.site?.rating
@@ -70,7 +65,11 @@ const tags = computed(() => {
       <ul class="site-card__info">
         <li>
           <span class="site-card__label">Ciudad:</span>
-          <span class="site-card__value">{{ locationLabel }}</span>
+          <span class="site-card__value">{{ cityLabel }}</span>
+        </li>
+        <li>
+          <span class="site-card__label">Provincia:</span>
+          <span class="site-card__value">{{ provinceLabel }}</span>
         </li>
         <li v-if="site.state">
           <span class="site-card__label">Estado:</span>
