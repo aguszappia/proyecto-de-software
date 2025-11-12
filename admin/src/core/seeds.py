@@ -1,8 +1,10 @@
 """Cargo datos iniciales de roles, permisos, usuarios, sitios y flags."""
 
+from src.core.database import db
 from src.core.users import UserRole
 from src.core.users import service as user_service
 from src.core.sites import service as sites_service
+from src.core.sites.models import Historic_Site, ReviewStatus, SiteReview
 from src.core.flags import service as flags_service
 from src.core.permissions import service as permissions_service
 
@@ -166,6 +168,74 @@ def run():
             print(f"[SEED ERROR] {name}: {e}")
 
     print("Seeds de sitios históricos cargadas")
+
+    # Seeds de reseñas de prueba
+    site_by_name = {
+        site.name: site
+        for site in db.session.query(Historic_Site).all()
+    }
+
+    review_payloads = [
+        {
+            "site_name": "Cabildo de Buenos Aires",
+            "user_email": "user1@example.com",
+            "rating": 5,
+            "comment": "Volví hace poco y sigue teniendo ese clima que me encanta.",
+            "status": ReviewStatus.PENDING,
+            "rejection_reason": None,
+        },
+        {
+            "site_name": "Puente Viejo",
+            "user_email": "editor@example.com",
+            "rating": 4,
+            "comment": "Paso seguido por acá camino al centro y siempre me da nostalgia.",
+            "status": ReviewStatus.PENDING,
+            "rejection_reason": None,
+        },
+        {
+            "site_name": "Sitio Arqueológico Las Piedras",
+            "user_email": "admin@example.com",
+            "rating": 3,
+            "comment": "La última vez estaba vallado, espero que vuelvan a abrirlo pronto.",
+            "status": ReviewStatus.PENDING,
+            "rejection_reason": "Mensaje repetido con otros reportes.",
+        },
+    ]
+
+    for payload in review_payloads:
+        site = site_by_name.get(payload["site_name"])
+        user = user_service.find_user_by_email(payload["user_email"])
+        if not site:
+            print(f"[SEED ERROR] review: el sitio {payload['site_name']} no existe")
+            continue
+        if not user:
+            print(f"[SEED ERROR] review: el usuario {payload['user_email']} no existe")
+            continue
+
+        existing = (
+            db.session.query(SiteReview)
+            .filter(
+                SiteReview.site_id == site.id,
+                SiteReview.user_id == user.id,
+            )
+            .first()
+        )
+        if existing:
+            print(f"[SEED WARN] review ya existente para {payload['site_name']} y {payload['user_email']}")
+            continue
+
+        review = SiteReview(
+            site_id=site.id,
+            user_id=user.id,
+            rating=payload["rating"],
+            comment=payload["comment"],
+            status=payload["status"],
+            rejection_reason=payload["rejection_reason"],
+        )
+        db.session.add(review)
+        print(f"[SEED OK] review de {payload['user_email']} en {payload['site_name']}")
+
+    db.session.commit()
 
     # Seeds de Flags iniciales
     flags_defaults = [

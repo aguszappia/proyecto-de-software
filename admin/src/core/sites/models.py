@@ -1,5 +1,7 @@
 """Modelos y enums para sitios históricos y sus etiquetas."""
 
+from typing import Optional
+
 from src.core.database import Base
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import DateTime, String, UniqueConstraint, Table, Column, Integer, ForeignKey, Boolean
@@ -10,6 +12,7 @@ from enum import Enum
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import relationship
 
+# --- Historial --- 
 class SiteHistory(Base):
     """Modelo base para un sitio Historico."""
 
@@ -43,16 +46,16 @@ site_tag_association = Table(
     Column('tag_id', Integer, ForeignKey('site_tags.id'), primary_key=True)
 )
 
+# --- Sitios historico ---
+
 class ConservationStatus(str, Enum):
     """Defino los posibles estados de conservación de un sitio."""
-
     GOOD = "Bueno"
     REGULAR = "Regular" 
     BAD = "Malo"
 
 class SiteCategory(str, Enum):
     """Enumero las categorías de sitios históricos disponibles."""
-
     ARCHITECTURE = "Arquitectura"
     INFRASTRUCTURE = "Infraestructura"
     ARCHAEOLOGICAL = "Sitio arqueológico"
@@ -135,6 +138,8 @@ class Historic_Site(Base):
             return point.x # longitud
         return None
 
+# --- Etiquetas para sitios --- 
+
     @property
     def cover_image(self):
         """Devuelvo la imagen marcada como portada si existe."""
@@ -158,6 +163,7 @@ class Historic_Site(Base):
         return cover.title if cover else None
 
 # Modelo para etiquetas
+
 class SiteTag(Base):
     """Modelo base para una etiqueta de sitio histórico."""
 
@@ -183,6 +189,32 @@ class SiteTag(Base):
     sites = relationship("Historic_Site", secondary=site_tag_association, back_populates="tags")
 
 
+# --- Reseñas de sitios históricos ---
+
+class ReviewStatus(str, Enum):
+    """Defino los posibles estados de una reseña"""
+    PENDING = "Pendiente"
+    APPROVED = "Aprobada" 
+    REJECTED = "Rechazada"
+
+class SiteReview(Base):
+    """Modelo base para reseñas de sitios históricos."""
+
+    __tablename__ = "site_reviews"
+    __table_args__ = (
+        UniqueConstraint("site_id", "user_id", name="uq_site_reviews_site_user"),
+    )
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    site_id: Mapped[int] = mapped_column(Integer, ForeignKey("historic_sites.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str] = mapped_column(String(1000), nullable=True)
+    status: Mapped[ReviewStatus] = mapped_column(
+        SQLAlchemyEnum(ReviewStatus), default=ReviewStatus.PENDING, nullable=False
+    )
+    rejection_reason: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+
+
 class SiteImage(Base):
     """Imagen asociada a un sitio"""
 
@@ -199,6 +231,7 @@ class SiteImage(Base):
     description: Mapped[str] = mapped_column(String(500), nullable=True)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_cover: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -208,6 +241,8 @@ class SiteImage(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    site = relationship("Historic_Site")
 
     site = relationship("Historic_Site", back_populates="images")
 
