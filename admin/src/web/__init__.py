@@ -26,6 +26,7 @@ from src.core.users.service import get_user
 from src.core.permissions import models as permissions_models  # noqa: F401
 from src.core.permissions import service as permissions_service
 from src.web.api.sites import bp as sites_api_bp, auth_bp as public_auth_bp
+from src.web.api.auth_session import session_api_bp
 
 
 def create_app(env="development", static_folder="../../static"):
@@ -36,7 +37,7 @@ def create_app(env="development", static_folder="../../static"):
     # Inicializar base de datos
     database.init_db(app)
     storage.init_app(app)
-    CORS(app)
+    CORS(app, supports_credentials=True)
 
     @app.route("/")
     def home():
@@ -87,6 +88,7 @@ def create_app(env="development", static_folder="../../static"):
     register_controllers(app)
 
     app.register_blueprint(public_auth_bp)
+    app.register_blueprint(session_api_bp)
     app.register_blueprint(sites_api_bp)
 
     Session(app)  # inicializa Flask-Session
