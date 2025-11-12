@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, onBeforeUnmount } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import API_BASE_URL from '@/constants/api'
@@ -57,7 +57,7 @@ const form = reactive({
   inaguration_year: '',
   lat: '',
   long: '',
-  tags: '',
+  tags: [],
 })
 
 const submitting = ref(false)
@@ -66,6 +66,9 @@ const errorMessage = ref('')
 const validationErrors = ref({})
 
 const mapElement = ref(null)
+const availableTags = ref([])
+const tagsDropdownOpen = ref(false)
+const tagsDropdownRef = ref(null)
 let mapInstance = null
 let markerInstance = null
 
@@ -78,6 +81,52 @@ const ensureMarker = (lat, lng) => {
     markerInstance = L.marker(point).addTo(mapInstance)
   } else {
     markerInstance.setLatLng(point)
+  }
+}
+
+const fetchAvailableTags = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/tags`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch tags')
+    }
+    const payload = await response.json()
+    const mapped = Array.isArray(payload?.data) ? payload.data : []
+    availableTags.value = mapped
+      .map((tag) => (typeof tag?.name === 'string' ? tag.name.trim() : ''))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b))
+  } catch (error) {
+    availableTags.value = []
+  }
+}
+
+const toggleTag = (tag) => {
+  if (!tag) return
+  const current = new Set(form.tags)
+  if (current.has(tag)) {
+    current.delete(tag)
+  } else {
+    current.add(tag)
+  }
+  form.tags = Array.from(current)
+}
+
+const toggleTagDropdown = () => {
+  if (!availableTags.value.length) {
+    return
+  }
+  tagsDropdownOpen.value = !tagsDropdownOpen.value
+}
+
+const closeTagDropdown = () => {
+  tagsDropdownOpen.value = false
+}
+
+const handleClickOutside = (event) => {
+  if (!tagsDropdownRef.value) return
+  if (!tagsDropdownRef.value.contains(event.target)) {
+    closeTagDropdown()
   }
 }
 
@@ -97,6 +146,13 @@ onMounted(() => {
     form.long = lng.toFixed(6)
     ensureMarker(lat, lng)
   })
+
+  document.addEventListener('click', handleClickOutside)
+  fetchAvailableTags()
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 const fieldLabels = {
@@ -119,12 +175,6 @@ const resetMessages = () => {
   validationErrors.value = {}
 }
 
-const normalizeTags = (raw) =>
-  (raw || '')
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-
 const handleSubmit = async () => {
   resetMessages()
   if (!form.lat || !form.long) {
@@ -144,7 +194,7 @@ const handleSubmit = async () => {
     state_of_conservation: form.state_of_conservation,
     category: form.category,
     inaguration_year: form.inaguration_year ? Number(form.inaguration_year) : null,
-    tags: normalizeTags(form.tags),
+    tags: form.tags,
   }
 
   submitting.value = true
@@ -171,7 +221,7 @@ const handleSubmit = async () => {
       form.inaguration_year = ''
       form.lat = ''
       form.long = ''
-      form.tags = ''
+      form.tags = []
       if (markerInstance && mapInstance) {
         mapInstance.removeLayer(markerInstance)
         markerInstance = null
@@ -291,15 +341,68 @@ const handleSubmit = async () => {
               placeholder="Ej. 1890"
             />
           </label>
-          <label class="form-grid__full">
-            Etiquetas (separadas por coma)
-            <input
-              v-model="form.tags"
-              type="text"
-              placeholder="Ej. patrimonio,colonial,arquitectura"
-            />
+          <div class="form-grid__full filter-group filter-group--tags create-form__tags">
+            <span>Etiquetas</span>
+            <div class="tag-dropdown" ref="tagsDropdownRef">
+              <button
+                type="button"
+                class="tag-dropdown__toggle"
+                :disabled="!availableTags.length"
+                @click.stop="toggleTagDropdown"
+              >
+                <span v-if="form.tags.length">
+                  {{ form.tags.length }} seleccionada{{ form.tags.length === 1 ? '' : 's' }}
+                </span>
+                <span v-else>
+                  {{ availableTags.length ? 'Seleccionar etiquetas' : 'No hay etiquetas disponibles' }}
+                </span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M6 9l6 6 6-6"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+              <div v-if="tagsDropdownOpen" class="tag-dropdown__panel">
+                <label
+                  v-for="tag in availableTags"
+                  :key="tag"
+                  class="tag-dropdown__option"
+                >
+                  <input
+                    type="checkbox"
+                    :value="tag"
+                    :checked="form.tags.includes(tag)"
+                    @change="toggleTag(tag)"
+                  />
+                  <span>{{ tag }}</span>
+                </label>
+                <p v-if="!availableTags.length" class="tag-placeholder">
+                  Cargaremos etiquetas cuando haya sitios disponibles.
+                </p>
+                <button
+                  type="button"
+                  class="secondary-button tag-dropdown__close"
+                  @click="closeTagDropdown"
+                >
+                  Listo
+                </button>
+              </div>
+            </div>
+            <div v-if="form.tags.length" class="tag-selected-summary">
+              <span v-for="tag in form.tags" :key="tag" class="tag-pill">
+                {{ tag }}
+                <button type="button" @click="toggleTag(tag)" aria-label="Quitar tag">
+                  ×
+                </button>
+              </span>
+            </div>
             <small>Usamos estas etiquetas para agrupar sitios similares.</small>
-          </label>
+          </div>
         </div>
 
         <div class="map-panel">
