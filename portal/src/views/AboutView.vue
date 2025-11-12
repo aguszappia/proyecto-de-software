@@ -11,7 +11,7 @@
       <ul class="about-hero__meta">
         <li>Portal público</li>
         <li>Etapa 2</li>
-        <li>SPA Vue + API</li>
+        <li> Vue 3 + API</li>
       </ul>
     </header>
 
@@ -19,10 +19,11 @@
       <h2>¿De qué se trata?</h2>
       <p>
         Este portal forma parte del <strong>Trabajo Integrador 2025</strong> de la cátedra
-        <em>Proyecto de Software</em>. Implementamos una SPA con
-        <strong>Vue 3</strong> dentro del directorio <code>web</code> para que el público pueda
-        descubrir sitios históricos destacados, acceder a reseñas, mapas interactivos desde cualquier
-        dispositivo.
+        <em>Proyecto de Software</em>. Implementamos un portal público con
+        <strong>Vue 3</strong> para que el público pueda
+        visualizar sitios históricos destacados, acceder a reseñas y mapas interactivos desde cualquier
+        dispositivo. Trabajamos con <strong>PostgreSQL</strong> (soporte geoespacial) y una API
+        que integra ambos frentes dentro del directorio <code>web</code> del proyecto.
       </p>
     </article>
 
@@ -64,7 +65,7 @@
       <div>
         <p class="section-kicker">Grupo Nº 28 — Etapa 2</p>
         <p class="about-footer__note">
-          Aplicación pública desarrollada con una SPA Vue conectada a APIs Python + Flask.
+          Aplicación pública desarrollada con Vue 3 conectada a la API Python + Flask.
         </p>
       </div>
       <div class="about-footer__logos" aria-label="Tecnologías utilizadas">
