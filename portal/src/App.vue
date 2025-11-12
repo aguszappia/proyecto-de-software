@@ -64,7 +64,6 @@ onMounted(() => {
         <nav class="public-nav" aria-label="Navegación principal">
           <RouterLink to="/">Inicio</RouterLink>
           <RouterLink to="/sitios">Sitios</RouterLink>
-          <RouterLink to="/map">Mapa</RouterLink>
           <RouterLink to="/about">Nosotros</RouterLink>
         </nav>
 
@@ -97,7 +96,6 @@ onMounted(() => {
         <p>© {{ new Date().getFullYear() }} Sitios Históricos.</p>
         <nav aria-label="Navegación secundaria">
           <RouterLink to="/sitios">Sitios</RouterLink>
-          <RouterLink to="/map">Mapa interactivo</RouterLink>
           <RouterLink to="/about">Nosotros</RouterLink>
         </nav>
       </footer>
