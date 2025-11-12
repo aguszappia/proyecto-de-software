@@ -11,7 +11,7 @@ from sqlalchemy import func, or_
 from src.core.database import db
 from src.core.flags import service as flags_service
 from src.core.sites.models import ConservationStatus, SiteCategory, SiteTag
-from src.core.sites.service import create_site, get_sites_by_location, list_sites
+from src.core.sites.service import create_site, get_site, get_sites_by_location, list_sites
 from src.core.sites.validators import clean_str, safe_float, safe_int
 from src.core.security.passwords import verify_password
 from src.core.users import UserRole
@@ -375,6 +375,19 @@ def index():
         return jsonify(payload), 200
     except QueryParamError as error:
         return _handle_query_error(error)
+    except Exception:
+        return _error_response(500, "server_error", "An unexpected error occurred")
+
+
+@bp.get("/<int:site_id>")
+def site_details(site_id: int):
+    """Obtiene el detalle público de un sitio histórico."""
+    try:
+        site = get_site(site_id)
+        if not site or not site.get("is_visible"):
+            return _error_response(404, "not_found", "Site not found")
+        payload = single_site_schema.dump(site)
+        return jsonify(payload), 200
     except Exception:
         return _error_response(500, "server_error", "An unexpected error occurred")
 

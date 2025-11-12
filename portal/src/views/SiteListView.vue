@@ -137,7 +137,13 @@ const preparedSites = computed(() =>
     updatedAt: formatUpdatedAtLabel(site.updated_at || site.updatedAt),
     image: GENERIC_SITE_IMAGE_URL,
     tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
-    href: site.id ? { name: 'site-detail', params: { id: site.id } } : null,
+    href: site.id
+      ? {
+          name: 'site-detail',
+          params: { id: site.id },
+          query: { ...route.query },
+        }
+      : null,
   })),
 )
 
