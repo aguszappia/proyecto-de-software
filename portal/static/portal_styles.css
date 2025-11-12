@@ -461,6 +461,71 @@ body {
   margin: 1.25rem 0 0;
 }
 
+.listing__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.listing__header h2 {
+  margin: 0;
+}
+
+.listing__header .listing__note {
+  margin-top: 0.35rem;
+}
+
+.listing__toggle-button {
+  min-width: 150px;
+}
+
+.listing__map-card {
+  margin-top: 1.25rem;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.12);
+}
+
+.listing__leaflet,
+.listing__map-card .leaflet-container {
+  width: 100%;
+  height: clamp(320px, 45vh, 520px);
+}
+
+.map-popup__link {
+  display: inline-flex;
+  margin-top: 0.35rem;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.listing__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.75rem;
+}
+
+.listing__spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(99, 102, 241, 0.4);
+  border-top-color: #6366f1;
+  animation: listing-spin 0.8s linear infinite;
+}
+
+@keyframes listing-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (min-width: 768px) {
   .listing__cards {
     gap: 1.5rem;
@@ -1052,10 +1117,17 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
 }
 
 .site-detail__back {
   align-self: flex-start;
+  width: auto;
+  min-width: 0;
+  display: inline-flex;
+  justify-content: flex-start;
 }
 
 .site-detail__hero h1 {
@@ -1364,6 +1436,20 @@ body {
   .site-card {
     min-height: 100%;
   }
+
+  .listing__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .listing__toggle-button {
+    width: 100%;
+  }
+
+  .listing__header .listing__note {
+    margin-top: 0.15rem;
+  }
 }
 
 @media (min-width: 768px) {
@@ -1386,28 +1472,8 @@ body {
 }
 
 @media (min-width: 1024px) {
-  .site-detail {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-    gap: 1.75rem;
-    align-items: flex-start;
-  }
-
-  .site-detail__back {
-    grid-column: 1 / -1;
-  }
-
-  .site-detail__hero,
-  .site-detail__gallery,
-  .site-detail__description,
-  .site-detail__tags {
-    grid-column: 1 / 2;
-  }
-
   .site-detail__map {
-    grid-column: 2 / 3;
-    position: sticky;
-    top: 1.25rem;
+    position: static;
   }
 
   .site-detail__leaflet,
