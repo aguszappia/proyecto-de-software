@@ -1,6 +1,5 @@
 import json
 
-from admin.src.web import config
 from minio import Minio
 from minio.error import S3Error
 
@@ -16,8 +15,8 @@ class Storage:
         server = app.config.get('MINIO_SERVER')
         access_key = app.config.get('MINIO_ACCESS_KEY')
         secret_key = app.config.get('MINIO_SECRET_KEY')
-        secure = config.get('MINIO_SECURE', False)
-        bucket = config.get('MINIO_BUCKET')
+        secure = app.config.get('MINIO_SECURE', False)
+        bucket = app.config.get('MINIO_BUCKET')
 
         if not server or not access_key or not secret_key or not bucket:
             raise RuntimeError("La configuración de MinIO es incompleta.")
