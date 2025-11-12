@@ -884,6 +884,134 @@ body {
   margin-top: 1.25rem;
 }
 
+.about-view {
+  gap: 1.75rem;
+}
+
+.about-view .view-panel__card {
+  text-align: center;
+}
+
+.about-view .view-panel__card p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.about-view strong {
+  font-weight: 700;
+  color: inherit;
+}
+
+.about-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.about-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 55%);
+  pointer-events: none;
+}
+
+.about-hero h1 {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  margin: 0.25rem 0 0.75rem;
+}
+
+.about-hero__lead {
+  font-size: 1.05rem;
+  color: #334155;
+  margin: 0 auto 1rem;
+  max-width: clamp(60ch, 72vw, 96ch);
+}
+
+.about-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  justify-content: center;
+}
+
+.about-hero__meta li {
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #1e293b;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+}
+
+.about-card--intro {
+  width: 100%;
+}
+
+.about-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .about-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.about-card h2 {
+  margin-bottom: 0.6rem;
+}
+
+.section-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-bottom: 0.4rem;
+}
+
+.about-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .about-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+  }
+}
+
+.about-footer__note {
+  color: #334155;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.about-footer__logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-footer__logos img {
+  filter: drop-shadow(0 10px 25px rgba(15, 23, 42, 0.08));
+  max-height: 56px;
+  width: auto;
+}
+
 .listing__placeholder {
   text-align: left;
   background: rgba(255, 255, 255, 0.9);
