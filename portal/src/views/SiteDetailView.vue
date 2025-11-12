@@ -19,6 +19,34 @@ const DEFAULT_SITE_IMAGE =
 const normalizeSite = (payload) => {
   if (!payload) return null
   const tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : []
+  const images = Array.isArray(payload.images) ? payload.images : []
+  const normalizeImageEntry = (entry) => {
+    if (!entry) return null
+    if (typeof entry === 'string') {
+      return { src: entry, alt: payload.name || 'Sitio histórico' }
+    }
+    if (typeof entry === 'object') {
+      const src = entry.src || entry.url || entry.image_url || entry.imageUrl
+      if (!src) {
+        return null
+      }
+      return { src, alt: entry.alt || entry.title || payload.name || 'Sitio histórico' }
+    }
+    return null
+  }
+
+  const galleryImages = images.map(normalizeImageEntry).filter(Boolean)
+  const coverImageSrc =
+    payload.cover_image_url ||
+    payload.coverImageUrl ||
+    (typeof payload.cover_image === 'string' ? payload.cover_image : payload.cover_image?.url)
+  if (coverImageSrc) {
+    galleryImages.unshift({
+      src: coverImageSrc,
+      alt: payload.cover_image_title || payload.name || 'Sitio histórico',
+    })
+  }
+
   return {
     id: payload.id,
     name: payload.name,
@@ -32,8 +60,7 @@ const normalizeSite = (payload) => {
     latitude: typeof payload.lat === 'number' ? payload.lat : payload.latitude ?? null,
     longitude: typeof payload.long === 'number' ? payload.long : payload.longitude ?? null,
     updatedAt: payload.updated_at || payload.inserted_at || null,
-    images: Array.isArray(payload.images) ? payload.images : [],
-    coverImage: payload.cover_image || null,
+    images: galleryImages,
   }
 }
 
@@ -76,10 +103,7 @@ watch(
 
 const galleryImages = computed(() => {
   if (!site.value) return []
-  const pool = [
-    ...(Array.isArray(site.value.images) ? site.value.images : []),
-    site.value.coverImage,
-  ].filter(Boolean)
+  const pool = Array.isArray(site.value.images) ? site.value.images : []
   if (!pool.length) {
     return [
       {
@@ -88,10 +112,7 @@ const galleryImages = computed(() => {
       },
     ]
   }
-  return pool.map((src, index) => ({
-    src,
-    alt: `Imagen ${index + 1} de ${site.value.name}`,
-  }))
+  return pool
 })
 
 watch(galleryImages, () => {

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import FeaturedSection from '@/components/FeaturedSection.vue'
 import HeroBanner from '@/components/HeroBanner.vue'
 import API_BASE_URL from '@/constants/api'
+import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
 
 const router = useRouter()
 
@@ -131,7 +132,8 @@ const mapSiteToCard = (site) => ({
       ? site.rating
       : site.average_rating ?? site.averageRating ?? null,
   updatedAt: formatUpdatedAtLabel(site.updated_at || site.updatedAt),
-  image: GENERIC_SITE_IMAGE_URL,
+  image: resolveSiteImageSrc(site, GENERIC_SITE_IMAGE_URL),
+  imageAlt: resolveSiteImageAlt(site),
   tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
   href: site.id ? { name: 'site-detail', params: { id: site.id } } : null,
 })

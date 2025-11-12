@@ -5,6 +5,7 @@ import { LMap, LMarker, LPopup, LTileLayer } from '@vue-leaflet/vue-leaflet'
 import 'leaflet/dist/leaflet.css'
 import SiteCard from '@/components/SiteCard.vue'
 import API_BASE_URL from '@/constants/api'
+import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
 
 const route = useRoute()
 const router = useRouter()
@@ -138,7 +139,8 @@ const preparedSites = computed(() =>
         ? site.rating
         : site.average_rating ?? site.averageRating ?? null,
     updatedAt: formatUpdatedAtLabel(site.updated_at || site.updatedAt),
-    image: GENERIC_SITE_IMAGE_URL,
+    image: resolveSiteImageSrc(site, GENERIC_SITE_IMAGE_URL),
+    imageAlt: resolveSiteImageAlt(site),
     tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
     href: site.id
       ? {
