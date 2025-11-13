@@ -42,7 +42,7 @@ class ProductionConfig(Config):
     MINIO_SECURE = True
     MINIO_BUCKET = "grupo28"
     CORS_ORIGINS = [
-        "https://grupo28.proyecto2025.linti.unlp.edu.ar/"
+        "https://grupo28.proyecto2025.linti.unlp.edu.ar"
     ]
 class DevelopmentConfig(Config):
     """Configuro la base local y claves de desarrollo."""
