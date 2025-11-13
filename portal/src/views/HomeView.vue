@@ -72,7 +72,8 @@ const heroCopy = {
   description: 'Explorá sitios históricos y descubrí las maravillas que guarda el pasado.',
   hint: 'Tip: buscá por ciudad, por sitio o por palabra clave.',
   backdrop:
-    'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=2000&q=60',
+    'https://images.unsplash.com/photo-1577801599718-f4e3ad3fc794?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    // 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=2000&q=60',
   scrollLabel: 'Ver destacados',
 }
 

@@ -62,7 +62,6 @@ onMounted(() => {
         </RouterLink>
 
         <nav class="public-nav" aria-label="Navegación principal">
-          <RouterLink to="/">Inicio</RouterLink>
           <RouterLink to="/sitios">Sitios</RouterLink>
           <RouterLink to="/about">Nosotros</RouterLink>
         </nav>
