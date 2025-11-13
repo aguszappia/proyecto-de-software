@@ -36,7 +36,7 @@ class ProductionConfig(Config):
     """Apunto a la base productiva usando variables de entorno."""
     SQLALCHEMY_ENGINES = {"default": environ.get('DATABASE_URL')}
     
-    MINIO_SERVER = environ.get('MINIO_SERVER')
+    MINIO_SERVER = "minio.proyecto2025.linti.unlp.edu.ar"
     MINIO_ACCESS_KEY = environ.get('MINIO_ACCESS_KEY')
     MINIO_SECRET_KEY = environ.get('MINIO_SECRET_KEY')
     MINIO_SECURE = True
@@ -48,7 +48,7 @@ class DevelopmentConfig(Config):
     """Configuro la base local y claves de desarrollo."""
     SECRET_KEY = "your_development_secret_key"
 
-    MINIO_SERVER = "minio.proyecto2025.linti.unlp.edu.ar"
+    MINIO_SERVER = "minio.localhost:9000"
     MINIO_ACCESS_KEY = "AsOGiJwynq9UDIrN7tf5"
     MINIO_SECRET_KEY = "Fy2p6U0THpWi27s9fy6ypH7RP1jSWRd4hFaarmPt"
     MINIO_SECURE = False
