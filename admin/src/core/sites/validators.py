@@ -81,6 +81,14 @@ def build_site_payload(form_data: Mapping[str, Any]) -> Tuple[Dict[str, Any], Di
     }
 
     errors: List[str] = []
+    field_labels = {
+        "name": "Nombre",
+        "short_description": "Descripción breve",
+        "full_description": "Descripción completa",
+        "city": "Ciudad",
+        "province": "Provincia",
+    }
+
     required_messages = {
         "name": "El nombre es obligatorio.",
         "short_description": "La descripción breve es obligatoria.",
@@ -91,6 +99,19 @@ def build_site_payload(form_data: Mapping[str, Any]) -> Tuple[Dict[str, Any], Di
     for field, message in required_messages.items():
         if not values[field]:
             errors.append(message)
+
+    max_lengths = {
+        "name": 255,
+        "short_description": 255,
+        "full_description": 2000,
+        "city": 120,
+        "province": 120,
+    }
+    for field, limit in max_lengths.items():
+        value = values.get(field) or ""
+        if value and len(value) > limit:
+            label = field_labels.get(field, field.replace("_", " ").title())
+            errors.append(f"{label} no puede superar los {limit} caracteres.")
 
     latitude = safe_float(values["latitude"])
     longitude = safe_float(values["longitude"])
