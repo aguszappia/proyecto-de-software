@@ -34,7 +34,7 @@ class Config:
 
 class ProductionConfig(Config):
     """Apunto a la base productiva usando variables de entorno."""
-    SQLALCHEMY_ENGINES = {"default": environ.get('DATABASE_URL')}
+    SQLALCHEMY_ENGINES = {"default": environ.get("DATABASE_URL") or environ.get("URL")}
     
     MINIO_SERVER = "minio.proyecto2025.linti.unlp.edu.ar"
     MINIO_ACCESS_KEY = environ.get('MINIO_ACCESS_KEY')
