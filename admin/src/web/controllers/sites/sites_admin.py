@@ -10,8 +10,10 @@ from typing import Dict
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 from sqlalchemy.exc import IntegrityError
 
-from src.core.sites.models import ConservationStatus, SiteCategory
+from src.core.sites import images_service
 from src.core.sites.history_service import list_deleted_sites
+from src.core.sites.images_service import SiteImageError
+from src.core.sites.models import ConservationStatus, SiteCategory
 from src.core.sites.service import (
     create_site,
     delete_site,
@@ -31,6 +33,7 @@ from src.core.sites.validators import (
     safe_int,
 )
 from src.core.database import db
+from src.web.controllers.sites import images_helpers
 from .sites_utils import PROVINCES, empty_site_form, parse_date
 
 bp = Blueprint("sites", __name__, url_prefix="/sites")
@@ -121,6 +124,18 @@ def create():
 
     if request.method == "POST":
         payload, form_values, errors = build_site_payload(request.form)
+        form_values["cover_image_preview"] = ""
+        cover_data = None
+        cover_file = request.files.get("cover_image")
+        has_file = bool(cover_file and getattr(cover_file, "filename", "").strip())
+        if not has_file:
+            errors.append("Subí una imagen representativa del sitio.")
+        else:
+            image_errors, extension, size = images_helpers._validate_image_file(cover_file)
+            if image_errors:
+                errors.extend(image_errors)
+            else:
+                cover_data = (cover_file, extension, size)
         if errors:
             for error in errors:
                 flash(error, "error")
@@ -134,7 +149,7 @@ def create():
                 is_edit=False,
             )
         try:
-            create_site(performed_by=session.get("user_id"), **payload)
+            new_site = create_site(performed_by=session.get("user_id"), **payload)
         except IntegrityError:
             db.session.rollback()
             flash("Ya existe un sitio histórico con ese nombre. Elegí otro antes de guardar.", "error")
@@ -147,6 +162,20 @@ def create():
                 provinces=PROVINCES,
                 is_edit=False,
             )
+        if cover_data:
+            try:
+                object_name, url = images_helpers.upload_file(new_site.id, cover_data)
+                images_service.create_image(
+                    new_site.id,
+                    object_name=object_name,
+                    url=url,
+                    title=payload["name"],
+                    description=None,
+                    make_cover=True,
+                )
+            except (SiteImageError, Exception) as error:
+                flash(f"La imagen no pudo subirse automáticamente: {error}", "error")
+                flash("Podés volver a intentarlo luego desde la sección de imágenes.", "warning")
         flash("Sitio histórico creado correctamente.", "success")
         return redirect(url_for("sites.index"))
 
@@ -170,9 +199,20 @@ def edit(site_id: int):
     site = get_site(site_id)
     if not site: # control si no existe 
         abort(404)
+    cover_preview = site.get("cover_image_url") or ""
 
     if request.method == "POST":
         payload, form_values, errors = build_site_payload(request.form)
+        form_values["cover_image_preview"] = cover_preview
+        cover_data = None
+        cover_file = request.files.get("cover_image")
+        has_file = bool(cover_file and getattr(cover_file, "filename", "").strip())
+        if has_file:
+            image_errors, extension, size = images_helpers._validate_image_file(cover_file)
+            if image_errors:
+                errors.extend(image_errors)
+            else:
+                cover_data = (cover_file, extension, size)
         if errors:
             for error in errors:
                 flash(error, "error")
@@ -216,6 +256,21 @@ def edit(site_id: int):
                 is_edit=True,
                 site_id=site_id,
             )
+        if cover_data:
+            try:
+                object_name, url = images_helpers.upload_file(site_id, cover_data)
+                images_service.create_image(
+                    site_id,
+                    object_name=object_name,
+                    url=url,
+                    title=payload["name"],
+                    description=None,
+                    make_cover=True,
+                )
+                flash("Se actualizó la portada del sitio.", "success")
+            except (SiteImageError, Exception) as error:
+                flash(f"La imagen no pudo subirse automáticamente: {error}", "error")
+                flash("Podés volver a intentarlo desde la sección de imágenes.", "warning")
         flash("Sitio histórico actualizado correctamente.", "success")
         return redirect(url_for("sites.index"))
 
@@ -240,6 +295,7 @@ def edit(site_id: int):
         "longitude": str(site.get("longitude") or ""),
         "is_visible": bool(site.get("is_visible", False)),
         "tag_ids": site.get("tag_ids", []),
+        "cover_image_preview": cover_preview,
     }
 
     return render_template(

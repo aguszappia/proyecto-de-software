@@ -41,15 +41,15 @@ class Config:
 
 class ProductionConfig(Config):
     """Apunto a la base productiva usando variables de entorno."""
-    SQLALCHEMY_ENGINES = {"default": environ.get('DATABASE_URL')}
+    SQLALCHEMY_ENGINES = {"default": environ.get("DATABASE_URL") or environ.get("URL")}
     
-    MINIO_SERVER = environ.get('MINIO_SERVER')
+    MINIO_SERVER = "minio.proyecto2025.linti.unlp.edu.ar"
     MINIO_ACCESS_KEY = environ.get('MINIO_ACCESS_KEY')
     MINIO_SECRET_KEY = environ.get('MINIO_SECRET_KEY')
     MINIO_SECURE = True
     MINIO_BUCKET = "grupo28"
     CORS_ORIGINS = [
-        "https://grupo28.proyecto2025.linti.unlp.edu.ar/"
+        "https://grupo28.proyecto2025.linti.unlp.edu.ar"
     ]
 class DevelopmentConfig(Config):
     """Configuro la base local y claves de desarrollo."""

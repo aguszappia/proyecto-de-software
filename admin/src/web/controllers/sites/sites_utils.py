@@ -62,4 +62,5 @@ def empty_site_form() -> Dict[str, object]:
         "longitude": "",
         "is_visible": False,
         "tag_ids": [],
+        "cover_image_preview": "",
     }
