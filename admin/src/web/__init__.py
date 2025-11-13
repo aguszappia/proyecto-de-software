@@ -27,6 +27,8 @@ from src.core.permissions import models as permissions_models  # noqa: F401
 from src.core.permissions import service as permissions_service
 from src.web.api.sites import bp as sites_api_bp, auth_bp as public_auth_bp
 from src.web.api.auth_session import session_api_bp
+from src.web.api.auth_oauth import public_oauth_bp
+from src.web.oauth import oauth
 
 
 def create_app(env="development", static_folder="../../static"):
@@ -37,6 +39,16 @@ def create_app(env="development", static_folder="../../static"):
     # Inicializar base de datos
     database.init_db(app)
     storage.init_app(app)
+    oauth.init_app(app)
+    oauth.register(
+        "google",
+        client_id=app.config.get("GOOGLE_CLIENT_ID"),
+        client_secret=app.config.get("GOOGLE_CLIENT_SECRET"),
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={
+            "scope": " ".join(app.config.get("GOOGLE_AUTH_SCOPE", ["openid", "email", "profile"]))
+        },
+    )
     CORS(app, supports_credentials=True)
 
     @app.route("/")
@@ -88,6 +100,7 @@ def create_app(env="development", static_folder="../../static"):
     register_controllers(app)
 
     app.register_blueprint(public_auth_bp)
+    app.register_blueprint(public_oauth_bp)
     app.register_blueprint(session_api_bp)
     app.register_blueprint(sites_api_bp)
 

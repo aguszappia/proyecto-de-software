@@ -32,3 +32,16 @@ GRANT ALL PRIVILEGES ON DATABASE grupo28 TO postgres;
     --name minio-dev \
     -v minio-data:/data \
     quay.io/minio/minio server /data --console-address ":9090"
+
+## Configuración de variables de entorno para Google OAuth
+
+Exportá estas variables antes de levantar la app. El redirect por defecto apunta al callback expuesto en `/api/auth/google/callback`.
+
+```bash
+export AUTHLIB_INSECURE_TRANSPORT=1
+export GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
+export GOOGLE_CLIENT_SECRET="tu-secret"
+export GOOGLE_REDIRECT_URI="http://localhost:5000/api/auth/google/callback"
+```
+
+Compartí las credenciales de Google solo por los canales privados del grupo (no las subas al repositorio).
