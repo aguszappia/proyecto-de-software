@@ -32,7 +32,7 @@
   </header>
 
   <div class="site-form">
-    <form method="post" class="site-form__form">
+    <form method="post" class="site-form__form" enctype="multipart/form-data">
         <div class="form-grid">
             <div class="form-field">
                 <label for="name">Nombre del sitio</label>
@@ -108,6 +108,55 @@
             </div>
         </div>
 
+        <div class="media-panel" data-media-panel>
+            <div>
+                <p class="media-panel__kicker">Imagen representativa</p>
+                <h2>Subí la portada del sitio</h2>
+                <p>Usamos esta imagen como portada principal en el portal público.</p>
+            </div>
+            <div class="media-panel__body" data-media-body>
+                <input
+                    class="media-panel__input"
+                    type="file"
+                    id="cover-image-input"
+                    name="cover_image"
+                    accept="image/jpeg,image/png,image/webp"
+                    data-requires-image="{{ 'true' if not is_edit else 'false' }}"
+                    {% if not is_edit %}required{% endif %}
+                >
+                <label class="media-upload" for="cover-image-input">
+                    <span>Seleccionar imagen</span>
+                </label>
+                <div
+                    class="media-preview"
+                    data-cover-preview
+                    data-initial-cover="{{ form_values.cover_image_preview }}"
+                >
+                    <img
+                        data-cover-preview-img
+                        src="{{ form_values.cover_image_preview }}"
+                        alt="Previsualización de la portada"
+                        {% if not form_values.cover_image_preview %}hidden{% endif %}
+                    >
+                    <div
+                        class="media-preview__placeholder"
+                        data-cover-placeholder
+                        {% if form_values.cover_image_preview %}hidden{% endif %}
+                    >
+                        <p>Seleccioná una imagen para verla aquí.</p>
+                    </div>
+                </div>
+                <div class="media-actions">
+                    <button type="button" class="secondary-button" data-cover-clear>Quitar imagen</button>
+                    {% if is_edit %}
+                        <small>Si no cargás una nueva, conservaremos la portada actual.</small>
+                    {% endif %}
+                </div>
+                <p class="media-hint">Formatos admitidos: JPG, PNG o WEBP. Tamaño máximo 5 MB.</p>
+                <p class="media-error" data-cover-error hidden></p>
+            </div>
+        </div>
+
         <div class="map-section">
             <label for="site-map">Ubicación geográfica</label>
             <div id="site-map" class="site-map" aria-live="polite"></div>
@@ -153,6 +202,107 @@
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
 ></script>
 <script>
+(function() {
+    const input = document.getElementById('cover-image-input');
+    const preview = document.querySelector('[data-cover-preview]');
+    if (!input || !preview) {
+        return;
+    }
+    const previewImg = preview.querySelector('[data-cover-preview-img]');
+    const placeholder = preview.querySelector('[data-cover-placeholder]');
+    const clearButton = document.querySelector('[data-cover-clear]');
+    const errorBox = document.querySelector('[data-cover-error]');
+    const initialSrc = preview.dataset.initialCover || "";
+    let objectUrl = null;
+    const MAX_SIZE = 5 * 1024 * 1024;
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+    function setError(message) {
+        if (!errorBox) return;
+        if (message) {
+            errorBox.textContent = message;
+            errorBox.hidden = false;
+        } else {
+            errorBox.hidden = true;
+            errorBox.textContent = "";
+        }
+    }
+
+    function showPlaceholder() {
+        if (previewImg) {
+            previewImg.hidden = true;
+            previewImg.removeAttribute('src');
+        }
+        if (placeholder) {
+            placeholder.hidden = false;
+        }
+    }
+
+    function showImage(src) {
+        if (!previewImg) {
+            return;
+        }
+        previewImg.hidden = false;
+        previewImg.src = src;
+        if (placeholder) {
+            placeholder.hidden = true;
+        }
+    }
+
+    function resetPreviewToInitial() {
+        if (initialSrc) {
+            showImage(initialSrc);
+        } else {
+            showPlaceholder();
+        }
+    }
+
+    function revokeObjectUrl() {
+        if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+        }
+    }
+
+    function clearSelection() {
+        revokeObjectUrl();
+        input.value = "";
+        setError("");
+        resetPreviewToInitial();
+    }
+
+    input.addEventListener('change', () => {
+        setError("");
+        revokeObjectUrl();
+        const [file] = input.files || [];
+        if (!file) {
+            resetPreviewToInitial();
+            return;
+        }
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            setError("El archivo debe ser JPG, PNG o WEBP.");
+            clearSelection();
+            return;
+        }
+        if (file.size > MAX_SIZE) {
+            setError("La imagen supera el límite de 5 MB.");
+            clearSelection();
+            return;
+        }
+        objectUrl = URL.createObjectURL(file);
+        showImage(objectUrl);
+    });
+
+    if (clearButton) {
+        clearButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            clearSelection();
+        });
+    }
+
+    resetPreviewToInitial();
+})();
+
 (function() {
     const mapElement = document.getElementById('site-map');
         const latInput = document.getElementById('latitude-input');

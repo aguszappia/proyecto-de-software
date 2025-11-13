@@ -67,11 +67,14 @@ const visibleSections = computed(() =>
 )
 
 const heroCopy = {
-  eyebrow: 'Portal de sitios históricos',
-  title: 'Descubrí sitios históricos',
-  description:
-    'Explora nuestro catálogo de sitios históricos.',
-  hint: 'Tip: se puede buscar por nombre, ciudad, provincia o palabra clave.',
+  eyebrow: 'Portal público',
+  title: 'SITIOS HISTORICOS',
+  description: 'Explorá sitios históricos y descubrí las maravillas que guarda el pasado.',
+  hint: 'Tip: buscá por ciudad, por sitio o por palabra clave.',
+  backdrop:
+    'https://images.unsplash.com/photo-1577801599718-f4e3ad3fc794?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    // 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=2000&q=60',
+  scrollLabel: 'Ver destacados',
 }
 
 const buildCtaTo = (params = {}) => ({
@@ -207,12 +210,15 @@ watch(
       :title="heroCopy.title"
       :description="heroCopy.description"
       :hint="heroCopy.hint"
+      :background-image="heroCopy.backdrop"
+      :search-placeholder="heroCopy.searchPlaceholder"
+      :scroll-label="heroCopy.scrollLabel"
+      scroll-target="home-sections"
       variant="map"
-      cta-label="Buscar"
       @search="handleHeroSearch"
     />
 
-    <div class="home__sections">
+    <div id="home-sections" class="home__sections">
       <FeaturedSection
         v-for="section in visibleSections"
         :key="section.key"
