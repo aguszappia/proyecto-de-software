@@ -12,6 +12,7 @@ from src.core.database import db
 from src.core.flags import service as flags_service
 from src.core.sites.models import ConservationStatus, SiteCategory, SiteTag
 from src.core.sites.service import create_site, get_site, get_sites_by_location, list_sites
+from src.core.sites import tags_service
 from src.core.sites.validators import clean_str, safe_float, safe_int
 from src.core.security.passwords import verify_password
 from src.core.users import UserRole
@@ -322,6 +323,16 @@ def _invalid_data_response(details: Dict[str, List[str]] | None = None):
 
 bp = Blueprint("sites_api", __name__, url_prefix="/api/sites")
 auth_bp = Blueprint("public_auth_api", __name__, url_prefix="/api")
+
+
+@auth_bp.get("/tags")
+def list_public_tags():
+    """Lista todas las etiquetas disponibles para el portal público."""
+    try:
+        tags = tags_service.list_tags()
+        return jsonify({"data": tags}), 200
+    except Exception:
+        return _error_response(500, "server_error", "No se pudieron obtener las etiquetas.")
 
 
 @bp.get("/")
