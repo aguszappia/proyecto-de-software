@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import API_BASE_URL from '@/constants/api'
+import { useAuthStore } from '@/stores/auth'
 
 const maintenanceState = ref({
   pending: true,
@@ -41,7 +42,10 @@ const loadMaintenanceStatus = async () => {
   }
 }
 
+const auth = useAuthStore()
+
 onMounted(() => {
+  auth.fetchCurrentUser()
   loadMaintenanceStatus()
 })
 </script>
