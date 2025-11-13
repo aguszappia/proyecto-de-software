@@ -12,7 +12,7 @@ from src.core.database import db
 from src.core.flags import service as flags_service
 from src.core.sites.models import ConservationStatus, SiteCategory, SiteTag
 from src.core.sites.service import create_site, get_site, get_sites_by_location, list_sites
-from src.core.sites import tags_service
+from src.core.sites import images_service, tags_service
 from src.core.sites.validators import clean_str, safe_float, safe_int
 from src.core.security.passwords import verify_password
 from src.core.users import UserRole
@@ -23,6 +23,7 @@ from src.web.controllers.featureflags import (
     DEFAULT_FLAG_MESSAGES,
     PORTAL_MAINTENANCE_FLAG_KEY,
 )
+from src.web.controllers.sites import images_helpers
 
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 100
@@ -321,6 +322,28 @@ def _invalid_data_response(details: Dict[str, List[str]] | None = None):
     return _error_response(400, "invalid_data", "Invalid input data", details)
 
 
+def _is_multipart_request() -> bool:
+    content_type = (request.content_type or "").lower()
+    return "multipart/form-data" in content_type
+
+
+def _extract_site_payload() -> Tuple[Dict[str, Any], bool]:
+    if _is_multipart_request():
+        data = {key: value for key, value in request.form.items()}
+        tags = request.form.getlist("tags[]") or request.form.getlist("tags")
+        data.pop("tags[]", None)
+        data.pop("tags", None)
+        if not tags and data.get("tags"):
+            raw_tags = data["tags"]
+            tags = [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+        data["tags"] = tags
+        return data, True
+    if request.is_json:
+        payload = request.get_json(silent=True) or {}
+        return payload, False
+    raise QueryParamError("El cuerpo debe ser JSON o multipart/form-data.")
+
+
 bp = Blueprint("sites_api", __name__, url_prefix="/api/sites")
 auth_bp = Blueprint("public_auth_api", __name__, url_prefix="/api")
 
@@ -407,12 +430,19 @@ def site_details(site_id: int):
 def create_site_endpoint():
     """Permite a la app pública proponer un nuevo sitio histórico."""
     try:
-        if not request.is_json:
-            return _invalid_data_response({"general": ["Request body must be JSON."]})
-
-        payload = request.get_json(silent=True) or {}
-        if not isinstance(payload, dict):
-            return _invalid_data_response({"general": ["The JSON body must be an object."]})
+        payload, is_multipart = _extract_site_payload()
+        cover_image_data = None
+        if is_multipart:
+            file_storage = request.files.get("cover_image")
+            has_file = file_storage and getattr(file_storage, "filename", "").strip()
+            if not has_file:
+                return _invalid_data_response({"cover_image": ["Subí una imagen representativa del sitio."]})
+            image_errors, extension, size = images_helpers._validate_image_file(file_storage)
+            if image_errors:
+                return _invalid_data_response({"cover_image": image_errors})
+            cover_image_data = (file_storage, extension, size)
+        else:
+            return _invalid_data_response({"cover_image": ["La imagen del sitio es obligatoria."]})
 
         try:
             data = site_create_schema.load(payload)
@@ -467,6 +497,16 @@ def create_site_endpoint():
             is_visible=False,
             tag_ids=tag_ids,
         )
+        if cover_image_data:
+            object_name, url = images_helpers.upload_file(site.id, cover_image_data)
+            images_service.create_image(
+                site.id,
+                object_name=object_name,
+                url=url,
+                title=name or "Portada del sitio",
+                description=None,
+                make_cover=True,
+            )
         db.session.refresh(site)
         response_payload = single_site_schema.dump(site)
         return jsonify(response_payload), 201

@@ -130,6 +130,7 @@ def build_site_payload(form_data: Mapping[str, Any]) -> Tuple[Dict[str, Any], Di
         **values,
         "is_visible": values["is_visible"] == "on",
         "tag_ids": tag_ids,
+        "cover_image_preview": "",
     }
 
     return payload, form_values, errors
