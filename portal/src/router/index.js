@@ -4,6 +4,7 @@ import MapView from '../views/MapView.vue'
 import SiteDetailView from '../views/SiteDetailView.vue'
 import SiteListView from '../views/SiteListView.vue'
 import SiteCreateView from '../views/SiteCreateView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -50,6 +51,11 @@ const router = createRouter({
       path: '/sitios/:id',
       name: 'site-detail',
       component: SiteDetailView,
+    },
+    {
+      path: '/perfil',
+      name: 'profile',
+      component: ProfileView,
     },
     {
       path: '/about',

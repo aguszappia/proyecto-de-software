@@ -19,6 +19,7 @@ class SiteSchema(Schema):
     updated_at = fields.Method("get_updated_at")
     cover_image_url = fields.Method("get_cover_image_url")
     cover_image_title = fields.Method("get_cover_image_title")
+    is_favorite = fields.Bool(dump_default=False)
 
     def _get_value(self, obj, attr, default=None):
         if isinstance(obj, dict):

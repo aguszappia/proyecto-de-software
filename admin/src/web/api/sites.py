@@ -3,7 +3,7 @@ from __future__ import annotations
 import unicodedata
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, session
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from marshmallow import ValidationError
 from sqlalchemy import func, or_
@@ -11,7 +11,16 @@ from sqlalchemy import func, or_
 from src.core.database import db
 from src.core.flags import service as flags_service
 from src.core.sites.models import ConservationStatus, SiteCategory, SiteTag
-from src.core.sites.service import create_site, get_site, get_sites_by_location, list_sites
+from src.core.sites.service import (
+    create_site,
+    get_site,
+    get_sites_by_location,
+    list_sites,
+    mark_site_favorite,
+    unmark_site_favorite,
+    list_favorite_site_ids,
+    is_favorite_for_user,
+)
 from src.core.sites import images_service, tags_service
 from src.core.sites.validators import clean_str, safe_float, safe_int
 from src.core.security.passwords import verify_password
@@ -41,6 +50,9 @@ class QueryParamError(ValueError):
 
 class AuthError(RuntimeError):
     """Errores de autenticación para endpoints públicos."""
+
+    def __init__(self, message: str = "Authentication required") -> None:
+        super().__init__(message)
 
 
 def _serialize_flag_state(flag, *, flag_key: str) -> Dict[str, Any]:
@@ -231,6 +243,49 @@ def _issue_api_token(user_id: int) -> str:
     return serializer.dumps({"user_id": int(user_id)})
 
 
+def _get_token_ttl() -> int:
+    return current_app.config.get("API_TOKEN_TTL_SECONDS", 60 * 60 * 24)
+
+
+def _require_api_user(optional: bool = False):
+    session_user_id = session.get("user_id")
+    session_role = session.get("user_role")
+    if session_user_id and session_role == UserRole.PUBLIC.value:
+        user = users_service.get_user(session_user_id)
+        if user and user.is_active:
+            return user
+
+    auth_header = request.headers.get("Authorization", "").strip()
+    if not auth_header:
+        if optional:
+            return None
+        raise AuthError("Missing Authorization header.")
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise AuthError("Authorization header must be 'Bearer <token>'.")
+    token = parts[1].strip()
+    serializer = _get_token_serializer()
+    try:
+        payload = serializer.loads(token, max_age=_get_token_ttl())
+    except SignatureExpired:
+        raise AuthError("Token expired.")
+    except BadSignature:
+        raise AuthError("Invalid token.")
+
+    user_id = payload.get("user_id")
+    user = users_service.get_user(user_id)
+    if not user or not user.is_active or user.role != UserRole.PUBLIC.value:
+        raise AuthError("Invalid user.")
+    return user
+
+
+def _auth_error_response(message: str):
+    response = jsonify({"error": {"code": "not_authenticated", "message": message}})
+    response.status_code = 401
+    response.headers["WWW-Authenticate"] = "Bearer"
+    return response
+
+
 def _parse_state_of_conservation(value: str | None) -> ConservationStatus:
     if not value:
         raise QueryParamError("El campo 'state_of_conservation' es obligatorio.")
@@ -368,6 +423,7 @@ def index():
         province = clean_str(request.args.get("province"))
         tags_raw = clean_str(request.args.get("tags")) or ""
         tags = [tag.strip() for tag in tags_raw.split(",") if tag.strip()]
+        filter_mode = clean_str(request.args.get("filter")) or ""
         order_by = clean_str(request.args.get("order_by")) or "latest"
 
         latitude = _parse_float_arg("lat")
@@ -396,6 +452,21 @@ def index():
 
         sorted_sites = _sort_sites(filtered_sites, order_by or "latest")
 
+        favorite_user = None
+        favorite_ids = set()
+        try:
+            if filter_mode == "favorites":
+                favorite_user = _require_api_user()
+            else:
+                favorite_user = _require_api_user(optional=True)
+        except AuthError as error:
+            return _auth_error_response(str(error))
+
+        if favorite_user:
+            favorite_ids = set(list_favorite_site_ids(favorite_user.id))
+            if filter_mode == "favorites":
+                sorted_sites = [site for site in sorted_sites if site["id"] in favorite_ids]
+
         page = _parse_int_arg("page", default=1, minimum=1) or 1
         per_page = _parse_int_arg(
             "per_page",
@@ -405,8 +476,13 @@ def index():
         ) or DEFAULT_PER_PAGE
 
         serialized_sites = site_schema.dump(sorted_sites)
+        if favorite_ids:
+            for site in serialized_sites:
+                site["is_favorite"] = site.get("id") in favorite_ids
         payload = _paginate(serialized_sites, page, per_page)
         return jsonify(payload), 200
+    except AuthError as error:
+        return _auth_error_response(str(error))
     except QueryParamError as error:
         return _handle_query_error(error)
     except Exception:
@@ -421,7 +497,12 @@ def site_details(site_id: int):
         if not site or not site.get("is_visible"):
             return _error_response(404, "not_found", "Site not found")
         payload = single_site_schema.dump(site)
+        user = _require_api_user(optional=True)
+        if user:
+            payload["is_favorite"] = is_favorite_for_user(site_id, user.id)
         return jsonify(payload), 200
+    except AuthError as error:
+        return _auth_error_response(str(error))
     except Exception:
         return _error_response(500, "server_error", "An unexpected error occurred")
 
@@ -516,6 +597,40 @@ def create_site_endpoint():
     except ValidationError as error:  # Defensive: por si aparece fuera del load principal
         return _invalid_data_response(error.messages)
     except Exception:  # pragma: no cover - defensive fallback
+        return _error_response(500, "server_error", "An unexpected error occurred")
+
+
+@bp.put("/<int:site_id>/favorite")
+def mark_favorite_endpoint(site_id: int):
+    """Marca un sitio como favorito para el usuario autenticado."""
+    try:
+        user = _require_api_user()
+        site = get_site(site_id)
+        if not site or not site.get("is_visible"):
+            return _error_response(404, "not_found", "Site not found")
+        success = mark_site_favorite(site_id, user.id)
+        if not success:
+            return _error_response(404, "not_found", "Site not found")
+        return "", 204
+    except AuthError as error:
+        return _auth_error_response(str(error))
+    except Exception:
+        return _error_response(500, "server_error", "An unexpected error occurred")
+
+
+@bp.delete("/<int:site_id>/favorite")
+def unmark_favorite_endpoint(site_id: int):
+    """Elimina un sitio de los favoritos del usuario."""
+    try:
+        user = _require_api_user()
+        site = get_site(site_id)
+        if not site or not site.get("is_visible"):
+            return _error_response(404, "not_found", "Site not found")
+        unmark_site_favorite(site_id, user.id)
+        return "", 204
+    except AuthError as error:
+        return _auth_error_response(str(error))
+    except Exception:
         return _error_response(500, "server_error", "An unexpected error occurred")
 
 

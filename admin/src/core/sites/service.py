@@ -8,7 +8,13 @@ from geoalchemy2 import WKTElement
 from geoalchemy2 import functions as geofunctions, elements as geoelements, Geography
 from sqlalchemy import asc, desc, or_
 from src.core.pagination import Pagination
-from src.core.sites.models import Historic_Site, SiteTag, ConservationStatus, SiteCategory
+from src.core.sites.models import (
+    Historic_Site,
+    SiteTag,
+    ConservationStatus,
+    SiteCategory,
+    SiteFavorite,
+)
 from src.core.sites.history_service import record_event
 from src.core.database import db
 
@@ -283,3 +289,60 @@ def get_sites_by_location(lat, lon, redius):
         geofunctions.ST_DWithin(Historic_Site.location.cast(Geography), center, redius)
     ).all()
     return [site.to_dict() for site in sites]
+
+
+def mark_site_favorite(site_id: int, user_id: int) -> bool:
+    """Marca un sitio como favorito para el usuario."""
+    session = db.session
+    site = (
+        session.query(Historic_Site.id, Historic_Site.is_visible)
+        .filter(Historic_Site.id == site_id)
+        .first()
+    )
+    if not site or not site.is_visible:
+        return False
+
+    existing = (
+        session.query(SiteFavorite)
+        .filter(SiteFavorite.site_id == site_id, SiteFavorite.user_id == user_id)
+        .first()
+    )
+    if existing:
+        return True
+
+    session.add(SiteFavorite(site_id=site_id, user_id=user_id))
+    session.commit()
+    return True
+
+
+def unmark_site_favorite(site_id: int, user_id: int) -> bool:
+    """Elimina el sitio de los favoritos del usuario."""
+    session = db.session
+    favorite = (
+        session.query(SiteFavorite)
+        .filter(SiteFavorite.site_id == site_id, SiteFavorite.user_id == user_id)
+        .first()
+    )
+    if not favorite:
+        return True
+    session.delete(favorite)
+    session.commit()
+    return True
+
+
+def list_favorite_site_ids(user_id: int) -> List[int]:
+    """Lista los IDs de sitios favoritos del usuario."""
+    session = db.session
+    rows = session.query(SiteFavorite.site_id).filter(SiteFavorite.user_id == user_id).all()
+    return [row[0] for row in rows]
+
+
+def is_favorite_for_user(site_id: int, user_id: int) -> bool:
+    """Indica si un sitio está marcado como favorito por el usuario."""
+    session = db.session
+    record = (
+        session.query(SiteFavorite.id)
+        .filter(SiteFavorite.site_id == site_id, SiteFavorite.user_id == user_id)
+        .first()
+    )
+    return record is not None

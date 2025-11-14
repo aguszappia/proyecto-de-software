@@ -6,9 +6,13 @@ import 'leaflet/dist/leaflet.css'
 import SiteCard from '@/components/SiteCard.vue'
 import API_BASE_URL from '@/constants/api'
 import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
+import { useFavoritesStore } from '@/stores/favorites'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const favoritesStore = useFavoritesStore()
+const auth = useAuthStore()
 
 const PROVINCES = [
   'Buenos Aires',
@@ -66,6 +70,7 @@ const availableTags = ref([])
 const tagsDropdownOpen = ref(false)
 const tagsDropdownRef = ref(null)
 const showingMap = ref(route.query.view === 'map')
+const showAuthPrompt = ref(false)
 
 const formFilters = ref({
   q: '',
@@ -174,7 +179,9 @@ watchEffect(async () => {
   error.value = null
   try {
     const query = buildQueryString(filters)
-    const response = await fetch(`${API_BASE_URL}/sites?${query}`)
+    const response = await fetch(`${API_BASE_URL}/sites?${query}`, {
+      credentials: 'include',
+    })
     if (!response.ok) {
       throw new Error(`Error ${response.status}`)
     }
@@ -219,7 +226,8 @@ watchEffect(async () => {
       return matchesSearch && matchesCity && matchesProvince && matchesStatus && matchesTags
     })
 
-    sites.value = filteredItems.map((site) => ({
+    favoritesStore.hydrateFromSites(filteredItems)
+    const mappedItems = filteredItems.map((site) => ({
       ...site,
       state_of_conservation:
         site.state_of_conservation ??
@@ -229,7 +237,9 @@ watchEffect(async () => {
       category: site.category ?? site.category_name ?? site.categoryName ?? null,
       inaguration_year:
         site.inaguration_year ?? site.inauguration_year ?? site.inaugYear ?? null,
+      is_favorite: site.is_favorite ?? site.isFavorite ?? false,
     }))
+    sites.value = mappedItems
   } catch (err) {
     error.value = err.message || 'No se pudo obtener la información'
   } finally {
@@ -419,6 +429,32 @@ const toggleMapMode = (enabled) => {
   synchronizeViewQuery(enabled ? 'map' : 'list')
 }
 
+const buildAbsoluteUrl = (routeLocation) => {
+  const resolved = router.resolve(routeLocation)
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
+  return `${origin}${resolved.href}`
+}
+
+const handleProposeSiteClick = () => {
+  const targetLocation = { name: 'site-create' }
+  if (auth.isAuthenticated) {
+    router.push(targetLocation)
+    return
+  }
+  showAuthPrompt.value = true
+}
+
+const handleAuthPromptClose = () => {
+  showAuthPrompt.value = false
+}
+
+const handleAuthPromptLogin = () => {
+  showAuthPrompt.value = false
+  const nextUrl = buildAbsoluteUrl({ name: 'site-create' })
+  auth.loginWithGoogle(nextUrl)
+}
+
 watch(
   mapSites,
   (value) => {
@@ -439,7 +475,9 @@ watch(
         Aplicá filtros avanzados para encontrar rápidamente los sitios que te interesan.
       </p>
       <div class="view-panel__actions">
-        <RouterLink class="primary-button" to="/sitios/nuevo">Proponer un sitio</RouterLink>
+        <button class="primary-button" type="button" @click="handleProposeSiteClick">
+          Proponer un sitio
+        </button>
       </div>
 
       <form class="filters-panel" @submit.prevent="handleFiltersSubmit">
@@ -662,4 +700,32 @@ watch(
       </template>
     </div>
   </section>
+
+  <div
+    v-if="showAuthPrompt"
+    class="public-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="auth-dialog-title"
+  >
+    <div class="public-modal__backdrop" @click="handleAuthPromptClose"></div>
+    <div class="public-modal__card" role="document">
+      <h2 id="auth-dialog-title">Iniciá sesión para continuar</h2>
+      <p>
+        Necesitás estar autenticado para proponer un nuevo sitio histórico en el portal público.
+      </p>
+      <div class="public-modal__actions">
+        <button class="public-modal__button" type="button" @click="handleAuthPromptClose">
+          Ahora no
+        </button>
+        <button
+          class="public-modal__button public-modal__button--primary"
+          type="button"
+          @click="handleAuthPromptLogin"
+        >
+          Ingresar con Google
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
