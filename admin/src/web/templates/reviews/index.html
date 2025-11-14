@@ -98,6 +98,7 @@
       <table class="data-table reviews-table">
         <thead>
           <tr>
+            <th class="cover-column">Portada</th>
             <th>Sitio</th>
             <th>Usuario</th>
             <th>Calificación</th>
@@ -110,6 +111,13 @@
         <tbody>
           {% for item in pagination.items %}
             <tr>
+              <td class="cover-column">
+                {% if item.site_cover_url %}
+                  <img class="cover-thumb" src="{{ item.site_cover_url }}" alt="{{ item.site_cover_title or item.site_name }}">
+                {% else %}
+                  <span class="cover-thumb cover-thumb--empty">Sin portada</span>
+                {% endif %}
+              </td>
               <td>{{ item.site_name }}</td>
               <td>
                 <div class="user-badge">

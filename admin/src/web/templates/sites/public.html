@@ -23,6 +23,13 @@
             <article class="site-card">
               <h2>{{ site.name }}</h2>
               <p class="site-card__summary">{{ site.short_description }}</p>
+              <div class="site-card__cover">
+                {% if site.cover_image_url %}
+                  <img src="{{ site.cover_image_url }}" alt="{{ site.cover_image_title or site.name }}">
+                {% else %}
+                  <span class="site-card__cover--empty">Sin portada</span>
+                {% endif %}
+              </div>
               <ul class="site-card__meta">
                 <li><strong>Ciudad:</strong> {{ site.city }}, {{ site.province }}</li>
                 <li><strong>Estado:</strong> {{ site.conservation_status }}</li>
