@@ -8,7 +8,7 @@
 
   <article class="detail-card">
     <header class="detail-card__header">
-      <div>
+      <div class="detail-card__title">
         <p class="section-kicker">Reseña #{{ presenter.review.id }}</p>
         <h1 class="page-title">{{ presenter.site_name }}</h1>
       </div>
@@ -17,35 +17,45 @@
       </span>
     </header>
 
-    <div class="meta-grid">
-      <div>
-        <span class="meta-label">Usuario</span>
-        <p class="meta-value">{{ presenter.user_display }}</p>
-        <small class="meta-hint">{{ presenter.user_email or 'Sin email' }}</small>
+    <div class="site-summary">
+      <div class="site-summary__cover">
+        {% if presenter.site_cover_url %}
+          <img class="site-cover-img" src="{{ presenter.site_cover_url }}" alt="{{ presenter.site_cover_title or presenter.site_name }}">
+        {% else %}
+          <span class="site-cover-placeholder">Sin portada</span>
+        {% endif %}
       </div>
-      <div>
-        <span class="meta-label">Calificación</span>
-        <p class="meta-value">{{ presenter.review.rating }}/5</p>
-      </div>
-      <div>
-        <span class="meta-label">Creada</span>
-        <p class="meta-value">
-          {% if presenter.review.created_at %}
-            {{ presenter.review.created_at.strftime('%d/%m/%Y %H:%M') }}
-          {% else %}
-            -
-          {% endif %}
-        </p>
-      </div>
-      <div>
-        <span class="meta-label">Última actualización</span>
-        <p class="meta-value">
-          {% if presenter.review.updated_at %}
-            {{ presenter.review.updated_at.strftime('%d/%m/%Y %H:%M') }}
-          {% else %}
-            -
-          {% endif %}
-        </p>
+
+      <div class="meta-grid">
+        <div>
+          <span class="meta-label">Usuario</span>
+          <p class="meta-value">{{ presenter.user_display }}</p>
+          <small class="meta-hint">{{ presenter.user_email or 'Sin email' }}</small>
+        </div>
+        <div>
+          <span class="meta-label">Calificación</span>
+          <p class="meta-value">{{ presenter.review.rating }}/5</p>
+        </div>
+        <div>
+          <span class="meta-label">Creada</span>
+          <p class="meta-value">
+            {% if presenter.review.created_at %}
+              {{ presenter.review.created_at.strftime('%d/%m/%Y %H:%M') }}
+            {% else %}
+              -
+            {% endif %}
+          </p>
+        </div>
+        <div>
+          <span class="meta-label">Última actualización</span>
+          <p class="meta-value">
+            {% if presenter.review.updated_at %}
+              {{ presenter.review.updated_at.strftime('%d/%m/%Y %H:%M') }}
+            {% else %}
+              -
+            {% endif %}
+          </p>
+        </div>
       </div>
     </div>
 
@@ -70,19 +80,21 @@
     <h2>Acciones disponibles</h2>
     <div class="detail-actions">
       <div class="detail-actions__row">
-        <form method="post" action="{{ url_for('reviews.approve', review_id=presenter.review.id) }}">
+        <form class="detail-action" method="post" action="{{ url_for('reviews.approve', review_id=presenter.review.id) }}">
           <input type="hidden" name="return_to" value="{{ return_url }}">
           <button type="submit" class="success-button">Aprobar</button>
         </form>
         <button type="button"
-                class="secondary-button"
+                class="secondary-button detail-action"
                 data-toggle-reject
                 data-target="detail-reject-panel"
                 aria-controls="detail-reject-panel"
                 aria-expanded="false">
           Rechazar
         </button>
-        <form method="post" action="{{ url_for('reviews.destroy', review_id=presenter.review.id) }}">
+      </div>
+      <div class="detail-actions__row detail-actions__row--single">
+        <form class="detail-action" method="post" action="{{ url_for('reviews.destroy', review_id=presenter.review.id) }}">
           <input type="hidden" name="return_to" value="{{ return_url }}">
           <button type="button"
                   class="danger-button"

@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import asc, desc, or_
+from sqlalchemy import asc, and_, desc, or_
 from sqlalchemy.orm import joinedload
 
 from src.core.database import db
 from src.core.pagination import Pagination
-from src.core.sites.models import Historic_Site, ReviewStatus, SiteReview
+from src.core.sites.models import Historic_Site, ReviewStatus, SiteImage, SiteReview
 from src.core.users.models import User
 
 MAX_REJECTION_LENGTH = 200
@@ -25,6 +25,8 @@ class ReviewPresenter:
     site_name: str
     user_email: Optional[str]
     user_name: str
+    site_cover_url: Optional[str] = None
+    site_cover_title: Optional[str] = None
 
     @property
     def user_display(self) -> str:
@@ -56,8 +58,14 @@ def _base_query():
             User.email.label("user_email"),
             User.first_name.label("user_first_name"),
             User.last_name.label("user_last_name"),
+            SiteImage.url.label("site_cover_url"),
+            SiteImage.title.label("site_cover_title"),
         )
         .join(Historic_Site, SiteReview.site_id == Historic_Site.id)
+        .outerjoin(
+            SiteImage,
+            and_(SiteImage.site_id == Historic_Site.id, SiteImage.is_cover.is_(True)),
+        )
         .outerjoin(User, User.id == SiteReview.user_id)
     )
 
@@ -117,7 +125,16 @@ def paginate_reviews(
     items = query.limit(per_page).offset((page - 1) * per_page).all()
 
     presenters: List[ReviewPresenter] = []
-    for review, site_id, site_name, user_email, first_name, last_name in items:
+    for (
+        review,
+        site_id,
+        site_name,
+        user_email,
+        first_name,
+        last_name,
+        cover_url,
+        cover_title,
+    ) in items:
         full_name = " ".join(part for part in [first_name or "", last_name or ""] if part).strip()
         presenters.append(
             ReviewPresenter(
@@ -126,6 +143,8 @@ def paginate_reviews(
                 site_name=site_name,
                 user_email=user_email,
                 user_name=full_name,
+                site_cover_url=cover_url,
+                site_cover_title=cover_title,
             )
         )
 
@@ -147,7 +166,7 @@ def get_review_presenter(review_id: int) -> Optional[ReviewPresenter]:
     row = _base_query().filter(SiteReview.id == review_id).first()
     if not row:
         return None
-    review, site_id, site_name, user_email, first_name, last_name = row
+    review, site_id, site_name, user_email, first_name, last_name, cover_url, cover_title = row
     full_name = " ".join(part for part in [first_name or "", last_name or ""] if part).strip()
     return ReviewPresenter(
         review=review,
@@ -155,6 +174,8 @@ def get_review_presenter(review_id: int) -> Optional[ReviewPresenter]:
         site_name=site_name,
         user_email=user_email,
         user_name=full_name,
+        site_cover_url=cover_url,
+        site_cover_title=cover_title,
     )
 
 

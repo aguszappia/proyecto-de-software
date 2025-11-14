@@ -3,15 +3,18 @@
 {% block title %}Imágenes de {{ site["name"] }}{% endblock %}
 
 {% block content %}
-<section class="container content-stack site-images">
-  <header class="section-heading">
-    <span class="section-kicker">Gestión de sitios</span>
-    <h1 class="page-title">Imágenes de {{ site["name"] }}</h1>
-    <p class="section-subtitle">
-      Podés cargar hasta {{ max_images }} archivos ({{ total_images }}/{{ max_images }}).
-      Formatos aceptados: {{ allowed_extensions | join(', ') }}. Tamaño máximo {{ max_file_size_mb }} MB.
-    </p>
-  </header>
+
+<section class="container content-stack">
+  <section class="site-images__intro-card">
+    <header class="section-heading">
+      <span class="section-kicker">Gestión de sitios</span>
+      <h1 class="page-title">Imágenes de {{ site["name"] }}</h1>
+      <p class="section-subtitle">
+        Podés cargar hasta {{ max_images }} archivos ({{ total_images }}/{{ max_images }}).
+        Formatos aceptados: {{ allowed_extensions | join(', ') }}. Tamaño máximo {{ max_file_size_mb }} MB.
+      </p>
+    </header>
+  </section>
 
   <div class="site-images__toolbar">
     <a class="secondary-button" href="{{ url_for('sites.edit', site_id=site['id']) }}">Volver a la edición</a>
