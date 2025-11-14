@@ -31,6 +31,13 @@ class Config:
         "pool_recycle": 60,     # tiempo para reciclar conexiones (segundos)
         "pool_pre_ping": True,  # verifica que la conexión siga activa
     } 
+    
+    
+    GOOGLE_CLIENT_ID = environ.get("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET = environ.get("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI = environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback")
+    GOOGLE_AUTH_SCOPE = ["openid", "email", "profile"]
+
 
 class ProductionConfig(Config):
     """Apunto a la base productiva usando variables de entorno."""
