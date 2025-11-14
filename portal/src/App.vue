@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import API_BASE_URL from '@/constants/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -43,6 +43,20 @@ const loadMaintenanceStatus = async () => {
 }
 
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
+
+const handleLoginClick = () => {
+  const origin = window.location.origin
+  const fullPath = route.fullPath || '/'
+  const nextUrl = `${origin}${fullPath}`
+  auth.loginWithGoogle(nextUrl)
+}
+
+const handleLogoutClick = async () => {
+  await auth.logout()
+  router.push('/')
+}
 
 onMounted(() => {
   auth.fetchCurrentUser()
@@ -70,9 +84,31 @@ onMounted(() => {
           <RouterLink to="/about">Nosotros</RouterLink>
         </nav>
 
-        <button class="public-cta" type="button">
-          Ingresar
-        </button>
+        <div class="public-auth-area">
+          <button
+            v-if="!auth.isAuthenticated"
+            class="public-cta"
+            type="button"
+            @click="handleLoginClick"
+          >
+            Ingresar con Google
+          </button>
+          <div v-else class="public-user-info">
+            <img
+              v-if="auth.user?.avatar"
+              :src="auth.user.avatar"
+              alt="Avatar"
+              class="public-user-avatar"
+              referrerpolicy="no-referrer"
+            />
+            <div class="public-user-details">
+              <span class="public-user-name">{{ auth.user?.name }}</span>
+              <button class="public-logout-button" type="button" @click="handleLogoutClick">
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
       </header>
 
       <main

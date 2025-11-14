@@ -45,6 +45,7 @@ def google_login():
 @public_oauth_bp.get("/google/callback")
 def google_callback():
     """Completa el flujo OAuth: crea/actualiza el usuario y arma la sesión."""
+    next_url = session.get("next_url") or "/"
     try:
         token = oauth.google.authorize_access_token()
     except Exception as exc:
@@ -75,9 +76,6 @@ def google_callback():
         session.pop("next_url", None)
         return jsonify({"error": "email_required"}), 400
 
-    # GUARDO NEXT ANTES DE HACER session.clear()
-    next_url = session.get("next_url") or "/"
-
     user = users_service.find_user_by_email(email)
     if not user:
         first_name = userinfo.get("given_name") or userinfo.get("name") or "Usuario"
@@ -106,8 +104,9 @@ def google_callback():
     # AHORA SÍ: ARMO LA SESIÓN
     _issue_session_for_user(user, avatar_url=avatar)
 
-    # Limpio el next_url de la sesión, pero uso el que me guardé antes
     session.pop("next_url", None)
 
-    # Redirijo al portal público
-    return redirect(next_url or "/")
+    target = next_url or "/"
+    if isinstance(target, str) and target.lower().startswith(("http://", "https://")):
+        return redirect(target)
+    return redirect(target)
