@@ -1,11 +1,14 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
 import API_BASE_URL from '@/constants/api'
+import { useFavoritesStore } from '@/stores/favorites'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
     loadingUser: false,
+    loginPromptVisible: false,
+    loginPromptNextUrl: '/',
   }),
   getters: {
     isAuthenticated: (state) => state.user !== null,
@@ -34,6 +37,19 @@ export const useAuthStore = defineStore('auth', {
       const target = `${baseAuthUrl}/api/auth/google/login?next=${encodeURIComponent(next)}`
       window.location.href = target
     },
+    requestLoginPrompt(nextUrl) {
+      this.loginPromptVisible = true
+      this.loginPromptNextUrl = nextUrl || window.location.href || '/'
+    },
+    cancelLoginPrompt() {
+      this.loginPromptVisible = false
+      this.loginPromptNextUrl = '/'
+    },
+    confirmLoginPrompt() {
+      const next = this.loginPromptNextUrl || '/'
+      this.cancelLoginPrompt()
+      this.loginWithGoogle(next)
+    },
     async logout() {
       try {
         await axios.post(
@@ -47,6 +63,8 @@ export const useAuthStore = defineStore('auth', {
         console.error('Error logging out', error)
       } finally {
         this.user = null
+        const favoritesStore = useFavoritesStore()
+        favoritesStore.reset()
       }
     },
   },

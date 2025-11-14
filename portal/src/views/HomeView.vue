@@ -5,8 +5,10 @@ import FeaturedSection from '@/components/FeaturedSection.vue'
 import HeroBanner from '@/components/HeroBanner.vue'
 import API_BASE_URL from '@/constants/api'
 import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
+import { useFavoritesStore } from '@/stores/favorites'
 
 const router = useRouter()
+const favoritesStore = useFavoritesStore()
 
 const isAuthenticated = ref(false) // TODO: conectar con la sesión real cuando esté disponible.
 
@@ -139,6 +141,7 @@ const mapSiteToCard = (site) => ({
   imageAlt: resolveSiteImageAlt(site),
   tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
   href: site.id ? { name: 'site-detail', params: { id: site.id } } : null,
+  is_favorite: site.is_favorite ?? site.isFavorite ?? false,
 })
 
 const fetchSitesForSection = async (sectionKey) => {
@@ -149,7 +152,9 @@ const fetchSitesForSection = async (sectionKey) => {
     per_page: String(perPage),
     order_by: config?.orderBy || 'latest',
   })
-  const response = await fetch(`${API_BASE_URL}/sites?${params.toString()}`)
+  const response = await fetch(`${API_BASE_URL}/sites?${params.toString()}`, {
+    credentials: 'include',
+  })
   if (!response.ok) {
     throw new Error('No se pudieron cargar los sitios.')
   }
@@ -168,6 +173,7 @@ const loadSection = async (sectionKey, { force = false } = {}) => {
 
   try {
     const rawItems = await fetchSitesForSection(sectionKey)
+    favoritesStore.hydrateFromSites(rawItems)
     state.items = rawItems.map(mapSiteToCard)
     state.loaded = true
   } catch (error) {

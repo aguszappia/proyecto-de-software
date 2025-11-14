@@ -3,15 +3,13 @@
 from typing import Optional
 
 from src.core.database import Base
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, String, UniqueConstraint, Table, Column, Integer, ForeignKey, Boolean
 from datetime import datetime, timezone
 from geoalchemy2.types import Geometry
 from geoalchemy2.shape import to_shape
 from enum import Enum
 from sqlalchemy import Enum as SQLAlchemyEnum
-from sqlalchemy.orm import relationship
-
 # --- Historial --- 
 class SiteHistory(Base):
     """Modelo base para un sitio Historico."""
@@ -97,6 +95,11 @@ class Historic_Site(Base):
         back_populates="site",
         cascade="all, delete-orphan",
         order_by="SiteImage.order_index",
+    )
+    favorites = relationship(
+        "SiteFavorite",
+        back_populates="site",
+        cascade="all, delete-orphan",
     )
 
     def to_dict(self) -> dict:
@@ -252,8 +255,6 @@ class SiteImage(Base):
         nullable=False,
     )
 
-    site = relationship("Historic_Site")
-
     site = relationship("Historic_Site", back_populates="images")
 
     def to_dict(self) -> dict:
@@ -269,3 +270,25 @@ class SiteImage(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class SiteFavorite(Base):
+    """Relación entre usuarios públicos y sitios favoritos."""
+
+    __tablename__ = "site_favorites"
+    __table_args__ = (
+        UniqueConstraint("user_id", "site_id", name="uq_site_favorites_user_site"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    site_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("historic_sites.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    site = relationship("Historic_Site", back_populates="favorites")

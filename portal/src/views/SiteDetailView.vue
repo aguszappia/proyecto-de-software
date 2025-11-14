@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { LMap, LMarker, LPopup, LTileLayer, LTooltip } from '@vue-leaflet/vue-leaflet'
 import 'leaflet/dist/leaflet.css'
 import API_BASE_URL from '@/constants/api'
+import { useFavoritesStore } from '@/stores/favorites'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -61,8 +63,12 @@ const normalizeSite = (payload) => {
     longitude: typeof payload.long === 'number' ? payload.long : payload.longitude ?? null,
     updatedAt: payload.updated_at || payload.inserted_at || null,
     images: galleryImages,
+    isFavorite: payload.is_favorite ?? payload.isFavorite ?? false,
   }
 }
+
+const favoritesStore = useFavoritesStore()
+const auth = useAuthStore()
 
 const fetchSiteDetails = async (id) => {
   if (!id) return
@@ -72,7 +78,9 @@ const fetchSiteDetails = async (id) => {
   descriptionExpanded.value = false
   galleryIndex.value = 0
   try {
-    const response = await fetch(`${API_BASE_URL}/sites/${id}`)
+    const response = await fetch(`${API_BASE_URL}/sites/${id}`, {
+      credentials: 'include',
+    })
     if (response.status === 404) {
       throw new Error('not_found')
     }
@@ -81,6 +89,9 @@ const fetchSiteDetails = async (id) => {
     }
     const payload = await response.json()
     site.value = normalizeSite(payload)
+    if (site.value?.id) {
+      favoritesStore.applyFavorite(site.value.id, Boolean(site.value.isFavorite))
+    }
   } catch (err) {
     error.value = err.message === 'not_found' ? 'El sitio no existe o no es público.' : null
     if (!error.value) {
@@ -199,6 +210,30 @@ const handleGalleryNav = (direction) => {
   galleryIndex.value = (galleryIndex.value + direction + total) % total
 }
 
+const isFavorite = computed(() => {
+  if (!site.value?.id) return false
+  return favoritesStore.isFavorite(site.value.id)
+})
+
+const favoritePending = computed(() => {
+  if (!site.value?.id) return false
+  return favoritesStore.isPending(site.value.id)
+})
+
+const handleFavoriteToggle = async () => {
+  if (!site.value?.id || favoritePending.value) return
+  if (!auth.isAuthenticated) {
+    const nextUrl = typeof window !== 'undefined' ? window.location.href : '/'
+    auth.requestLoginPrompt(nextUrl)
+    return
+  }
+  await favoritesStore.toggleFavorite(site.value.id)
+  site.value = {
+    ...site.value,
+    isFavorite: favoritesStore.isFavorite(site.value.id),
+  }
+}
+
 const handleBackClick = () => {
   router.push({
     name: 'sites',
@@ -241,10 +276,26 @@ const handleRetry = () => {
 
     <template v-else-if="site">
       <article class="site-detail__hero view-panel__card">
-        <header>
+        <header class="site-detail__header">
           <p class="view-panel__subtitle">Sitio seleccionado</p>
           <h1>{{ site.name }}</h1>
           <p class="site-detail__location">{{ locationLabel }}</p>
+          <button
+            v-if="site.id"
+            class="detail-favorite-icon"
+            type="button"
+            :class="{ 'detail-favorite-icon--active': isFavorite }"
+            :aria-pressed="isFavorite"
+            :disabled="favoritePending"
+            @click="handleFavoriteToggle"
+            title="Marcar como favorito"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+              />
+            </svg>
+          </button>
         </header>
 
         <div class="site-detail__meta">

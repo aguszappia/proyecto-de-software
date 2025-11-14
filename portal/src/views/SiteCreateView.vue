@@ -1,8 +1,10 @@
 <script setup>
 import { reactive, ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import API_BASE_URL from '@/constants/api'
+import { useAuthStore } from '@/stores/auth'
 
 const defaultCoords = { lat: -34.6037, long: -58.3816 }
 
@@ -79,6 +81,19 @@ const tagsDropdownRef = ref(null)
 const coverImageInput = ref(null)
 let mapInstance = null
 let markerInstance = null
+const auth = useAuthStore()
+const route = useRoute()
+const buildNextUrl = () => {
+  if (typeof window === 'undefined') {
+    return '/sitios/nuevo'
+  }
+  const origin = window.location.origin
+  const nextPath = route.fullPath || '/sitios/nuevo'
+  return `${origin}${nextPath}`
+}
+const handleLoginForProposal = () => {
+  auth.loginWithGoogle(buildNextUrl())
+}
 
 const ensureMarker = (lat, lng) => {
   if (!mapInstance) {
@@ -227,6 +242,10 @@ const resetMessages = () => {
 
 const handleSubmit = async () => {
   resetMessages()
+  if (!auth.isAuthenticated) {
+    errorMessage.value = 'Necesitás iniciar sesión para proponer un sitio.'
+    return
+  }
   if (!form.lat || !form.long) {
     validationErrors.value = { general: ['Seleccioná la ubicación en el mapa.'] }
     return
@@ -324,7 +343,27 @@ const handleSubmit = async () => {
       </p>
     </div>
 
-    <div class="view-panel__card create-form">
+    <div
+      v-if="auth.loadingUser"
+      class="view-panel__card view-panel__card--centered"
+    >
+      <p>Estamos verificando tu sesión…</p>
+    </div>
+
+    <div
+      v-else-if="!auth.isAuthenticated"
+      class="view-panel__card view-panel__card--centered"
+    >
+      <h2>Iniciá sesión para proponer un sitio</h2>
+      <p>
+        Para proteger el contenido del portal necesitamos que te autentiques antes de enviar una propuesta.
+      </p>
+      <button class="primary-button" type="button" @click="handleLoginForProposal">
+        Ingresar con Google
+      </button>
+    </div>
+
+    <div v-else class="view-panel__card create-form">
       <div v-if="successMessage" class="alert alert--success">
         {{ successMessage }}
       </div>
