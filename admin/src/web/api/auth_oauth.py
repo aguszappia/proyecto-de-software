@@ -39,7 +39,11 @@ def google_login():
     next_url = request.args.get("next") or "/"
     session["next_url"] = next_url
     redirect_uri = _default_redirect_uri()
-    return oauth.google.authorize_redirect(redirect_uri)
+    # Forzamos a Google a mostrar el selector de cuentas aunque haya sesiones activas.
+    return oauth.google.authorize_redirect(
+        redirect_uri,
+        prompt="select_account",
+    )
 
 
 @public_oauth_bp.get("/google/callback")
