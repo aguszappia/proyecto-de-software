@@ -147,9 +147,13 @@
                         class="flag-form flag-form--disable">
                     <input type="hidden" name="flag_key" value="{{ flag.key }}">
                     <input type="hidden" name="enabled" value="false">
+                    <input type="hidden" name="message" value="">
                     <button type="button"
                             class="secondary-button flag-disable-button"
-                            data-flag-name="{{ flag.name }}">
+                            data-flag-name="{{ flag.name }}"
+                            data-flag-key="{{ flag.key }}"
+                            data-default-message="{{ (default_message or '')|e }}"
+                            data-max-message="{{ max_message_length }}">
                       Desactivar
                     </button>
                   </form>
@@ -163,6 +167,7 @@
                     <button type="button"
                             class="primary-button flag-activate-button"
                             data-flag-name="{{ flag.name }}"
+                            data-flag-key="{{ flag.key }}"
                             data-default-message="{{ default_message or '' }}"
                             data-max-message="{{ max_message_length }}">
                       Activar
@@ -210,56 +215,67 @@
       const counter = modal.querySelector('[data-modal-counter]');
       const description = modal.querySelector('[data-modal-description]');
       const errorBox = modal.querySelector('[data-modal-error]');
+      const titleNode = modal.querySelector('[data-modal-title]');
+      const REVIEWS_FLAG_KEY = 'reviews_enabled';
       let maxLength = parseInt(textarea.getAttribute('maxlength') || '0', 10) || {{ max_message_length }};
       let activeForm = null;
       let flagName = '';
-      let modalMode = 'enable';
+      let modalConfig = {
+        showTextarea: true,
+        requireMessage: true,
+      };
 
       function updateCounter(value) {
         if (!counter) return;
         counter.textContent = `${value.length}/${maxLength}`;
       }
 
-      function openModal(form, defaults) {
-        activeForm = form;
-        flagName = defaults.name;
-        modalMode = defaults.mode || 'enable';
-        maxLength = defaults.maxLength || maxLength;
-        textarea.value = defaults.message || '';
-        if (modalMode === 'disable') {
-          textarea.setAttribute('readonly', 'readonly');
-          textarea.style.display = 'none';
-          if (counter) {
-            counter.style.display = 'none';
-          }
-          if (description) {
-            description.textContent = `¿Querés desactivar ${flagName}?`;
-          }
-          confirmBtn.textContent = 'Desactivar';
-        } else {
+      function configureTextarea(showTextarea) {
+        if (showTextarea) {
           textarea.removeAttribute('readonly');
           textarea.style.display = 'block';
           if (counter) {
             counter.style.display = 'block';
           }
-          textarea.setAttribute('maxlength', maxLength.toString());
-          if (description) {
-            description.textContent = 'Ingresá un mensaje para activar este flag.';
+        } else {
+          textarea.setAttribute('readonly', 'readonly');
+          textarea.style.display = 'none';
+          if (counter) {
+            counter.style.display = 'none';
           }
-          confirmBtn.textContent = 'Activar';
         }
+      }
+
+      function openModal(form, defaults) {
+        activeForm = form;
+        flagName = defaults.name;
+        modalConfig = {
+          showTextarea: Boolean(defaults.showTextarea),
+          requireMessage: Boolean(defaults.requireMessage),
+        };
+        maxLength = defaults.maxLength || maxLength;
+        textarea.value = defaults.message || '';
+        configureTextarea(modalConfig.showTextarea);
+        if (modalConfig.showTextarea) {
+          textarea.setAttribute('maxlength', maxLength.toString());
+        }
+        if (description) {
+          description.textContent = defaults.description || '';
+        }
+        confirmBtn.textContent = defaults.confirmLabel || 'Confirmar';
         updateCounter(textarea.value);
         if (errorBox) {
           errorBox.textContent = '';
         }
-        modal.querySelector('[data-modal-title]').textContent =
-          (modalMode === 'disable' ? 'Desactivar ' : 'Activar ') + flagName;
+        if (titleNode) {
+          titleNode.textContent = defaults.title || '';
+        }
         modal.hidden = false;
         modal.classList.add('is-open');
-        if (modalMode === 'disable') {
-          confirmBtn.focus();
-        } else {
+        if (modalConfig.showTextarea) {
           textarea.focus();
+        } else {
+          confirmBtn.focus();
         }
       }
 
@@ -276,13 +292,15 @@
           return;
         }
         let message = textarea.value.trim();
-        if (modalMode === 'enable') {
+        if (modalConfig.showTextarea) {
           if (!message) {
-            if (errorBox) {
-              errorBox.textContent = 'Ingresá un mensaje para continuar.';
+            if (modalConfig.requireMessage) {
+              if (errorBox) {
+                errorBox.textContent = 'Ingresá un mensaje para continuar.';
+              }
+              textarea.focus();
+              return;
             }
-            textarea.focus();
-            return;
           }
           if (message.length > maxLength) {
             if (errorBox) {
@@ -308,11 +326,30 @@
         button.addEventListener('click', () => {
           const form = button.closest('form');
           if (!form) return;
+          const flagKey = button.dataset.flagKey || '';
+          const name = button.dataset.flagName || 'la funcionalidad';
+          const hasMessage = flagKey !== REVIEWS_FLAG_KEY;
+          if (!hasMessage) {
+            openModal(form, {
+              message: '',
+              name,
+              showTextarea: false,
+              requireMessage: false,
+              description: `¿Querés activar ${name}?`,
+              confirmLabel: 'Activar',
+              title: `Activar ${name}`,
+            });
+            return;
+          }
           openModal(form, {
             message: button.dataset.defaultMessage || '',
             maxLength: parseInt(button.dataset.maxMessage || '0', 10) || {{ max_message_length }},
-            name: button.dataset.flagName || 'la funcionalidad',
-            mode: 'enable',
+            name,
+            showTextarea: true,
+            requireMessage: true,
+            description: 'Ingresá un mensaje para activar este flag.',
+            confirmLabel: 'Activar',
+            title: `Activar ${name}`,
           });
         });
       });
@@ -321,11 +358,20 @@
         button.addEventListener('click', () => {
           const form = button.closest('form');
           if (!form) return;
+          const name = button.dataset.flagName || 'la funcionalidad';
+          const flagKey = button.dataset.flagKey || '';
+          const requireMessage = flagKey === REVIEWS_FLAG_KEY;
           openModal(form, {
-            message: '',
-            maxLength: maxLength,
-            name: button.dataset.flagName || 'la funcionalidad',
-            mode: 'disable',
+            message: requireMessage ? button.dataset.defaultMessage || '' : '',
+            maxLength: parseInt(button.dataset.maxMessage || '0', 10) || {{ max_message_length }},
+            name,
+            showTextarea: requireMessage,
+            requireMessage,
+            description: requireMessage
+              ? 'Ingresá un mensaje para informar la desactivación.'
+              : `¿Querés desactivar ${name}?`,
+            confirmLabel: 'Desactivar',
+            title: `Desactivar ${name}`,
           });
         });
       });

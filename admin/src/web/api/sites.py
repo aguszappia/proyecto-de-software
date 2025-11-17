@@ -1,41 +1,82 @@
 from __future__ import annotations
 
-import unicodedata
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional
 
-from flask import Blueprint, current_app, jsonify, request, session
-from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from flask import Blueprint, jsonify, request, session
+from itsdangerous import BadSignature, SignatureExpired
 from marshmallow import ValidationError
 from sqlalchemy import func, inspect, or_, text
 from src.core.sites.reviews_service import list_top_rated_sites
 from src.core.database import db
 from src.core.flags import service as flags_service
-from src.core.sites.models import ConservationStatus, Historic_Site, SiteCategory, SiteTag
-from src.core.sites.service import (
-    create_site,
-    get_site,
-    get_sites_by_location,
-    list_sites,
-    mark_site_favorite,
-    unmark_site_favorite,
-    list_favorite_site_ids,
-    is_favorite_for_user,
-)
 from src.core.sites import images_service, tags_service
+from src.core.sites.models import Historic_Site
 from src.core.sites.reviews_service import (
     create_site_review,
     delete_review as remove_review,
     find_review_by_user,
     get_public_review_stats,
     get_review,
-    list_reviews_for_user,
     list_public_reviews_for_site,
+    list_reviews_for_user,
     update_site_review,
 )
-from src.core.sites.validators import clean_str, safe_float, safe_int
+from src.core.sites.service import (
+    create_site,
+    get_site,
+    get_sites_by_location,
+    is_favorite_for_user,
+    list_favorite_site_ids,
+    list_sites,
+    mark_site_favorite,
+    unmark_site_favorite,
+)
 from src.core.security.passwords import verify_password
 from src.core.users import UserRole
 from src.core.users import service as users_service
+from src.core.sites.validators import safe_float, safe_int
+from src.web.api.sites_helpers import (
+    CATEGORY_ALIASES,
+    DEFAULT_PER_PAGE,
+    MAX_PER_PAGE,
+    STATUS_ALIASES,
+    VALID_ORDER_CHOICES,
+    _apply_filters,
+    _auth_error_response,
+    _ensure_visits_column,
+    _error_response,
+    _extract_site_payload,
+    _filter_by_tags,
+    _filter_visible,
+    _format_user_display,
+    _get_token_serializer,
+    _get_token_ttl,
+    _get_site_or_404,
+    _handle_query_error,
+    _increment_site_visit,
+    _invalid_data_response,
+    _issue_api_token,
+    _normalize_text,
+    _paginate,
+    _parse_category,
+    _parse_float_arg,
+    _parse_int_arg,
+    _parse_state_of_conservation,
+    _parse_tags,
+    _require_api_user,
+    _serialize_flag_state,
+    _sort_sites,
+    _validate_review_payload,
+    AuthError,
+    QueryParamError,
+    TOKEN_SALT_FALLBACK,
+)
+from src.web.controllers.featureflags import (
+    ADMIN_MAINTENANCE_FLAG_KEY,
+    DEFAULT_FLAG_MESSAGES,
+    PORTAL_MAINTENANCE_FLAG_KEY,
+    REVIEWS_ENABLED_FLAG_KEY,
+)
 from src.web.schemas.sites import (
     review_list_schema,
     review_schema,
@@ -514,9 +555,22 @@ def _validate_review_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, List[st
         )
     return errors, rating_value, comment_value
 
-
 bp = Blueprint("sites_api", __name__, url_prefix="/api/sites")
 auth_bp = Blueprint("public_auth_api", __name__, url_prefix="/api")
+
+REVIEWS_DISABLED_ERROR_MESSAGE = "La creación de reseñas está deshabilitada temporalmente."
+
+
+def _is_reviews_feature_enabled() -> bool:
+    flags = flags_service.load_flags()
+    flag = flags.get(REVIEWS_ENABLED_FLAG_KEY)
+    if not flag:
+        return True
+    return bool(flag.enabled)
+
+
+def _reviews_disabled_response():
+    return _error_response(503, "reviews_disabled", REVIEWS_DISABLED_ERROR_MESSAGE)
 
 
 @auth_bp.get("/tags")
@@ -534,11 +588,11 @@ def index():
     """Implementa el endpoint público GET /api/sites."""
     try:
         _ensure_visits_column()
-        name = clean_str(request.args.get("name"))
-        description = clean_str(request.args.get("description"))
-        city = clean_str(request.args.get("city"))
-        province = clean_str(request.args.get("province"))
-        tags_raw = clean_str(request.args.get("tags")) or ""
+        name = request.args.get("name")
+        description = request.args.get("description")
+        city = request.args.get("city")
+        province = request.args.get("province")
+        tags_raw = request.args.get("tags") or ""
         tags = [tag.strip() for tag in tags_raw.split(",") if tag.strip()]
         filter_mode = clean_str(request.args.get("filter")) or ""
         order_by = clean_str(request.args.get("order_by"))
@@ -548,6 +602,9 @@ def index():
             order_by = _map_sort_params(sort_by, sort_dir)
         if not order_by:
             order_by = "latest"
+
+        filter_mode = request.args.get("filter") or ""
+        order_by = request.args.get("order_by") or "latest"
 
         latitude = _parse_float_arg("lat")
         longitude = _parse_float_arg("long")
@@ -566,11 +623,11 @@ def index():
 
         filtered_sites = _apply_filters(
             base_sites,
-            name=name,
-            description=description,
-            city=city,
-            province=province,
-            tags=tags,
+            name=_normalize_text(name) if name else "",
+            description=_normalize_text(description) if description else "",
+            city=_normalize_text(city) if city else "",
+            province=_normalize_text(province) if province else "",
+            tags=[_normalize_text(tag) for tag in tags],
         )
         for site in filtered_sites:
             site_id = site.get("id")
@@ -626,12 +683,7 @@ def site_details(site_id: int):
         site_model = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
         if not site_model or not getattr(site_model, "is_visible", False):
             return _error_response(404, "not_found", "Site not found")
-        try:
-            site_model.visits = (site_model.visits or 0) + 1
-            db.session.add(site_model)
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
+        _increment_site_visit(site_model)
         payload = single_site_schema.dump(site_model)
         user = _require_api_user(optional=True)
         if user:
@@ -647,8 +699,8 @@ def site_details(site_id: int):
 def list_site_reviews(site_id: int):
     """Lista reseñas aprobadas y la reseña del usuario autenticado."""
     try:
-        site = get_site(site_id)
-        if not site or not site.get("is_visible"):
+        site = _get_site_or_404(site_id)
+        if not site:
             return _error_response(404, "not_found", "Site not found")
         user = _require_api_user(optional=True)
         approved_reviews = list_public_reviews_for_site(site_id)
@@ -677,9 +729,11 @@ def list_site_reviews(site_id: int):
 def create_site_review_endpoint(site_id: int):
     """Crea una reseña pendiente para un sitio visible."""
     try:
+        if not _is_reviews_feature_enabled():
+            return _reviews_disabled_response()
         user = _require_api_user()
-        site = get_site(site_id)
-        if not site or not site.get("is_visible"):
+        site = _get_site_or_404(site_id)
+        if not site:
             return _error_response(404, "not_found", "Site not found")
         if not request.is_json:
             return _invalid_data_response({"general": ["El cuerpo debe ser JSON."]})
@@ -705,9 +759,11 @@ def create_site_review_endpoint(site_id: int):
 def update_site_review_endpoint(site_id: int, review_id: int):
     """Actualiza la reseña existente del usuario autenticado."""
     try:
+        if not _is_reviews_feature_enabled():
+            return _reviews_disabled_response()
         user = _require_api_user()
-        site = get_site(site_id)
-        if not site or not site.get("is_visible"):
+        site = _get_site_or_404(site_id)
+        if not site:
             return _error_response(404, "not_found", "Site not found")
         if not request.is_json:
             return _invalid_data_response({"general": ["El cuerpo debe ser JSON."]})
@@ -731,9 +787,11 @@ def update_site_review_endpoint(site_id: int, review_id: int):
 def delete_site_review_endpoint(site_id: int, review_id: int):
     """Elimina la reseña propia del sitio."""
     try:
+        if not _is_reviews_feature_enabled():
+            return _reviews_disabled_response()
         user = _require_api_user()
-        site = get_site(site_id)
-        if not site or not site.get("is_visible"):
+        site = _get_site_or_404(site_id)
+        if not site:
             return _error_response(404, "not_found", "Site not found")
         review = get_review(review_id)
         if not review or review.site_id != site_id or review.user_id != user.id:
@@ -767,16 +825,15 @@ def create_site_endpoint():
         try:
             data = site_create_schema.load(payload)
         except ValidationError as error:
-            # Marshmallow already organiza las claves por campo
             return _invalid_data_response(error.messages)
 
-        name = clean_str(data.get("name"))
-        short_description = clean_str(data.get("short_description"))
-        description = clean_str(data.get("description"))
-        city = clean_str(data.get("city"))
-        province = clean_str(data.get("province"))
-        latitude = safe_float(data.get("lat"))
-        longitude = safe_float(data.get("long"))
+        name = data.get("name")
+        short_description = data.get("short_description")
+        description = data.get("description")
+        city = data.get("city")
+        province = data.get("province")
+        latitude = safe_float(data.get("lat")) if hasattr(data, "get") else None
+        longitude = safe_float(data.get("long")) if hasattr(data, "get") else None
         state_of_conservation = _parse_state_of_conservation(data.get("state_of_conservation"))
         category = _parse_category(data.get("category"))
         inauguration_raw = data.get("inaguration_year")
@@ -833,9 +890,9 @@ def create_site_endpoint():
     except QueryParamError as error:
         details = getattr(error, "details", None) or {"general": [str(error)]}
         return _invalid_data_response(details)
-    except ValidationError as error:  # Defensive: por si aparece fuera del load principal
+    except ValidationError as error:
         return _invalid_data_response(error.messages)
-    except Exception:  # pragma: no cover - defensive fallback
+    except Exception:
         return _error_response(500, "server_error", "An unexpected error occurred")
 
 
@@ -844,8 +901,8 @@ def mark_favorite_endpoint(site_id: int):
     """Marca un sitio como favorito para el usuario autenticado."""
     try:
         user = _require_api_user()
-        site = get_site(site_id)
-        if not site or not site.get("is_visible"):
+        site = _get_site_or_404(site_id)
+        if not site:
             return _error_response(404, "not_found", "Site not found")
         success = mark_site_favorite(site_id, user.id)
         if not success:
@@ -862,8 +919,8 @@ def unmark_favorite_endpoint(site_id: int):
     """Elimina un sitio de los favoritos del usuario."""
     try:
         user = _require_api_user()
-        site = get_site(site_id)
-        if not site or not site.get("is_visible"):
+        site = _get_site_or_404(site_id)
+        if not site:
             return _error_response(404, "not_found", "Site not found")
         unmark_site_favorite(site_id, user.id)
         return "", 204
@@ -873,13 +930,127 @@ def unmark_favorite_endpoint(site_id: int):
         return _error_response(500, "server_error", "An unexpected error occurred")
 
 
+@auth_bp.post("/login")
+def api_login():
+    """Obtengo un token Bearer para usuarios públicos."""
+    try:
+        if not request.is_json:
+            raise QueryParamError("El cuerpo debe ser JSON válido.")
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict):
+            raise QueryParamError("El cuerpo JSON debe ser un objeto.")
+
+        email = (payload.get("email") or "").strip().lower()
+        password = payload.get("password") or ""
+        if not email or not password:
+            raise QueryParamError("Los campos 'email' y 'password' son obligatorios.")
+
+        user = users_service.find_user_by_email(email)
+        if not user or not verify_password(password, user.password_hash):
+            raise AuthError("Credenciales inválidas.")
+        if not user.is_active:
+            raise AuthError("Usuario inactivo.")
+        if user.role != UserRole.PUBLIC.value:
+            raise AuthError("Solo usuarios con rol público pueden usar esta API.")
+
+        token = _issue_api_token(user.id)
+        ttl = _get_token_ttl()
+        return jsonify(
+            {
+                "token": token,
+                "token_type": "bearer",
+                "expires_in": ttl,
+            }
+        ), 200
+    except QueryParamError as error:
+        return jsonify({"error": str(error)}), 400
+    except AuthError as error:
+        response = jsonify({"error": str(error)})
+        response.status_code = 401
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+    except Exception as error:
+        return jsonify({"error": "No se pudo generar el token.", "details": str(error)}), 500
+
+
+@auth_bp.get("/status")
+def public_status():
+    """Expongo el estado de mantenimiento para las apps pública y privada."""
+    flags = flags_service.load_flags()
+    admin_flag = flags.get(ADMIN_MAINTENANCE_FLAG_KEY)
+    portal_flag = flags.get(PORTAL_MAINTENANCE_FLAG_KEY)
+
+    admin_state = _serialize_flag_state(admin_flag, flag_key=ADMIN_MAINTENANCE_FLAG_KEY, default_messages=DEFAULT_FLAG_MESSAGES)
+    portal_state = _serialize_flag_state(portal_flag, flag_key=PORTAL_MAINTENANCE_FLAG_KEY, default_messages=DEFAULT_FLAG_MESSAGES)
+
+    payload = {
+        "maintenance": {
+            "admin": admin_state,
+            "portal": portal_state,
+        }
+    }
+    return jsonify(payload), 200
+
+
+@auth_bp.get("/token/verify")
+def verify_token():
+    """Verifica un token público existente."""
+    auth_header = request.headers.get("Authorization", "").strip()
+    if not auth_header:
+        return jsonify({"valid": False, "error": "Missing Authorization header."}), 401
+    parts = auth_header.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return jsonify({"valid": False, "error": "Invalid Authorization header."}), 401
+    token = parts[1].strip()
+    serializer = _get_token_serializer()
+    try:
+        payload = serializer.loads(token, max_age=_get_token_ttl())
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise AuthError("Invalid token.")
+        user = users_service.get_user(user_id)
+        if not user or not user.is_active or user.role != UserRole.PUBLIC.value:
+            raise AuthError("Invalid user.")
+        return jsonify({"valid": True, "user_id": user_id}), 200
+    except (AuthError, BadSignature, SignatureExpired) as err:
+        return jsonify({"valid": False, "error": str(err)}), 401
+
+
+@auth_bp.get("/flags")
+def get_public_flags():
+    """Retorna el estado de los flags de mantenimiento."""
+    flags = flags_service.load_flags()
+    admin_flag = flags.get(ADMIN_MAINTENANCE_FLAG_KEY)
+    portal_flag = flags.get(PORTAL_MAINTENANCE_FLAG_KEY)
+    reviews_flag = flags.get(REVIEWS_ENABLED_FLAG_KEY)
+
+    admin_state = _serialize_flag_state(admin_flag, flag_key=ADMIN_MAINTENANCE_FLAG_KEY, default_messages=DEFAULT_FLAG_MESSAGES)
+    portal_state = _serialize_flag_state(portal_flag, flag_key=PORTAL_MAINTENANCE_FLAG_KEY, default_messages=DEFAULT_FLAG_MESSAGES)
+    reviews_state = _serialize_flag_state(
+        reviews_flag,
+        flag_key=REVIEWS_ENABLED_FLAG_KEY,
+        default_messages=DEFAULT_FLAG_MESSAGES,
+        show_message_when_disabled=True,
+    )
+
+    return jsonify(
+        {
+            "flags": {
+                "admin": admin_state,
+                "portal": portal_state,
+                "reviews": reviews_state,
+            }
+        }
+    ), 200
+
+
 @auth_bp.get("/me/reviews")
 def list_my_reviews():
     """Devuelve las reseñas creadas por el usuario autenticado."""
     try:
         user = _require_api_user()
         reviews = list_reviews_for_user(user.id)
-        payload = []
+        payload: List[Dict[str, Optional[object]]] = []
         for item in reviews:
             review = item.get("review")
             site = item.get("site")
@@ -898,7 +1069,6 @@ def list_my_reviews():
         return _auth_error_response(str(error))
     except Exception:
         return _error_response(500, "server_error", "No se pudieron obtener tus reseñas.")
-
 
 @auth_bp.post("/login")
 def api_login():

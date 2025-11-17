@@ -282,7 +282,7 @@ def run():
             "name": "Reseñas habilitadas",
             "description": "Controla si el portal permite crear nuevas reseñas.",
             "enabled": True,
-            "message": "Las reseñas están disponibles.",
+            "message": "La creación de reseñas está deshabilitada temporalmente.\n\nEstamos trabajando para habilitarlas nuevamente pronto.",
         },
     ]
 
