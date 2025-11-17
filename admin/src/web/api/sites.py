@@ -28,6 +28,7 @@ from src.core.sites.reviews_service import (
     find_review_by_user,
     get_public_review_stats,
     get_review,
+    list_reviews_for_user,
     list_public_reviews_for_site,
     update_site_review,
 )
@@ -785,6 +786,33 @@ def unmark_favorite_endpoint(site_id: int):
         return _auth_error_response(str(error))
     except Exception:
         return _error_response(500, "server_error", "An unexpected error occurred")
+
+
+@auth_bp.get("/me/reviews")
+def list_my_reviews():
+    """Devuelve las reseñas creadas por el usuario autenticado."""
+    try:
+        user = _require_api_user()
+        reviews = list_reviews_for_user(user.id)
+        payload = []
+        for item in reviews:
+            review = item.get("review")
+            site = item.get("site")
+            serialized = review_schema.dump(review)
+            serialized["site"] = {
+                "id": getattr(site, "id", None),
+                "name": getattr(site, "name", None),
+                "city": getattr(site, "city", None),
+                "province": getattr(site, "province", None),
+                "cover_image_url": getattr(site, "cover_image_url", None),
+                "cover_image_title": getattr(site, "cover_image_title", None),
+            }
+            payload.append(serialized)
+        return jsonify({"data": payload}), 200
+    except AuthError as error:
+        return _auth_error_response(str(error))
+    except Exception:
+        return _error_response(500, "server_error", "No se pudieron obtener tus reseñas.")
 
 
 @auth_bp.post("/login")

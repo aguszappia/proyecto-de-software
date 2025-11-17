@@ -85,10 +85,11 @@ const reviewMessage = ref('')
 const reviewMessageType = ref('success')
 const reviewSubmitting = ref(false)
 const reviewDeleting = ref(false)
+const reviewHoverRating = ref(null)
 
 const REVIEW_MIN_LENGTH = 20
 const REVIEW_MAX_LENGTH = 1000
-const REVIEW_SCORE_OPTIONS = [5, 4, 3, 2, 1]
+const REVIEW_SCORE_OPTIONS = [1, 2, 3, 4, 5]
 
 const normalizeReviewStatus = (value) => {
   if (!value) return ''
@@ -134,10 +135,39 @@ const toFiniteNumber = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
+const selectedRatingValue = computed(() => {
+  const parsed = toFiniteNumber(reviewForm.rating)
+  return typeof parsed === 'number' ? parsed : 0
+})
+
+const displayedRatingValue = computed(() => {
+  const hoverValue = toFiniteNumber(reviewHoverRating.value)
+  if (typeof hoverValue === 'number') return hoverValue
+  return selectedRatingValue.value
+})
+
+const handleRatingSelect = (score) => {
+  reviewForm.rating = String(score)
+  reviewHoverRating.value = null
+  if (reviewErrors.value.rating) {
+    const nextErrors = { ...reviewErrors.value }
+    delete nextErrors.rating
+    reviewErrors.value = nextErrors
+  }
+}
+
+const handleRatingHover = (score) => {
+  reviewHoverRating.value = score
+}
+
+const handleRatingLeave = () => {
+  reviewHoverRating.value = null
+}
 
 const resetReviewForm = () => {
   reviewForm.rating = ''
   reviewForm.comment = ''
+  reviewHoverRating.value = null
 }
 
 const syncReviewForm = () => {
@@ -803,12 +833,39 @@ const handleRetry = () => {
           <form class="review-form__grid" @submit.prevent="handleReviewSubmit">
             <label>
               Puntuación
-              <select v-model="reviewForm.rating">
-                <option value="">Seleccioná una opción</option>
-                <option v-for="score in REVIEW_SCORE_OPTIONS" :key="score" :value="score">
-                  {{ score }} / 5
-                </option>
-              </select>
+              <div class="rating-input">
+                <div
+                  class="rating-input__stars"
+                  role="radiogroup"
+                  aria-label="Seleccionar una puntuación entre 1 y 5 estrellas"
+                  @mouseleave="handleRatingLeave"
+                >
+                  <button
+                    v-for="score in REVIEW_SCORE_OPTIONS"
+                    :key="score"
+                    class="rating-input__star"
+                    type="button"
+                    role="radio"
+                    :aria-checked="selectedRatingValue === score"
+                    :aria-label="`${score} ${score === 1 ? 'estrella' : 'estrellas'}`"
+                    :class="{ 'rating-input__star--filled': score <= displayedRatingValue }"
+                    @mouseenter="handleRatingHover(score)"
+                    @focus="handleRatingHover(score)"
+                    @mouseleave="handleRatingLeave"
+                    @blur="handleRatingLeave"
+                    @click="handleRatingSelect(score)"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <span class="rating-input__value" aria-live="polite">
+                  {{ selectedRatingValue ? `${selectedRatingValue} / 5` : 'Sin seleccionar' }}
+                </span>
+              </div>
               <small v-if="reviewErrors.rating" class="review-error">{{ reviewErrors.rating }}</small>
             </label>
             <label>
