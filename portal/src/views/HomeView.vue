@@ -1,16 +1,18 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import FeaturedSection from '@/components/FeaturedSection.vue'
 import HeroBanner from '@/components/HeroBanner.vue'
 import API_BASE_URL from '@/constants/api'
 import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
+import { useAuthStore } from '@/stores/auth'
 import { useFavoritesStore } from '@/stores/favorites'
 
 const router = useRouter()
+const auth = useAuthStore()
 const favoritesStore = useFavoritesStore()
 
-const isAuthenticated = ref(false) // TODO: conectar con la sesión real cuando esté disponible.
+const isAuthenticated = computed(() => auth.isAuthenticated)
 
 const sectionsConfig = [
   {
@@ -32,16 +34,6 @@ const sectionsConfig = [
     orderBy: 'rating-5-1',
   },
   {
-    key: 'favorites',
-    title: 'Favoritos',
-    subtitle: 'Mi lista personal de favoritos.',
-    ctaParams: { filter: 'favorites' },
-    emptyMessage: 'Inicia sesión para comenzar a guardar tus favoritos.',
-    requiresAuth: true,
-    skeletonItems: 3,
-    orderBy: 'latest',
-  },
-  {
     key: 'recent',
     title: 'Recientemente agregados',
     subtitle: 'Nuevos sitios que acaban de sumarse al portal.',
@@ -49,6 +41,17 @@ const sectionsConfig = [
     emptyMessage: 'Pronto verás novedades aquí.',
     skeletonItems: 3,
     orderBy: 'latest',
+  },
+  {
+    key: 'favorites',
+    title: 'Favoritos',
+    subtitle: 'Mi lista personal de favoritos.',
+    ctaParams: { filter: 'favorites' },
+    emptyMessage: 'Todavia no tienes sitios favoritos.',
+    requiresAuth: true,
+    skeletonItems: 3,
+    orderBy: 'latest',
+    filter: 'favorites',
   },
 ]
 
@@ -150,8 +153,11 @@ const fetchSitesForSection = async (sectionKey) => {
   const params = new URLSearchParams({
     page: '1',
     per_page: String(perPage),
-    order_by: config?.orderBy || 'latest',
   })
+  params.set('order_by', config?.orderBy || 'latest')
+  if (config?.filter) {
+    params.set('filter', config.filter)
+  }
   const response = await fetch(`${API_BASE_URL}/sites?${params.toString()}`, {
     credentials: 'include',
   })
@@ -200,13 +206,31 @@ watch(
 )
 
 watch(
-  () => isAuthenticated.value,
+  isAuthenticated,
   (loggedIn) => {
     if (loggedIn) {
       loadSection('favorites', { force: true })
     }
   },
 )
+
+const stopFavoritesActionHook = favoritesStore.$onAction(({ name, after }) => {
+  if (name !== 'setFavorite') {
+    return
+  }
+  after(() => {
+    if (!isAuthenticated.value) {
+      return
+    }
+    loadSection('favorites', { force: true })
+  })
+})
+
+onBeforeUnmount(() => {
+  if (typeof stopFavoritesActionHook === 'function') {
+    stopFavoritesActionHook()
+  }
+})
 </script>
 
 <template>
