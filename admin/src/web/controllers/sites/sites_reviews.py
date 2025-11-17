@@ -75,7 +75,7 @@ def _extract_filters() -> Tuple[ReviewFilters, Optional[ReviewStatus], Optional[
     args = request.args
     filters = ReviewFilters()
 
-    filters.status = (args.get("status") or ReviewStatus.PENDING.value).strip()
+    filters.status = (args.get("status") or "").strip()
     filters.site_id = _safe_positive_int(args.get("site_id"))
     filters.rating_min = _parse_rating(args.get("rating_min"))
     filters.rating_max = _parse_rating(args.get("rating_max"))
