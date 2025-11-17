@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css'
 import API_BASE_URL from '@/constants/api'
 import { useFavoritesStore } from '@/stores/favorites'
 import { useAuthStore } from '@/stores/auth'
+import { useFeatureFlagsStore } from '@/stores/featureFlags'
 import { resolveCsrfToken } from '@/utils/csrf'
 
 const route = useRoute()
@@ -70,6 +71,8 @@ const normalizeSite = (payload) => {
 
 const favoritesStore = useFavoritesStore()
 const auth = useAuthStore()
+const featureFlags = useFeatureFlagsStore()
+featureFlags.ensurePublicFlags()
 
 const reviewsLoading = ref(false)
 const reviewsError = ref('')
@@ -85,6 +88,7 @@ const reviewMessage = ref('')
 const reviewMessageType = ref('success')
 const reviewSubmitting = ref(false)
 const reviewDeleting = ref(false)
+const reviewDeleteConfirmVisible = ref(false)
 const reviewHoverRating = ref(null)
 
 const REVIEW_MIN_LENGTH = 20
@@ -196,6 +200,12 @@ const formattedAverage = computed(() => {
 })
 
 const hasReviews = computed(() => reviews.value.length > 0)
+const reviewsDisabled = computed(() => !featureFlags.reviewsEnabled)
+const showReviewsDisabledNotice = computed(() => reviewsDisabled.value && auth.isAuthenticated)
+const reviewsDisabledMessageLines = computed(() => {
+  const message = featureFlags.reviewsDisabledMessage || ''
+  return message.split(/\n+/).map((entry) => entry.trim()).filter(Boolean)
+})
 
 const pendingReviewNotice = computed(() => {
   const status = normalizeReviewStatus(userReview.value?.status)
@@ -404,11 +414,8 @@ const handleReviewSubmit = async () => {
   }
 }
 
-const handleReviewDelete = async () => {
+const performReviewDelete = async () => {
   if (!site.value?.id || !userReview.value?.id) return
-  const confirmed =
-    typeof window === 'undefined' ? true : window.confirm('Esta acción no se puede deshacer. ¿Eliminar tu reseña?')
-  if (!confirmed) return
   reviewDeleting.value = true
   reviewMessage.value = ''
   reviewMessageType.value = 'success'
@@ -445,6 +452,22 @@ const handleReviewDelete = async () => {
   } finally {
     reviewDeleting.value = false
   }
+}
+
+const openReviewDeleteConfirm = () => {
+  if (!site.value?.id || !userReview.value?.id) return
+  reviewDeleteConfirmVisible.value = true
+}
+
+const closeReviewDeleteConfirm = () => {
+  if (reviewDeleting.value) return
+  reviewDeleteConfirmVisible.value = false
+}
+
+const confirmReviewDelete = async () => {
+  if (!reviewDeleteConfirmVisible.value) return
+  reviewDeleteConfirmVisible.value = false
+  await performReviewDelete()
 }
 
 const fetchSiteDetails = async (id) => {
@@ -819,7 +842,16 @@ const handleRetry = () => {
 
         <div class="review-separator" aria-hidden="true"></div>
 
-        <div v-if="auth.isAuthenticated" class="review-form">
+        <div
+          v-if="showReviewsDisabledNotice"
+          class="reviews-auth-hint reviews-disabled-hint"
+          role="status"
+        >
+          <p v-for="(line, index) in reviewsDisabledMessageLines" :key="`reviews-disabled-${index}`">
+            {{ line }}
+          </p>
+        </div>
+        <div v-else-if="auth.isAuthenticated" class="review-form">
           <h3>{{ userReview ? 'Editar mi reseña' : 'Escribir una reseña' }}</h3>
           <p v-if="pendingReviewNotice" class="review-form__notice">
             {{ pendingReviewNotice }}
@@ -893,7 +925,7 @@ const handleRetry = () => {
                 class="secondary-button"
                 type="button"
                 :disabled="reviewDeleting || reviewSubmitting"
-                @click="handleReviewDelete"
+                @click="openReviewDeleteConfirm"
               >
                 {{ reviewDeleting ? 'Eliminando…' : 'Eliminar reseña' }}
               </button>
@@ -932,4 +964,30 @@ const handleRetry = () => {
       </article>
     </template>
   </section>
+  <div
+    v-if="reviewDeleteConfirmVisible"
+    class="public-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="review-delete-title"
+  >
+    <div class="public-modal__backdrop"></div>
+    <div class="public-modal__card" role="document">
+      <h2 id="review-delete-title">Eliminar reseña</h2>
+      <p>Esta acción no se puede deshacer. ¿Querés eliminar tu reseña?</p>
+      <div class="public-modal__actions">
+        <button class="public-modal__button" type="button" @click="closeReviewDeleteConfirm" :disabled="reviewDeleting">
+          Cancelar
+        </button>
+        <button
+          class="public-modal__button public-modal__button--danger"
+          type="button"
+          :disabled="reviewDeleting"
+          @click="confirmReviewDelete"
+        >
+          {{ reviewDeleting ? 'Eliminando…' : 'Eliminar' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
