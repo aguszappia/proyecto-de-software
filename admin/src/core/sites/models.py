@@ -82,6 +82,7 @@ class Historic_Site(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
+    visits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_visible: Mapped[bool] = mapped_column(default=False, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -116,6 +117,7 @@ class Historic_Site(Base):
             "conservation_status": self.conservation_status,
             "inaguration_year": self.inaguration_year,
             "category": self.category,
+            "visits": self.visits,
             "is_visible": self.is_visible,
             "tags": [tag.name for tag in self.tags],
             "cover_image_url": self.cover_image_url,

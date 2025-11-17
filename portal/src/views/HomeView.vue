@@ -22,7 +22,7 @@ const sectionsConfig = [
     ctaParams: { sort: 'visits' },
     emptyMessage: 'Todavía no registramos sitios populares aquí.',
     skeletonItems: 3,
-    orderBy: 'latest',
+    orderBy: 'visits',
   },
   {
     key: 'topRated',

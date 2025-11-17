@@ -6,11 +6,11 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from flask import Blueprint, current_app, jsonify, request, session
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from marshmallow import ValidationError
-from sqlalchemy import func, or_
+from sqlalchemy import func, inspect, or_, text
 
 from src.core.database import db
 from src.core.flags import service as flags_service
-from src.core.sites.models import ConservationStatus, SiteCategory, SiteTag
+from src.core.sites.models import ConservationStatus, Historic_Site, SiteCategory, SiteTag
 from src.core.sites.service import (
     create_site,
     get_site,
@@ -52,12 +52,30 @@ from src.web.controllers.sites import images_helpers
 
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 100
-VALID_ORDER_CHOICES = {"rating-5-1", "rating-1-5", "latest", "oldest"}
+VALID_ORDER_CHOICES = {"rating-5-1", "rating-1-5", "latest", "oldest", "visits"}
 TOKEN_SALT_FALLBACK = "public-api-token"
 REVIEW_MIN_SCORE = 1
 REVIEW_MAX_SCORE = 5
 REVIEW_MIN_LENGTH = 20
 REVIEW_MAX_LENGTH = 1000
+_VISITS_COLUMN_CHECKED = False
+
+
+def _ensure_visits_column():
+    """Crea la columna visits si no existe (para despliegues ya en producción)."""
+    global _VISITS_COLUMN_CHECKED
+    if _VISITS_COLUMN_CHECKED:
+        return
+    try:
+        inspector = inspect(db.engine)
+        columns = {col["name"] for col in inspector.get_columns("historic_sites")}
+        if "visits" not in columns:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE historic_sites ADD COLUMN visits INTEGER NOT NULL DEFAULT 0"))
+    except Exception:
+        # Defensive: no interrumpe el request si falla la verificación/alter.
+        pass
+    _VISITS_COLUMN_CHECKED = True
 
 
 class QueryParamError(ValueError):
@@ -215,6 +233,12 @@ def _sort_sites(items: List[Dict[str, Any]], order_by: str) -> List[Dict[str, An
         return sorted(items, key=rating_value, reverse=True)
     if order_by == "rating-1-5":
         return sorted(items, key=rating_value)
+    if order_by == "visits":
+        return sorted(
+            items,
+            key=lambda site: site.get("visits") or 0,
+            reverse=True,
+        )
     return items
 
 
@@ -468,6 +492,7 @@ def list_public_tags():
 def index():
     """Implementa el endpoint público GET /api/sites."""
     try:
+        _ensure_visits_column()
         name = clean_str(request.args.get("name"))
         description = clean_str(request.args.get("description"))
         city = clean_str(request.args.get("city"))
@@ -544,10 +569,17 @@ def index():
 def site_details(site_id: int):
     """Obtiene el detalle público de un sitio histórico."""
     try:
-        site = get_site(site_id)
-        if not site or not site.get("is_visible"):
+        _ensure_visits_column()
+        site_model = db.session.query(Historic_Site).filter(Historic_Site.id == site_id).first()
+        if not site_model or not getattr(site_model, "is_visible", False):
             return _error_response(404, "not_found", "Site not found")
-        payload = single_site_schema.dump(site)
+        try:
+            site_model.visits = (site_model.visits or 0) + 1
+            db.session.add(site_model)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        payload = single_site_schema.dump(site_model)
         user = _require_api_user(optional=True)
         if user:
             payload["is_favorite"] = is_favorite_for_user(site_id, user.id)
