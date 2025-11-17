@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unicodedata
-from typing import Any, Dict, Iterable, List, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from flask import Blueprint, current_app, jsonify, request, session
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -22,11 +22,26 @@ from src.core.sites.service import (
     is_favorite_for_user,
 )
 from src.core.sites import images_service, tags_service
+from src.core.sites.reviews_service import (
+    create_site_review,
+    delete_review as remove_review,
+    find_review_by_user,
+    get_public_review_stats,
+    get_review,
+    list_public_reviews_for_site,
+    update_site_review,
+)
 from src.core.sites.validators import clean_str, safe_float, safe_int
 from src.core.security.passwords import verify_password
 from src.core.users import UserRole
 from src.core.users import service as users_service
-from src.web.schemas.sites import single_site_schema, site_create_schema, site_schema
+from src.web.schemas.sites import (
+    review_list_schema,
+    review_schema,
+    single_site_schema,
+    site_create_schema,
+    site_schema,
+)
 from src.web.controllers.featureflags import (
     ADMIN_MAINTENANCE_FLAG_KEY,
     DEFAULT_FLAG_MESSAGES,
@@ -38,6 +53,10 @@ DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 100
 VALID_ORDER_CHOICES = {"rating-5-1", "rating-1-5", "latest", "oldest"}
 TOKEN_SALT_FALLBACK = "public-api-token"
+REVIEW_MIN_SCORE = 1
+REVIEW_MAX_SCORE = 5
+REVIEW_MIN_LENGTH = 20
+REVIEW_MAX_LENGTH = 1000
 
 
 class QueryParamError(ValueError):
@@ -71,6 +90,16 @@ def _normalize_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value or "")
     stripped = "".join(char for char in normalized if not unicodedata.combining(char))
     return stripped.casefold()
+
+
+def _format_user_display(user) -> str:
+    if not user:
+        return "Visitante"
+    parts = [getattr(user, "first_name", "") or "", getattr(user, "last_name", "") or ""]
+    clean = " ".join(part.strip() for part in parts if part.strip()).strip()
+    if clean:
+        return clean
+    return getattr(user, "email", None) or "Visitante"
 
 
 STATUS_ALIASES = {
@@ -399,6 +428,27 @@ def _extract_site_payload() -> Tuple[Dict[str, Any], bool]:
     raise QueryParamError("El cuerpo debe ser JSON o multipart/form-data.")
 
 
+def _validate_review_payload(payload: Dict[str, Any]) -> Tuple[Dict[str, List[str]], Optional[int], str]:
+    """Valido los datos de reseñas públicas."""
+    errors: Dict[str, List[str]] = {}
+    rating_value = safe_int(payload.get("rating"))
+    if rating_value is None or rating_value < REVIEW_MIN_SCORE or rating_value > REVIEW_MAX_SCORE:
+        errors.setdefault("rating", []).append("Elegí un puntaje entre 1 y 5.")
+
+    comment_value = clean_str(payload.get("comment"))
+    if not comment_value:
+        errors.setdefault("comment", []).append("Escribí una reseña.")
+    elif len(comment_value) < REVIEW_MIN_LENGTH:
+        errors.setdefault("comment", []).append(
+            f"La reseña debe tener al menos {REVIEW_MIN_LENGTH} caracteres.",
+        )
+    elif len(comment_value) > REVIEW_MAX_LENGTH:
+        errors.setdefault("comment", []).append(
+            f"La reseña no puede superar los {REVIEW_MAX_LENGTH} caracteres.",
+        )
+    return errors, rating_value, comment_value
+
+
 bp = Blueprint("sites_api", __name__, url_prefix="/api/sites")
 auth_bp = Blueprint("public_auth_api", __name__, url_prefix="/api")
 
@@ -505,6 +555,109 @@ def site_details(site_id: int):
         return _auth_error_response(str(error))
     except Exception:
         return _error_response(500, "server_error", "An unexpected error occurred")
+
+
+@bp.get("/<int:site_id>/reviews")
+def list_site_reviews(site_id: int):
+    """Lista reseñas aprobadas y la reseña del usuario autenticado."""
+    try:
+        site = get_site(site_id)
+        if not site or not site.get("is_visible"):
+            return _error_response(404, "not_found", "Site not found")
+        user = _require_api_user(optional=True)
+        approved_reviews = list_public_reviews_for_site(site_id)
+        stats = get_public_review_stats(site_id)
+        reviews_payload = review_list_schema.dump(approved_reviews)
+        user_review_payload = None
+        if user:
+            user_review = find_review_by_user(site_id, user.id)
+            if user_review:
+                user_review_payload = review_schema.dump(user_review)
+        payload = {
+            "data": {
+                "reviews": reviews_payload,
+                "stats": stats,
+                "user_review": user_review_payload,
+            }
+        }
+        return jsonify(payload), 200
+    except AuthError as error:
+        return _auth_error_response(str(error))
+    except Exception:
+        return _error_response(500, "server_error", "No se pudieron obtener las reseñas.")
+
+
+@bp.post("/<int:site_id>/reviews")
+def create_site_review_endpoint(site_id: int):
+    """Crea una reseña pendiente para un sitio visible."""
+    try:
+        user = _require_api_user()
+        site = get_site(site_id)
+        if not site or not site.get("is_visible"):
+            return _error_response(404, "not_found", "Site not found")
+        if not request.is_json:
+            return _invalid_data_response({"general": ["El cuerpo debe ser JSON."]})
+        payload = request.get_json(silent=True) or {}
+        errors, rating, comment = _validate_review_payload(payload)
+        if errors:
+            return _invalid_data_response(errors)
+        existing = find_review_by_user(site_id, user.id)
+        if existing:
+            return _invalid_data_response(
+                {"general": ["Ya registraste una reseña para este sitio. Podés editarla."]},
+            )
+        review = create_site_review(site_id=site_id, user_id=user.id, rating=rating or 0, comment=comment)
+        review.author_name = _format_user_display(user)
+        return jsonify({"data": review_schema.dump(review)}), 201
+    except AuthError as error:
+        return _auth_error_response(str(error))
+    except Exception:
+        return _error_response(500, "server_error", "No se pudo crear la reseña.")
+
+
+@bp.put("/<int:site_id>/reviews/<int:review_id>")
+def update_site_review_endpoint(site_id: int, review_id: int):
+    """Actualiza la reseña existente del usuario autenticado."""
+    try:
+        user = _require_api_user()
+        site = get_site(site_id)
+        if not site or not site.get("is_visible"):
+            return _error_response(404, "not_found", "Site not found")
+        if not request.is_json:
+            return _invalid_data_response({"general": ["El cuerpo debe ser JSON."]})
+        payload = request.get_json(silent=True) or {}
+        errors, rating, comment = _validate_review_payload(payload)
+        if errors:
+            return _invalid_data_response(errors)
+        review = get_review(review_id)
+        if not review or review.site_id != site_id or review.user_id != user.id:
+            return _error_response(404, "not_found", "Review not found")
+        updated_review = update_site_review(review, rating=rating or 0, comment=comment)
+        updated_review.author_name = _format_user_display(user)
+        return jsonify({"data": review_schema.dump(updated_review)}), 200
+    except AuthError as error:
+        return _auth_error_response(str(error))
+    except Exception:
+        return _error_response(500, "server_error", "No se pudo actualizar la reseña.")
+
+
+@bp.delete("/<int:site_id>/reviews/<int:review_id>")
+def delete_site_review_endpoint(site_id: int, review_id: int):
+    """Elimina la reseña propia del sitio."""
+    try:
+        user = _require_api_user()
+        site = get_site(site_id)
+        if not site or not site.get("is_visible"):
+            return _error_response(404, "not_found", "Site not found")
+        review = get_review(review_id)
+        if not review or review.site_id != site_id or review.user_id != user.id:
+            return _error_response(404, "not_found", "Review not found")
+        remove_review(review)
+        return "", 204
+    except AuthError as error:
+        return _auth_error_response(str(error))
+    except Exception:
+        return _error_response(500, "server_error", "No se pudo eliminar la reseña.")
 
 
 @bp.post("/")

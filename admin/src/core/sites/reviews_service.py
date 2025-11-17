@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import asc, and_, desc, or_
+from sqlalchemy import asc, and_, desc, func, or_
 from sqlalchemy.orm import joinedload
 
 from src.core.database import db
@@ -153,12 +153,17 @@ def paginate_reviews(
 
 def get_review(review_id: int) -> Optional[SiteReview]:
     """Busco una reseña por id con el sitio asociado."""
-    return (
-        db.session.query(SiteReview)
+    row = (
+        db.session.query(SiteReview, User.first_name, User.last_name)
         .options(joinedload(SiteReview.site))
+        .outerjoin(User, User.id == SiteReview.user_id)
         .filter(SiteReview.id == review_id)
         .first()
     )
+    if not row:
+        return None
+    review, first_name, last_name = row
+    return _attach_author(review, first_name, last_name)
 
 
 def get_review_presenter(review_id: int) -> Optional[ReviewPresenter]:
@@ -177,6 +182,88 @@ def get_review_presenter(review_id: int) -> Optional[ReviewPresenter]:
         site_cover_url=cover_url,
         site_cover_title=cover_title,
     )
+
+
+def _format_author_name(first_name: Optional[str], last_name: Optional[str]) -> str:
+    parts = [part.strip() for part in [first_name or "", last_name or ""] if part]
+    display = " ".join(parts).strip()
+    return display or "Visitante"
+
+
+def _attach_author(review: SiteReview, first_name: Optional[str], last_name: Optional[str]) -> SiteReview:
+    review.author_name = _format_author_name(first_name, last_name)
+    return review
+
+
+def list_public_reviews_for_site(site_id: int) -> List[SiteReview]:
+    """Devuelvo las reseñas aprobadas de un sitio para el portal público."""
+    reviews: List[SiteReview] = []
+    query = (
+        db.session.query(SiteReview, User.first_name, User.last_name)
+        .outerjoin(User, User.id == SiteReview.user_id)
+        .filter(
+            SiteReview.site_id == site_id,
+            SiteReview.status == ReviewStatus.APPROVED,
+        )
+        .order_by(SiteReview.created_at.desc())
+    )
+    for review, first_name, last_name in query.all():
+        reviews.append(_attach_author(review, first_name, last_name))
+    return reviews
+
+
+def get_public_review_stats(site_id: int) -> Dict[str, object]:
+    """Calculo cantidad y promedio sólo de reseñas aprobadas."""
+    avg_rating, total = (
+        db.session.query(func.avg(SiteReview.rating), func.count(SiteReview.id))
+        .filter(SiteReview.site_id == site_id, SiteReview.status == ReviewStatus.APPROVED)
+        .first()
+    )
+    average = float(avg_rating) if avg_rating is not None else None
+    return {
+        "average_rating": average,
+        "total_reviews": int(total or 0),
+    }
+
+
+def find_review_by_user(site_id: int, user_id: int) -> Optional[SiteReview]:
+    """Busco la reseña existente para un usuario específico."""
+    row = (
+        db.session.query(SiteReview, User.first_name, User.last_name)
+        .outerjoin(User, User.id == SiteReview.user_id)
+        .filter(SiteReview.site_id == site_id, SiteReview.user_id == user_id)
+        .first()
+    )
+    if not row:
+        return None
+    review, first_name, last_name = row
+    return _attach_author(review, first_name, last_name)
+
+
+def create_site_review(*, site_id: int, user_id: int, rating: int, comment: str) -> SiteReview:
+    """Creo una reseña pendiente para el portal público."""
+    review = SiteReview(
+        site_id=site_id,
+        user_id=user_id,
+        rating=rating,
+        comment=comment.strip(),
+        status=ReviewStatus.PENDING,
+        rejection_reason=None,
+    )
+    db.session.add(review)
+    db.session.commit()
+    return review
+
+
+def update_site_review(review: SiteReview, *, rating: int, comment: str) -> SiteReview:
+    """Actualizo una reseña y la vuelvo a estado pendiente."""
+    review.rating = rating
+    review.comment = comment.strip()
+    review.status = ReviewStatus.PENDING
+    review.rejection_reason = None
+    db.session.add(review)
+    db.session.commit()
+    return review
 
 
 def approve_review(review: SiteReview):
