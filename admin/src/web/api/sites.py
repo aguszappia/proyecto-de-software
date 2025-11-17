@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import unicodedata
 from typing import Dict, List, Optional
 
 from flask import Blueprint, jsonify, request, session
@@ -10,7 +10,7 @@ from src.core.sites.reviews_service import list_top_rated_sites
 from src.core.database import db
 from src.core.flags import service as flags_service
 from src.core.sites import images_service, tags_service
-from src.core.sites.models import Historic_Site
+from src.core.sites.models import ConservationStatus, Historic_Site, SiteCategory, SiteTag
 from src.core.sites.reviews_service import (
     create_site_review,
     delete_review as remove_review,
@@ -34,7 +34,7 @@ from src.core.sites.service import (
 from src.core.security.passwords import verify_password
 from src.core.users import UserRole
 from src.core.users import service as users_service
-from src.core.sites.validators import safe_float, safe_int
+from src.core.sites.validators import clean_str, safe_float, safe_int
 from src.web.api.sites_helpers import (
     CATEGORY_ALIASES,
     DEFAULT_PER_PAGE,
@@ -143,12 +143,22 @@ class AuthError(RuntimeError):
         super().__init__(message)
 
 
-def _serialize_flag_state(flag, *, flag_key: str) -> Dict[str, Any]:
+def _serialize_flag_state(
+    flag,
+    *,
+    flag_key: str,
+    default_messages: Dict[str, str] | None = None,
+    show_message_when_disabled: bool = False,
+) -> Dict[str, Any]:
     """Devuelvo el estado simplificado de un flag con mensaje por defecto."""
     enabled = bool(flag and flag.enabled)
+    defaults = default_messages or DEFAULT_FLAG_MESSAGES
+    default_message = defaults.get(flag_key, "")
     message = ""
     if enabled:
-        message = flag.message or DEFAULT_FLAG_MESSAGES.get(flag_key, "")
+        message = flag.message or default_message
+    elif show_message_when_disabled:
+        message = (flag.message or default_message or "").strip()
     return {
         "enabled": enabled,
         "message": message,
@@ -603,9 +613,6 @@ def index():
         if not order_by:
             order_by = "latest"
 
-        filter_mode = request.args.get("filter") or ""
-        order_by = request.args.get("order_by") or "latest"
-
         latitude = _parse_float_arg("lat")
         longitude = _parse_float_arg("long")
         radius_km = _parse_float_arg("radius")
@@ -930,68 +937,6 @@ def unmark_favorite_endpoint(site_id: int):
         return _error_response(500, "server_error", "An unexpected error occurred")
 
 
-@auth_bp.post("/login")
-def api_login():
-    """Obtengo un token Bearer para usuarios públicos."""
-    try:
-        if not request.is_json:
-            raise QueryParamError("El cuerpo debe ser JSON válido.")
-        payload = request.get_json(silent=True) or {}
-        if not isinstance(payload, dict):
-            raise QueryParamError("El cuerpo JSON debe ser un objeto.")
-
-        email = (payload.get("email") or "").strip().lower()
-        password = payload.get("password") or ""
-        if not email or not password:
-            raise QueryParamError("Los campos 'email' y 'password' son obligatorios.")
-
-        user = users_service.find_user_by_email(email)
-        if not user or not verify_password(password, user.password_hash):
-            raise AuthError("Credenciales inválidas.")
-        if not user.is_active:
-            raise AuthError("Usuario inactivo.")
-        if user.role != UserRole.PUBLIC.value:
-            raise AuthError("Solo usuarios con rol público pueden usar esta API.")
-
-        token = _issue_api_token(user.id)
-        ttl = _get_token_ttl()
-        return jsonify(
-            {
-                "token": token,
-                "token_type": "bearer",
-                "expires_in": ttl,
-            }
-        ), 200
-    except QueryParamError as error:
-        return jsonify({"error": str(error)}), 400
-    except AuthError as error:
-        response = jsonify({"error": str(error)})
-        response.status_code = 401
-        response.headers["WWW-Authenticate"] = "Bearer"
-        return response
-    except Exception as error:
-        return jsonify({"error": "No se pudo generar el token.", "details": str(error)}), 500
-
-
-@auth_bp.get("/status")
-def public_status():
-    """Expongo el estado de mantenimiento para las apps pública y privada."""
-    flags = flags_service.load_flags()
-    admin_flag = flags.get(ADMIN_MAINTENANCE_FLAG_KEY)
-    portal_flag = flags.get(PORTAL_MAINTENANCE_FLAG_KEY)
-
-    admin_state = _serialize_flag_state(admin_flag, flag_key=ADMIN_MAINTENANCE_FLAG_KEY, default_messages=DEFAULT_FLAG_MESSAGES)
-    portal_state = _serialize_flag_state(portal_flag, flag_key=PORTAL_MAINTENANCE_FLAG_KEY, default_messages=DEFAULT_FLAG_MESSAGES)
-
-    payload = {
-        "maintenance": {
-            "admin": admin_state,
-            "portal": portal_state,
-        }
-    }
-    return jsonify(payload), 200
-
-
 @auth_bp.get("/token/verify")
 def verify_token():
     """Verifica un token público existente."""
@@ -1070,44 +1015,6 @@ def list_my_reviews():
     except Exception:
         return _error_response(500, "server_error", "No se pudieron obtener tus reseñas.")
 
-@auth_bp.post("/login")
-def api_login():
-    """Obtengo un token Bearer para usuarios públicos."""
-    try:
-        if not request.is_json:
-            raise QueryParamError("El cuerpo debe ser JSON válido.")
-        payload = request.get_json(silent=True) or {}
-        if not isinstance(payload, dict):
-            raise QueryParamError("El cuerpo JSON debe ser un objeto.")
-
-        email = clean_str(payload.get("email")).lower()
-        password = payload.get("password") or ""
-        if not email or not password:
-            raise QueryParamError("Los campos 'email' y 'password' son obligatorios.")
-
-        user = users_service.find_user_by_email(email)
-        if not user or not verify_password(password, user.password_hash):
-            raise AuthError("Credenciales inválidas.")
-        if not user.is_active:
-            raise AuthError("Usuario inactivo.")
-        if user.role != UserRole.PUBLIC.value:
-            raise AuthError("Solo usuarios con rol público pueden usar esta API.")
-
-        token = _issue_api_token(user.id)
-        ttl = current_app.config.get("API_TOKEN_TTL_SECONDS", 60 * 60 * 24)
-        return jsonify(
-            {
-                "token": token,
-                "token_type": "bearer",
-                "expires_in": ttl,
-            }
-        ), 200
-    except QueryParamError as error:
-        return jsonify({"error": str(error)}), 400
-    except AuthError as error:
-        response = jsonify({"error": str(error)})
-        response.status_code = 401
-        response.headers["WWW-Authenticate"] = "Bearer"
         return response
     except Exception as error:  # pragma: no cover - defensive fallback
         return jsonify({"error": "No se pudo generar el token.", "details": str(error)}), 500
