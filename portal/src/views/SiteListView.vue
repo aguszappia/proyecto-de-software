@@ -52,6 +52,9 @@ const activeFilters = computed(() => ({
   city: route.query.city || '',
   province: route.query.province || '',
   conservation_status: route.query.conservation_status || '',
+  favorites:
+    auth.isAuthenticated &&
+    ['1', 'true', 'yes', 'on'].includes(String(route.query.favorites || '').toLowerCase()),
   sort_by: ['created_at', 'name', 'rating', 'visits'].includes(route.query.sort_by)
     ? route.query.sort_by
     : 'created_at',
@@ -77,6 +80,7 @@ const formFilters = ref({
   city: '',
   province: '',
   conservation_status: '',
+  favorites: false,
   sort_by: 'created_at',
   sort_dir: 'desc',
   tags: [],
@@ -165,6 +169,7 @@ const buildQueryString = (filters) => {
   if (filters.q) params.set('q', filters.q)
   if (filters.sort_by) params.set('sort_by', filters.sort_by)
   if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.favorites) params.set('favorites', '1')
   filters.tags?.forEach((tag) => {
     if (tag) params.append('tags', tag)
   })
@@ -191,6 +196,7 @@ watchEffect(async () => {
     const normalizedProvince = filters.province.trim().toLowerCase()
     const normalizedStatus = filters.conservation_status.trim().toLowerCase()
     const desiredTags = (filters.tags || []).map((tag) => tag.trim().toLowerCase()).filter(Boolean)
+    const favoritesOnly = filters.favorites && auth.isAuthenticated
     const rawItems = Array.isArray(payload?.data) ? payload.data : []
 
     const filteredItems = rawItems.filter((site) => {
@@ -222,8 +228,20 @@ watchEffect(async () => {
       const matchesTags =
         !desiredTags.length ||
         desiredTags.every((tag) => siteTags.includes(tag))
+      const siteFavoriteFlag =
+        site.is_favorite === true ||
+        site.isFavorite === true ||
+        favoritesStore.isFavorite(site.id)
+      const matchesFavorites = !favoritesOnly || siteFavoriteFlag
 
-      return matchesSearch && matchesCity && matchesProvince && matchesStatus && matchesTags
+      return (
+        matchesSearch &&
+        matchesCity &&
+        matchesProvince &&
+        matchesStatus &&
+        matchesTags &&
+        matchesFavorites
+      )
     })
 
     favoritesStore.hydrateFromSites(filteredItems)
@@ -255,6 +273,7 @@ const serializeFilters = (filters) => {
   if (filters.conservation_status) query.conservation_status = filters.conservation_status
   if (filters.sort_by && filters.sort_by !== 'created_at') query.sort_by = filters.sort_by
   if (filters.sort_dir && filters.sort_dir !== 'desc') query.sort_dir = filters.sort_dir
+  if (filters.favorites) query.favorites = '1'
   if (filters.tags?.length) query.tags = filters.tags
   return query
 }
@@ -505,7 +524,7 @@ watch(
           </label>
         </div>
 
-        <div class="filters-row">
+        <div class="filters-row filters-row--ordering">
           <label class="filter-group">
             <span>Estado de conservación</span>
             <select v-model="formFilters.conservation_status">
@@ -595,6 +614,19 @@ watch(
               </span>
             </div>
           </div>
+          <label
+            v-if="auth.isAuthenticated"
+            class="filter-group filter-group--favorites-checkbox"
+          >
+            <div class="filter-inline-checkbox">
+              <input
+                id="favorites-filter"
+                v-model="formFilters.favorites"
+                type="checkbox"
+              />
+              <span>Favoritos</span>
+            </div>
+          </label>
         </div>
 
         <div class="filters-actions">
