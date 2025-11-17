@@ -19,7 +19,7 @@ const sectionsConfig = [
     key: 'mostVisited',
     title: 'Más visitados',
     subtitle: 'Tendencias entre los usuarios.',
-    ctaParams: { sort: 'visits' },
+    ctaParams: { sort_by: 'visits', sort_dir: 'desc' },
     emptyMessage: 'Todavía no registramos sitios populares aquí.',
     skeletonItems: 3,
     orderBy: 'visits',
@@ -28,10 +28,12 @@ const sectionsConfig = [
     key: 'topRated',
     title: 'Mejor puntuados',
     subtitle: 'Los sitios con mejores valoraciones.',
-    ctaParams: { sort: 'rating' },
+    ctaParams: { sort_by: 'rating', sort_dir: 'desc' },
     emptyMessage: 'Aún no hay calificaciones cargadas.',
     skeletonItems: 3,
     orderBy: 'rating-5-1',
+    highlightEndpoint: '/sites/highlights/top-rated',
+    highlightLimit: 3,
   },
   {
     key: 'recent',
@@ -149,6 +151,19 @@ const mapSiteToCard = (site) => ({
 
 const fetchSitesForSection = async (sectionKey) => {
   const config = sectionsConfig.find((section) => section.key === sectionKey)
+  if (config?.highlightEndpoint) {
+    const limit = config.highlightLimit ?? config.skeletonItems ?? 3
+    const response = await fetch(
+      `${API_BASE_URL}${config.highlightEndpoint}?limit=${encodeURIComponent(limit)}`,
+      { credentials: 'include' },
+    )
+    if (!response.ok) {
+      throw new Error('No se pudieron cargar los sitios destacados.')
+    }
+    const payload = await response.json()
+    return Array.isArray(payload?.data) ? payload.data : []
+  }
+
   const perPage = config?.perPage ?? 100
   const params = new URLSearchParams({
     page: '1',

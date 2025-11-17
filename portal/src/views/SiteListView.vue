@@ -52,7 +52,7 @@ const activeFilters = computed(() => ({
   city: route.query.city || '',
   province: route.query.province || '',
   conservation_status: route.query.conservation_status || '',
-  sort_by: ['created_at', 'name', 'city'].includes(route.query.sort_by)
+  sort_by: ['created_at', 'name', 'rating', 'visits'].includes(route.query.sort_by)
     ? route.query.sort_by
     : 'created_at',
   sort_dir: route.query.sort_dir === 'asc' ? 'asc' : 'desc',
@@ -163,8 +163,8 @@ const buildQueryString = (filters) => {
   if (filters.province) params.set('province', filters.province)
   if (filters.conservation_status) params.set('conservation_status', filters.conservation_status)
   if (filters.q) params.set('q', filters.q)
-  params.set('sort_by', filters.sort_by || 'created_at')
-  params.set('sort_dir', filters.sort_dir || 'desc')
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
   filters.tags?.forEach((tag) => {
     if (tag) params.append('tags', tag)
   })
@@ -519,8 +519,9 @@ watch(
             <span>Ordenar por</span>
             <select v-model="formFilters.sort_by">
               <option value="created_at">Fecha de registro</option>
+              <option value="visits">Visitas</option>
+              <option value="rating">Puntuación</option>
               <option value="name">Nombre</option>
-              <option value="city">Ciudad</option>
             </select>
           </label>
           <label class="filter-group">

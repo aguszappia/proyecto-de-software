@@ -226,6 +226,36 @@ def get_public_review_stats(site_id: int) -> Dict[str, object]:
     }
 
 
+def list_top_rated_sites(limit: int = 3) -> List[Dict[str, object]]:
+    """Obtengo sitios visibles ordenados por rating promedio (solo reseñas aprobadas)."""
+    query = (
+        db.session.query(
+            Historic_Site,
+            func.avg(SiteReview.rating).label("avg_rating"),
+            func.count(SiteReview.id).label("total_reviews"),
+        )
+        .outerjoin(
+            SiteReview,
+            and_(
+                SiteReview.site_id == Historic_Site.id,
+                SiteReview.status == ReviewStatus.APPROVED,
+            ),
+        )
+        .filter(Historic_Site.is_visible.is_(True))
+        .group_by(Historic_Site.id)
+        .order_by(func.avg(SiteReview.rating).desc(), Historic_Site.created_at.desc())
+        .limit(limit)
+    )
+
+    results: List[Dict[str, object]] = []
+    for site, avg_rating, total_reviews in query.all():
+        payload = site.to_dict()
+        payload["average_rating"] = float(avg_rating) if avg_rating is not None else None
+        payload["total_reviews"] = int(total_reviews or 0)
+        results.append(payload)
+    return results
+
+
 def find_review_by_user(site_id: int, user_id: int) -> Optional[SiteReview]:
     """Busco la reseña existente para un usuario específico."""
     row = (
@@ -331,3 +361,31 @@ def list_reviews_for_user(user_id: int) -> List[Dict[str, object]]:
             }
         )
     return reviews
+
+def list_top_rated_sites(limit: int = 3) -> list[dict]:
+    """Obtengo los sitios visibles con mejor rating promedio (solo reseñas aprobadas)."""
+    query = (
+        db.session.query(
+            Historic_Site,
+            func.avg(SiteReview.rating).label("avg_rating"),
+            func.count(SiteReview.id).label("total_reviews"),
+        )
+        .outerjoin(
+            SiteReview,
+            and_(
+                SiteReview.site_id == Historic_Site.id,
+                SiteReview.status == ReviewStatus.APPROVED,
+            ),
+        )
+        .filter(Historic_Site.is_visible.is_(True))
+        .group_by(Historic_Site.id)
+        .order_by(func.avg(SiteReview.rating).desc(), Historic_Site.created_at.desc())
+        .limit(limit)
+    )
+    results = []
+    for site, avg_rating, total_reviews in query.all():
+        payload = site.to_dict()
+        payload["average_rating"] = float(avg_rating) if avg_rating is not None else None
+        payload["total_reviews"] = int(total_reviews or 0)
+        results.append(payload)
+    return results
