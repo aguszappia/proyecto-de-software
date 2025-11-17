@@ -306,3 +306,28 @@ def delete_review(review: SiteReview):
     """Elimino la reseña definitivamente."""
     db.session.delete(review)
     db.session.commit()
+
+
+def list_reviews_for_user(user_id: int) -> List[Dict[str, object]]:
+    """Devuelve las reseñas del usuario junto con datos básicos del sitio."""
+    query = (
+        db.session.query(
+            SiteReview,
+            Historic_Site,
+            User.first_name,
+            User.last_name,
+        )
+        .join(Historic_Site, SiteReview.site_id == Historic_Site.id)
+        .outerjoin(User, User.id == SiteReview.user_id)
+        .filter(SiteReview.user_id == user_id, Historic_Site.is_visible.is_(True))
+        .order_by(SiteReview.created_at.desc())
+    )
+    reviews: List[Dict[str, object]] = []
+    for review, site, first_name, last_name in query.all():
+        reviews.append(
+            {
+                "review": _attach_author(review, first_name, last_name),
+                "site": site,
+            }
+        )
+    return reviews
