@@ -58,12 +58,21 @@ def _ensure_visits_column():
     _VISITS_COLUMN_CHECKED = True
 
 
-def _serialize_flag_state(flag, *, flag_key: str, default_messages: Dict[str, str]) -> Dict[str, Any]:
+def _serialize_flag_state(
+    flag,
+    *,
+    flag_key: str,
+    default_messages: Dict[str, str],
+    show_message_when_disabled: bool = False,
+) -> Dict[str, Any]:
     """Devuelvo el estado simplificado de un flag con mensaje por defecto."""
     enabled = bool(flag and flag.enabled)
+    default_message = default_messages.get(flag_key, "")
     message = ""
     if enabled:
-        message = flag.message or default_messages.get(flag_key, "")
+        message = flag.message or default_message
+    elif show_message_when_disabled:
+        message = (flag.message or default_message or "").strip()
     return {
         "enabled": enabled,
         "message": message,

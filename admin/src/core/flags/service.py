@@ -65,6 +65,8 @@ def set_flag(
     enabled: bool,
     message: str,
     user_id: Optional[int],
+    preserve_message_when_disabled: bool = False,
+    require_message_when_enabled: bool = True,
 ) -> FeatureFlag:
     """Actualizo estado, mensaje y auditoría del flag indicado."""
     session = _session()
@@ -74,14 +76,19 @@ def set_flag(
 
     clean_message = (message or "").strip()
     if enabled:
-        if not clean_message:
+        if require_message_when_enabled and not clean_message:
             raise FeatureFlagError("El mensaje es obligatorio cuando el flag está activo.")
-        if len(clean_message) > MAX_MESSAGE_LENGTH:
+        if clean_message and len(clean_message) > MAX_MESSAGE_LENGTH:
             raise FeatureFlagError(
                 f"El mensaje no puede superar {MAX_MESSAGE_LENGTH} caracteres."
             )
     else:
-        clean_message = ""
+        if not preserve_message_when_disabled:
+            clean_message = ""
+        elif len(clean_message) > MAX_MESSAGE_LENGTH:
+            raise FeatureFlagError(
+                f"El mensaje no puede superar {MAX_MESSAGE_LENGTH} caracteres."
+            )
 
     flag.enabled = enabled
     flag.message = clean_message
