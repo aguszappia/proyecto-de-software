@@ -7,7 +7,7 @@ from flask import Blueprint, current_app, jsonify, request, session
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from marshmallow import ValidationError
 from sqlalchemy import func, inspect, or_, text
-
+from src.core.sites.reviews_service import list_top_rated_sites
 from src.core.database import db
 from src.core.flags import service as flags_service
 from src.core.sites.models import ConservationStatus, Historic_Site, SiteCategory, SiteTag
@@ -907,3 +907,16 @@ def public_status():
         }
     }
     return jsonify(payload), 200
+
+@bp.get("/highlights/top-rated")
+def top_rated_sites():
+    """Devuelvo los sitios con mejor calificación promedio (3 por defecto)."""
+    try:
+        limit = _parse_int_arg("limit", default=3, minimum=1, maximum=10) or 3
+        sites = list_top_rated_sites(limit=limit)
+        payload = site_schema.dump(sites)
+        return jsonify({"data": payload}), 200
+    except QueryParamError as error:
+        return _handle_query_error(error)
+    except Exception:
+        return _error_response(500, "server_error", "An unexpected error occurred")
