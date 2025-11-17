@@ -354,12 +354,6 @@ watch(
 
 <template>
   <section class="view-panel profile-view">
-    <div class="view-panel__card">
-      <p class="view-panel__subtitle">Tu espacio</p>
-      <h1>Mi perfil</h1>
-      <p>Pronto vas a poder gestionar tus favoritos y postulaciones desde aquí.</p>
-    </div>
-
     <div
       v-if="!auth.isAuthenticated"
       class="view-panel__card profile-card view-panel__card--centered"
@@ -387,19 +381,6 @@ watch(
           <p>{{ auth.user?.email || 'Correo no disponible' }}</p>
         </div>
       </div>
-      <dl class="profile-meta">
-        <div>
-          <dt>Estado</dt>
-          <dd>Sesión activa</dd>
-        </div>
-        <div>
-          <dt>Última actividad</dt>
-          <dd>Disponible pronto</dd>
-        </div>
-      </dl>
-      <p class="profile-note">
-        Estamos trabajando para habilitar reseñas, favoritos y más acciones dentro de tu perfil.
-      </p>
     </div>
 
     <div

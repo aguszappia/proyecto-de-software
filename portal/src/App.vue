@@ -1,47 +1,10 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
-import API_BASE_URL from '@/constants/api'
 import { useAuthStore } from '@/stores/auth'
+import { refreshMaintenanceStatus, useMaintenanceState } from '@/stores/maintenance'
 
-const maintenanceState = ref({
-  pending: true,
-  enabled: false,
-  message: '',
-})
-
-const MAINTENANCE_FALLBACK_MESSAGE =
-  'Estamos realizando tareas de mantenimiento. Volvé a intentarlo en unos minutos.'
-
-const loadMaintenanceStatus = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/status`, {
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-    if (!response.ok) {
-      throw new Error('Failed to fetch maintenance status')
-    }
-    const payload = await response.json()
-    const portalState = payload?.maintenance?.portal || {}
-    const isEnabled = Boolean(portalState.enabled)
-    maintenanceState.value = {
-      pending: false,
-      enabled: isEnabled,
-      message: isEnabled
-        ? portalState.message || MAINTENANCE_FALLBACK_MESSAGE
-        : '',
-    }
-  } catch (error) {
-    maintenanceState.value = {
-      pending: false,
-      enabled: false,
-      message: '',
-    }
-  }
-}
-
+const maintenanceState = useMaintenanceState()
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
@@ -106,7 +69,7 @@ watch(
 
 onMounted(() => {
   auth.fetchCurrentUser()
-  loadMaintenanceStatus()
+  refreshMaintenanceStatus()
   document.addEventListener('click', handleAccountMenuClickOutside)
 })
 
@@ -130,17 +93,18 @@ onBeforeUnmount(() => {
           </div>
         </RouterLink>
 
-        <nav class="public-nav" aria-label="Navegación principal">
-          <RouterLink to="/sitios">Sitios</RouterLink>
-          <RouterLink to="/about">Nosotros</RouterLink>
-        </nav>
+        <div class="public-menu-row">
+          <nav class="public-nav" aria-label="Navegación principal">
+            <RouterLink to="/sitios">Sitios</RouterLink>
+            <RouterLink to="/about">Nosotros</RouterLink>
+          </nav>
 
-        <div class="public-auth-area">
-          <button
-            v-if="!auth.isAuthenticated"
-            class="public-cta"
-            type="button"
-            @click="handleLoginClick"
+          <div class="public-auth-area">
+            <button
+              v-if="!auth.isAuthenticated"
+              class="public-cta"
+              type="button"
+              @click="handleLoginClick"
           >
             <span class="public-cta__icon" aria-hidden="true">
               <svg
@@ -196,6 +160,7 @@ onBeforeUnmount(() => {
               <button type="button" role="menuitem" @click="handleLogoutRequest">
                 Cerrar sesión
               </button>
+            </div>
             </div>
           </div>
         </div>
