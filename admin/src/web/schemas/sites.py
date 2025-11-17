@@ -20,6 +20,7 @@ class SiteSchema(Schema):
     cover_image_url = fields.Method("get_cover_image_url")
     cover_image_title = fields.Method("get_cover_image_title")
     is_favorite = fields.Bool(dump_default=False)
+    visits = fields.Int()
 
     def _get_value(self, obj, attr, default=None):
         if isinstance(obj, dict):

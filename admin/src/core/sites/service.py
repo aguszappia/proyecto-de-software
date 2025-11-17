@@ -52,6 +52,7 @@ def create_site(**kwargs):
         inaguration_year=inaguration_year,
         category=category,
         is_visible=is_visible,
+        visits=kwargs.get("visits", 0) or 0,
         updated_at=updated_at
     )
     if tag_ids:
