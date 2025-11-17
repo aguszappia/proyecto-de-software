@@ -19,7 +19,7 @@ const sectionsConfig = [
     key: 'mostVisited',
     title: 'Más visitados',
     subtitle: 'Tendencias entre los usuarios.',
-    ctaParams: { sort: 'visits' },
+    ctaParams: { sort_by: 'visits', sort_dir: 'desc' },
     emptyMessage: 'Todavía no registramos sitios populares aquí.',
     skeletonItems: 3,
     orderBy: 'visits',

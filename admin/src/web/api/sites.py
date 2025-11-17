@@ -58,6 +58,7 @@ VALID_ORDER_CHOICES = {
     "latest",
     "oldest",
     "visits",
+    "visits-asc",
     "name-az",
     "name-za",
 }
@@ -247,6 +248,11 @@ def _sort_sites(items: List[Dict[str, Any]], order_by: str) -> List[Dict[str, An
             key=lambda site: site.get("visits") or 0,
             reverse=True,
         )
+    if order_by == "visits-asc":
+        return sorted(
+            items,
+            key=lambda site: site.get("visits") or 0,
+        )
     if order_by == "name-az":
         return sorted(
             items,
@@ -273,7 +279,7 @@ def _map_sort_params(sort_by: str, sort_dir: str) -> Optional[str]:
     if sort_key == "name":
         return "name-za" if is_desc else "name-az"
     if sort_key == "visits":
-        return "visits"
+        return "visits" if is_desc else "visits-asc"
     return None
 
 
