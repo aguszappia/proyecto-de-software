@@ -74,6 +74,7 @@ from src.web.controllers.featureflags import (
     ADMIN_MAINTENANCE_FLAG_KEY,
     DEFAULT_FLAG_MESSAGES,
     PORTAL_MAINTENANCE_FLAG_KEY,
+    REVIEWS_ENABLED_FLAG_KEY,
 )
 from src.web.schemas.sites import (
     review_list_schema,
@@ -85,6 +86,20 @@ from src.web.schemas.sites import (
 
 bp = Blueprint("sites_api", __name__, url_prefix="/api/sites")
 auth_bp = Blueprint("public_auth_api", __name__, url_prefix="/api")
+
+REVIEWS_DISABLED_ERROR_MESSAGE = "La creación de reseñas está deshabilitada temporalmente."
+
+
+def _is_reviews_feature_enabled() -> bool:
+    flags = flags_service.load_flags()
+    flag = flags.get(REVIEWS_ENABLED_FLAG_KEY)
+    if not flag:
+        return True
+    return bool(flag.enabled)
+
+
+def _reviews_disabled_response():
+    return _error_response(503, "reviews_disabled", REVIEWS_DISABLED_ERROR_MESSAGE)
 
 
 @auth_bp.get("/tags")
@@ -228,6 +243,8 @@ def list_site_reviews(site_id: int):
 def create_site_review_endpoint(site_id: int):
     """Crea una reseña pendiente para un sitio visible."""
     try:
+        if not _is_reviews_feature_enabled():
+            return _reviews_disabled_response()
         user = _require_api_user()
         site = _get_site_or_404(site_id)
         if not site:
@@ -256,6 +273,8 @@ def create_site_review_endpoint(site_id: int):
 def update_site_review_endpoint(site_id: int, review_id: int):
     """Actualiza la reseña existente del usuario autenticado."""
     try:
+        if not _is_reviews_feature_enabled():
+            return _reviews_disabled_response()
         user = _require_api_user()
         site = _get_site_or_404(site_id)
         if not site:
@@ -282,6 +301,8 @@ def update_site_review_endpoint(site_id: int, review_id: int):
 def delete_site_review_endpoint(site_id: int, review_id: int):
     """Elimina la reseña propia del sitio."""
     try:
+        if not _is_reviews_feature_enabled():
+            return _reviews_disabled_response()
         user = _require_api_user()
         site = _get_site_or_404(site_id)
         if not site:
@@ -515,15 +536,23 @@ def get_public_flags():
     flags = flags_service.load_flags()
     admin_flag = flags.get(ADMIN_MAINTENANCE_FLAG_KEY)
     portal_flag = flags.get(PORTAL_MAINTENANCE_FLAG_KEY)
+    reviews_flag = flags.get(REVIEWS_ENABLED_FLAG_KEY)
 
     admin_state = _serialize_flag_state(admin_flag, flag_key=ADMIN_MAINTENANCE_FLAG_KEY, default_messages=DEFAULT_FLAG_MESSAGES)
     portal_state = _serialize_flag_state(portal_flag, flag_key=PORTAL_MAINTENANCE_FLAG_KEY, default_messages=DEFAULT_FLAG_MESSAGES)
+    reviews_state = _serialize_flag_state(
+        reviews_flag,
+        flag_key=REVIEWS_ENABLED_FLAG_KEY,
+        default_messages=DEFAULT_FLAG_MESSAGES,
+        show_message_when_disabled=True,
+    )
 
     return jsonify(
         {
             "flags": {
                 "admin": admin_state,
                 "portal": portal_state,
+                "reviews": reviews_state,
             }
         }
     ), 200
