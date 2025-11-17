@@ -83,6 +83,11 @@ let mapInstance = null
 let markerInstance = null
 const auth = useAuthStore()
 const route = useRoute()
+const scrollToTop = () => {
+  if (typeof window !== 'undefined' && window.scrollTo) {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
 const buildNextUrl = () => {
   if (typeof window === 'undefined') {
     return '/sitios/nuevo'
@@ -244,14 +249,17 @@ const handleSubmit = async () => {
   resetMessages()
   if (!auth.isAuthenticated) {
     errorMessage.value = 'Necesitás iniciar sesión para proponer un sitio.'
+    scrollToTop()
     return
   }
   if (!form.lat || !form.long) {
     validationErrors.value = { general: ['Seleccioná la ubicación en el mapa.'] }
+    scrollToTop()
     return
   }
   if (!coverImageFile.value) {
     validationErrors.value = { cover_image: ['Subí al menos una imagen del sitio.'] }
+    scrollToTop()
     return
   }
 
@@ -324,8 +332,10 @@ const handleSubmit = async () => {
     }
     errorMessage.value =
       payloadError?.error?.message || `No se pudo enviar la propuesta (error ${response.status}).`
+    scrollToTop()
   } catch (err) {
     errorMessage.value = 'No se pudo conectar con el servidor. Intentá más tarde.'
+    scrollToTop()
   } finally {
     submitting.value = false
   }
