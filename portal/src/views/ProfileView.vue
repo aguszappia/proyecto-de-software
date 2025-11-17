@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import SiteCard from '@/components/SiteCard.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -18,6 +18,14 @@ const userReviews = ref([])
 const userReviewsLoading = ref(false)
 const userReviewsError = ref('')
 let suppressFavoriteWatch = false
+const FAVORITES_PER_PAGE = 3
+const favoritesPage = ref(0)
+const favoritesIsMobile = ref(false)
+const REVIEWS_PER_PAGE = 1
+const reviewsPage = ref(0)
+const reviewsIsMobile = ref(false)
+let favoritesMediaQuery
+let favoritesMediaHandler
 
 const GENERIC_SITE_IMAGE_URL =
   'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=60'
@@ -160,6 +168,68 @@ const favoriteCards = computed(() =>
   favoriteSites.value.filter((site) => favoritesStore.isFavorite(site.id)),
 )
 
+const favoriteTotalPages = computed(() =>
+  favoriteCards.value.length ? Math.ceil(favoriteCards.value.length / FAVORITES_PER_PAGE) : 0,
+)
+const favoriteNeedsCarousel = computed(
+  () => !favoritesIsMobile.value && favoriteTotalPages.value > 1,
+)
+const favoriteShowPrev = computed(
+  () => favoriteNeedsCarousel.value && favoritesPage.value > 0,
+)
+const favoriteShowNext = computed(
+  () => favoriteNeedsCarousel.value && favoritesPage.value < favoriteTotalPages.value - 1,
+)
+const favoritePageItems = computed(() => {
+  const start = favoritesPage.value * FAVORITES_PER_PAGE
+  return favoriteCards.value.slice(start, start + FAVORITES_PER_PAGE)
+})
+const favoriteVisibleCards = computed(() =>
+  favoritesIsMobile.value ? favoriteCards.value : favoritePageItems.value,
+)
+
+const reviewsTotalPages = computed(() =>
+  userReviewList.value.length ? Math.ceil(userReviewList.value.length / REVIEWS_PER_PAGE) : 0,
+)
+const reviewsNeedsCarousel = computed(
+  () => !reviewsIsMobile.value && reviewsTotalPages.value > 1,
+)
+const reviewsShowPrev = computed(() => reviewsNeedsCarousel.value && reviewsPage.value > 0)
+const reviewsShowNext = computed(
+  () => reviewsNeedsCarousel.value && reviewsPage.value < reviewsTotalPages.value - 1,
+)
+const reviewsPageItems = computed(() => {
+  const start = reviewsPage.value * REVIEWS_PER_PAGE
+  return userReviewList.value.slice(start, start + REVIEWS_PER_PAGE)
+})
+const reviewVisibleCards = computed(() =>
+  reviewsIsMobile.value ? userReviewList.value : reviewsPageItems.value,
+)
+
+const handleReviewsPrev = () => {
+  if (reviewsPage.value > 0) {
+    reviewsPage.value -= 1
+  }
+}
+
+const handleReviewsNext = () => {
+  if (reviewsPage.value < reviewsTotalPages.value - 1) {
+    reviewsPage.value += 1
+  }
+}
+
+const handleFavoritesPrev = () => {
+  if (favoritesPage.value > 0) {
+    favoritesPage.value -= 1
+  }
+}
+
+const handleFavoritesNext = () => {
+  if (favoritesPage.value < favoriteTotalPages.value - 1) {
+    favoritesPage.value += 1
+  }
+}
+
 const loadUserReviews = async () => {
   if (!auth.isAuthenticated) {
     userReviews.value = []
@@ -226,6 +296,31 @@ onMounted(() => {
     loadFavoriteSites()
     loadUserReviews()
   }
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    favoritesMediaQuery = window.matchMedia('(max-width: 640px)')
+    favoritesIsMobile.value = favoritesMediaQuery.matches
+    reviewsIsMobile.value = favoritesMediaQuery.matches
+    favoritesMediaHandler = (event) => {
+      favoritesIsMobile.value = event.matches
+      reviewsIsMobile.value = event.matches
+      favoritesPage.value = 0
+      reviewsPage.value = 0
+    }
+    if (favoritesMediaQuery.addEventListener) {
+      favoritesMediaQuery.addEventListener('change', favoritesMediaHandler)
+    } else if (favoritesMediaQuery.addListener) {
+      favoritesMediaQuery.addListener(favoritesMediaHandler)
+    }
+  }
+})
+
+onBeforeUnmount(() => {
+  if (!favoritesMediaQuery || !favoritesMediaHandler) return
+  if (favoritesMediaQuery.removeEventListener) {
+    favoritesMediaQuery.removeEventListener('change', favoritesMediaHandler)
+  } else if (favoritesMediaQuery.removeListener) {
+    favoritesMediaQuery.removeListener(favoritesMediaHandler)
+  }
 })
 
 watch(
@@ -239,6 +334,20 @@ watch(
         favoritesStore.isFavorite(site.id),
       )
     }
+  },
+)
+
+watch(
+  () => favoriteCards.value.length,
+  () => {
+    favoritesPage.value = 0
+  },
+)
+
+watch(
+  () => userReviewList.value.length,
+  () => {
+    reviewsPage.value = 0
   },
 )
 </script>
@@ -312,8 +421,35 @@ watch(
       <div v-else-if="favoriteCards.length === 0" class="profile-favorites__empty">
         Todavía no marcaste sitios como favoritos.
       </div>
-      <div v-else class="profile-favorites__grid">
-        <SiteCard v-for="site in favoriteCards" :key="site.id" :site="site" />
+      <div v-else class="featured__grid-wrapper profile-favorites__carousel">
+        <button
+          v-if="favoriteShowPrev"
+          type="button"
+          class="featured__arrow featured__arrow--left"
+          @click="handleFavoritesPrev"
+          aria-label="Ver favoritos anteriores"
+        >
+          ‹
+        </button>
+        <div class="featured__grid">
+          <div
+            v-for="(site, index) in favoriteVisibleCards"
+            :key="site?.id ?? `favorite-slot-${index}`"
+            class="featured__slot"
+          >
+            <SiteCard v-if="site" :site="site" />
+            <div v-else class="site-card site-card--placeholder"></div>
+          </div>
+        </div>
+        <button
+          v-if="favoriteShowNext"
+          type="button"
+          class="featured__arrow featured__arrow--right"
+          @click="handleFavoritesNext"
+          aria-label="Ver más favoritos"
+        >
+          ›
+        </button>
       </div>
     </div>
 
@@ -340,61 +476,81 @@ watch(
       <div v-else-if="userReviewList.length === 0" class="profile-favorites__empty">
         Todavía no escribiste reseñas. Compartí tu experiencia en la ficha de cada sitio y aparecerán acá.
       </div>
-      <ul v-else class="review-list profile-reviews__list">
-        <li
-          v-for="(review, index) in userReviewList"
-          :key="review.id || `my-review-${index}`"
-          class="review-card profile-review-card"
+      <div v-else class="profile-reviews__carousel">
+        <button
+          v-if="reviewsShowPrev"
+          type="button"
+          class="featured__arrow featured__arrow--left"
+          @click="handleReviewsPrev"
+          aria-label="Ver reseñas anteriores"
         >
-          <header class="profile-review-card__header">
-            <div>
-              <p class="profile-review-card__site">
-                <RouterLink
-                  v-if="review.siteId"
-                  :to="{ name: 'site-detail', params: { id: review.siteId } }"
+          ‹
+        </button>
+        <ul class="review-list profile-reviews__list">
+          <li
+            v-for="(review, index) in reviewVisibleCards"
+            :key="review.id || `my-review-${index}`"
+            class="review-card profile-review-card"
+          >
+            <header class="profile-review-card__header">
+              <div>
+                <p class="profile-review-card__site">
+                  <RouterLink
+                    v-if="review.siteId"
+                    :to="{ name: 'site-detail', params: { id: review.siteId } }"
+                  >
+                    {{ review.siteName }}
+                  </RouterLink>
+                  <span v-else>{{ review.siteName }}</span>
+                </p>
+                <p
+                  v-if="review.siteCity || review.siteProvince"
+                  class="profile-review-card__location"
                 >
-                  {{ review.siteName }}
-                </RouterLink>
-                <span v-else>{{ review.siteName }}</span>
-              </p>
-              <p
-                v-if="review.siteCity || review.siteProvince"
-                class="profile-review-card__location"
+                  {{ [review.siteCity, review.siteProvince].filter(Boolean).join(', ') }}
+                </p>
+              </div>
+              <span
+                class="profile-review-card__status"
+                :class="`profile-review-card__status--${resolveReviewStatusVariant(review.status)}`"
               >
-                {{ [review.siteCity, review.siteProvince].filter(Boolean).join(', ') }}
-              </p>
+                {{ resolveReviewStatusLabel(review.status) }}
+              </span>
+            </header>
+            <div v-if="review.rating" class="profile-review-card__rating review-card__rating">
+              <span
+                v-for="star in 5"
+                :key="`my-review-star-${review.id || index}-${star}`"
+                class="review-star"
+                :class="{ 'review-star--filled': star <= review.rating }"
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                  />
+                </svg>
+              </span>
+              <strong>{{ review.rating }}/5</strong>
             </div>
-            <span
-              class="profile-review-card__status"
-              :class="`profile-review-card__status--${resolveReviewStatusVariant(review.status)}`"
-            >
-              {{ resolveReviewStatusLabel(review.status) }}
-            </span>
-          </header>
-          <div v-if="review.rating" class="profile-review-card__rating review-card__rating">
-            <span
-              v-for="star in 5"
-              :key="`my-review-star-${review.id || index}-${star}`"
-              class="review-star"
-              :class="{ 'review-star--filled': star <= review.rating }"
-              aria-hidden="true"
-            >
-              <svg viewBox="0 0 24 24">
-                <path
-                  d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
-                />
-              </svg>
-            </span>
-            <strong>{{ review.rating }}/5</strong>
-          </div>
-          <p class="review-card__comment profile-review-card__comment">
-            {{ review.comment || 'Sin comentario.' }}
-          </p>
-          <p v-if="formatReviewDate(review.createdAt)" class="profile-review-card__date">
-            Actualizada el {{ formatReviewDate(review.createdAt) }}
-          </p>
-        </li>
-      </ul>
+            <p class="review-card__comment profile-review-card__comment">
+              {{ review.comment || 'Sin comentario.' }}
+            </p>
+            <p v-if="formatReviewDate(review.createdAt)" class="profile-review-card__date">
+              Actualizada el {{ formatReviewDate(review.createdAt) }}
+            </p>
+          </li>
+        </ul>
+        <button
+          v-if="reviewsShowNext"
+          type="button"
+          class="featured__arrow featured__arrow--right"
+          @click="handleReviewsNext"
+          aria-label="Ver más reseñas"
+        >
+          ›
+        </button>
+      </div>
     </div>
   </section>
 </template>
