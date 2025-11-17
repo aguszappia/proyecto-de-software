@@ -28,7 +28,7 @@ const sectionsConfig = [
     key: 'topRated',
     title: 'Mejor puntuados',
     subtitle: 'Los sitios con mejores valoraciones.',
-    ctaParams: { sort: 'rating' },
+    ctaParams: { sort_by: 'rating', sort_dir: 'desc' },
     emptyMessage: 'Aún no hay calificaciones cargadas.',
     skeletonItems: 3,
     orderBy: 'rating-5-1',

@@ -52,7 +52,15 @@ from src.web.controllers.sites import images_helpers
 
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 100
-VALID_ORDER_CHOICES = {"rating-5-1", "rating-1-5", "latest", "oldest", "visits"}
+VALID_ORDER_CHOICES = {
+    "rating-5-1",
+    "rating-1-5",
+    "latest",
+    "oldest",
+    "visits",
+    "name-az",
+    "name-za",
+}
 TOKEN_SALT_FALLBACK = "public-api-token"
 REVIEW_MIN_SCORE = 1
 REVIEW_MAX_SCORE = 5
@@ -239,7 +247,34 @@ def _sort_sites(items: List[Dict[str, Any]], order_by: str) -> List[Dict[str, An
             key=lambda site: site.get("visits") or 0,
             reverse=True,
         )
+    if order_by == "name-az":
+        return sorted(
+            items,
+            key=lambda site: (site.get("name") or "").casefold(),
+        )
+    if order_by == "name-za":
+        return sorted(
+            items,
+            key=lambda site: (site.get("name") or "").casefold(),
+            reverse=True,
+        )
     return items
+
+
+def _map_sort_params(sort_by: str, sort_dir: str) -> Optional[str]:
+    """Traduce sort_by/sort_dir de la vista a nuestro order_by interno."""
+    direction = (sort_dir or "").lower()
+    is_desc = direction != "asc"
+    sort_key = (sort_by or "").lower()
+    if sort_key == "created_at":
+        return "latest" if is_desc else "oldest"
+    if sort_key == "rating":
+        return "rating-5-1" if is_desc else "rating-1-5"
+    if sort_key == "name":
+        return "name-za" if is_desc else "name-az"
+    if sort_key == "visits":
+        return "visits"
+    return None
 
 
 def _filter_visible(items: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -500,7 +535,13 @@ def index():
         tags_raw = clean_str(request.args.get("tags")) or ""
         tags = [tag.strip() for tag in tags_raw.split(",") if tag.strip()]
         filter_mode = clean_str(request.args.get("filter")) or ""
-        order_by = clean_str(request.args.get("order_by")) or "latest"
+        order_by = clean_str(request.args.get("order_by"))
+        sort_by = clean_str(request.args.get("sort_by")) or ""
+        sort_dir = clean_str(request.args.get("sort_dir")) or ""
+        if not order_by and sort_by:
+            order_by = _map_sort_params(sort_by, sort_dir)
+        if not order_by:
+            order_by = "latest"
 
         latitude = _parse_float_arg("lat")
         longitude = _parse_float_arg("long")
@@ -525,6 +566,12 @@ def index():
             province=province,
             tags=tags,
         )
+        for site in filtered_sites:
+            site_id = site.get("id")
+            if site_id:
+                stats = get_public_review_stats(site_id)
+                site["average_rating"] = stats.get("average_rating")
+                site["total_reviews"] = stats.get("total_reviews")
 
         sorted_sites = _sort_sites(filtered_sites, order_by or "latest")
 

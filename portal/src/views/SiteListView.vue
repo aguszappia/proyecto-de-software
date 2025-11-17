@@ -52,7 +52,7 @@ const activeFilters = computed(() => ({
   city: route.query.city || '',
   province: route.query.province || '',
   conservation_status: route.query.conservation_status || '',
-  sort_by: ['created_at', 'name', 'city'].includes(route.query.sort_by)
+  sort_by: ['created_at', 'name', 'rating'].includes(route.query.sort_by)
     ? route.query.sort_by
     : 'created_at',
   sort_dir: route.query.sort_dir === 'asc' ? 'asc' : 'desc',
@@ -519,8 +519,8 @@ watch(
             <span>Ordenar por</span>
             <select v-model="formFilters.sort_by">
               <option value="created_at">Fecha de registro</option>
+              <option value="rating">Puntuación</option>
               <option value="name">Nombre</option>
-              <option value="city">Ciudad</option>
             </select>
           </label>
           <label class="filter-group">
