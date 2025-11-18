@@ -1401,6 +1401,12 @@ body {
   gap: 1rem;
 }
 
+.profile-card__header p {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .profile-avatar {
   width: 64px;
   height: 64px;
@@ -2448,6 +2454,13 @@ body {
   .view-panel__card {
     padding: 1.25rem;
   }
+
+  .view-panel__card  {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 
   .hero__search-bar {
     position: relative;

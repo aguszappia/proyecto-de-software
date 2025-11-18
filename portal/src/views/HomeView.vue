@@ -48,7 +48,7 @@ const sectionsConfig = [
     key: 'favorites',
     title: 'Favoritos',
     subtitle: 'Mi lista personal de favoritos.',
-    ctaParams: { filter: 'favorites' },
+    ctaParams: { filter: 'favorites', favorites: '1' },
     emptyMessage: 'Todavia no tienes sitios favoritos.',
     requiresAuth: true,
     skeletonItems: 3,
@@ -145,7 +145,7 @@ const mapSiteToCard = (site) => ({
   image: resolveSiteImageSrc(site, GENERIC_SITE_IMAGE_URL),
   imageAlt: resolveSiteImageAlt(site),
   tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
-  href: site.id ? { name: 'site-detail', params: { id: site.id } } : null,
+  href: site.id ? { name: 'site-detail', params: { id: site.id }, query: { from: 'home' } } : null,
   is_favorite: site.is_favorite ?? site.isFavorite ?? false,
 })
 
