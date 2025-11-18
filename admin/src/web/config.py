@@ -33,9 +33,11 @@ class Config:
     } 
     
     
+    # OAuth Google
+    AUTHLIB_INSECURE_TRANSPORT = environ.get("AUTHLIB_INSECURE_TRANSPORT", "0")
     GOOGLE_CLIENT_ID = environ.get("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = environ.get("GOOGLE_CLIENT_SECRET", "")
-    GOOGLE_REDIRECT_URI = environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/google/callback")
+    GOOGLE_REDIRECT_URI = environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5050/api/auth/google/callback")
     GOOGLE_AUTH_SCOPE = ["openid", "email", "profile"]
 
 
