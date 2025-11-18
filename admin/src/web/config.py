@@ -21,6 +21,14 @@ class Config:
     API_TOKEN_TTL_SECONDS = int(environ.get("API_TOKEN_TTL_SECONDS", 60 * 60 * 24))
     API_TOKEN_SALT = environ.get("API_TOKEN_SALT", "public-api-token")
 
+    # Configuración para emisión/validación de JWT públicos
+    JWT_SECRET_KEY = environ.get("JWT_SECRET_KEY")
+    JWT_ALGORITHM = environ.get("JWT_ALGORITHM", "HS256")
+    JWT_ACCESS_TTL_SECONDS = int(environ.get("JWT_ACCESS_TTL_SECONDS", 60 * 60))
+    JWT_REFRESH_TTL_SECONDS = int(
+        environ.get("JWT_REFRESH_TTL_SECONDS", 60 * 60 * 24 * 30)
+    )
+
     CORS_RESOURCES = [
         r"/api/*"
     ]
