@@ -5,25 +5,13 @@ from __future__ import annotations
 import secrets
 
 from flask import Blueprint, current_app, jsonify, redirect, request, session, url_for
+from flask_jwt_extended import create_access_token, set_access_cookies
 
-from src.core.permissions import service as permissions_service
 from src.core.users import UserRole
 from src.core.users import service as users_service
 from src.web.oauth import oauth
 
 public_oauth_bp = Blueprint("public_oauth_api", __name__, url_prefix="/api/auth")
-
-
-def _issue_session_for_user(user, *, avatar_url: str | None = None) -> None:
-    """Limpio y actualizo la sesión para el usuario autenticado."""
-    session.clear()
-    session.permanent = True
-    session["user_id"] = user.id
-    session["user_role"] = user.role
-    permissions = [perm.code for perm in permissions_service.list_role_permissions(user.role)]
-    session["permissions"] = permissions
-    if avatar_url:
-        session["user_avatar"] = avatar_url
 
 
 def _default_redirect_uri() -> str:
@@ -105,12 +93,20 @@ def google_callback():
 
     avatar = userinfo.get("picture")
 
-    # AHORA SÍ: ARMO LA SESIÓN
-    _issue_session_for_user(user, avatar_url=avatar)
-
     session.pop("next_url", None)
 
     target = next_url or "/"
     if isinstance(target, str) and target.lower().startswith(("http://", "https://")):
-        return redirect(target)
-    return redirect(target)
+        response = redirect(target)
+    else:
+        response = redirect(target)
+
+    claims = {
+        "email": user.email,
+        "role": user.role,
+    }
+    if avatar:
+        claims["avatar"] = avatar
+    access_token = create_access_token(identity=str(user.id), additional_claims=claims)
+    set_access_cookies(response, access_token)
+    return response
