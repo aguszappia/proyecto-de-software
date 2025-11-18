@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import API_BASE_URL from '@/constants/api'
+import API_BASE_URL, { AUTH_BASE_URL } from '@/constants/api'
 import { useFavoritesStore } from '@/stores/favorites'
 
 export const useAuthStore = defineStore('auth', {
@@ -33,8 +33,7 @@ export const useAuthStore = defineStore('auth', {
     },
     loginWithGoogle(nextPath) {
       const next = nextPath || window.location.pathname + window.location.search + window.location.hash
-      const baseAuthUrl = API_BASE_URL.replace('/api', '')
-      const target = `${baseAuthUrl}/api/auth/google/login?next=${encodeURIComponent(next)}`
+      const target = `${AUTH_BASE_URL}/api/auth/google/login?next=${encodeURIComponent(next)}`
       window.location.href = target
     },
     requestLoginPrompt(nextUrl) {
