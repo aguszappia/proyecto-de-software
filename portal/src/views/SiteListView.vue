@@ -265,6 +265,26 @@ watchEffect(async () => {
   }
 })
 
+const normalizeId = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const stopFavoritesActionHook = favoritesStore.$onAction(({ name, args, after }) => {
+  if (name !== 'setFavorite' && name !== 'toggleFavorite') {
+    return
+  }
+  after(() => {
+    if (!activeFilters.value.favorites) return
+    const [siteId] = args
+    const id = normalizeId(siteId)
+    if (!id || favoritesStore.isFavorite(id)) {
+      return
+    }
+    sites.value = sites.value.filter((site) => normalizeId(site.id) !== id)
+  })
+})
+
 const serializeFilters = (filters) => {
   const query = {}
   if (filters.q) query.q = filters.q
@@ -331,6 +351,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  if (typeof stopFavoritesActionHook === 'function') {
+    stopFavoritesActionHook()
+  }
 })
 
 watch(

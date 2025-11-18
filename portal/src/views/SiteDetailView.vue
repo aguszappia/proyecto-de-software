@@ -91,6 +91,14 @@ const reviewDeleting = ref(false)
 const reviewDeleteConfirmVisible = ref(false)
 const reviewHoverRating = ref(null)
 
+const fromProfileView = computed(() => route.query.from === 'profile')
+const fromHomeView = computed(() => route.query.from === 'home')
+const backButtonLabel = computed(() => {
+  if (fromProfileView.value) return '← Volver a mi perfil'
+  if (fromHomeView.value) return '← Volver al home'
+  return '← Volver al listado'
+})
+
 const REVIEW_MIN_LENGTH = 20
 const REVIEW_MAX_LENGTH = 1000
 const REVIEW_SCORE_OPTIONS = [1, 2, 3, 4, 5]
@@ -654,9 +662,19 @@ const handleFavoriteToggle = async () => {
 }
 
 const handleBackClick = () => {
+  if (fromProfileView.value) {
+    router.push({ name: 'profile' })
+    return
+  }
+  if (fromHomeView.value) {
+    router.push({ name: 'home' })
+    return
+  }
+  const nextQuery = { ...route.query }
+  delete nextQuery.from
   router.push({
     name: 'sites',
-    query: { ...route.query },
+    query: nextQuery,
   })
 }
 
@@ -679,7 +697,7 @@ const handleRetry = () => {
 <template>
   <section class="site-detail view-panel">
     <button class="site-detail__back secondary-button" type="button" @click="handleBackClick">
-      ← Volver al listado
+      {{ backButtonLabel }}
     </button>
 
     <div v-if="loading" class="view-panel__card detail__content">

@@ -47,7 +47,7 @@ const normalizeFavoriteSite = (site) => ({
   tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
   image: resolveSiteImageSrc(site, GENERIC_SITE_IMAGE_URL),
   imageAlt: resolveSiteImageAlt(site),
-  href: site.id ? { name: 'site-detail', params: { id: site.id } } : null,
+  href: site.id ? { name: 'site-detail', params: { id: site.id }, query: { from: 'profile' } } : null,
 })
 
 const normalizeReviewStatus = (value) => {
@@ -478,7 +478,7 @@ watch(
                 <p class="profile-review-card__site">
                   <RouterLink
                     v-if="review.siteId"
-                    :to="{ name: 'site-detail', params: { id: review.siteId } }"
+                    :to="{ name: 'site-detail', params: { id: review.siteId }, query: { from: 'profile' } }"
                   >
                     {{ review.siteName }}
                   </RouterLink>
