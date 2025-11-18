@@ -17,7 +17,34 @@ export const useAuthStore = defineStore('auth', {
     async fetchCurrentUser() {
       this.loadingUser = true
       try {
+        const loaded = await this._fetchUserFromJwt()
+        if (!loaded) {
+          await this._fetchUserFromSession()
+        }
+      } finally {
+        this.loadingUser = false
+      }
+    },
+    async _fetchUserFromJwt() {
+      try {
         const response = await axios.get(`${API_BASE_URL}/auth/jwt/me`, {
+          withCredentials: true,
+        })
+        this.user = response.data?.data || null
+        return true
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          this.user = null
+          return false
+        }
+        console.error('Error fetching current user via JWT', error)
+        this.user = null
+        return false
+      }
+    },
+    async _fetchUserFromSession() {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/me`, {
           withCredentials: true,
         })
         this.user = response.data?.data || null
@@ -25,10 +52,9 @@ export const useAuthStore = defineStore('auth', {
         if (error.response && error.response.status === 401) {
           this.user = null
         } else {
-          console.error('Error fetching current user', error)
+          console.error('Error fetching current user via session', error)
+          this.user = null
         }
-      } finally {
-        this.loadingUser = false
       }
     },
     loginWithGoogle(nextPath) {
@@ -59,7 +85,22 @@ export const useAuthStore = defineStore('auth', {
           },
         )
       } catch (error) {
-        console.error('Error logging out', error)
+        if (!error.response || error.response.status !== 401) {
+          console.error('Error logging out via JWT', error)
+        }
+      }
+      try {
+        await axios.post(
+          `${API_BASE_URL}/auth/logout`,
+          {},
+          {
+            withCredentials: true,
+          },
+        )
+      } catch (error) {
+        if (!error.response || error.response.status !== 401) {
+          console.error('Error logging out via session', error)
+        }
       } finally {
         this.user = null
         const favoritesStore = useFavoritesStore()
