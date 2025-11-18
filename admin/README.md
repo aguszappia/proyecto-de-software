@@ -32,3 +32,5 @@ GRANT ALL PRIVILEGES ON DATABASE grupo28 TO postgres;
     --name minio-dev \
     -v minio-data:/data \
     quay.io/minio/minio server /data --console-address ":9090"
+
+

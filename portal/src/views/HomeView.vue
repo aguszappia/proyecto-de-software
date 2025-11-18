@@ -1,43 +1,39 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import FeaturedSection from '@/components/FeaturedSection.vue'
 import HeroBanner from '@/components/HeroBanner.vue'
 import API_BASE_URL from '@/constants/api'
 import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
+import { useAuthStore } from '@/stores/auth'
+import { useFavoritesStore } from '@/stores/favorites'
 
 const router = useRouter()
+const auth = useAuthStore()
+const favoritesStore = useFavoritesStore()
 
-const isAuthenticated = ref(false) // TODO: conectar con la sesión real cuando esté disponible.
+const isAuthenticated = computed(() => auth.isAuthenticated)
 
 const sectionsConfig = [
   {
     key: 'mostVisited',
     title: 'Más visitados',
     subtitle: 'Tendencias entre los usuarios.',
-    ctaParams: { sort: 'visits' },
+    ctaParams: { sort_by: 'visits', sort_dir: 'desc' },
     emptyMessage: 'Todavía no registramos sitios populares aquí.',
     skeletonItems: 3,
-    orderBy: 'latest',
+    orderBy: 'visits',
   },
   {
     key: 'topRated',
     title: 'Mejor puntuados',
     subtitle: 'Los sitios con mejores valoraciones.',
-    ctaParams: { sort: 'rating' },
+    ctaParams: { sort_by: 'rating', sort_dir: 'desc' },
     emptyMessage: 'Aún no hay calificaciones cargadas.',
     skeletonItems: 3,
     orderBy: 'rating-5-1',
-  },
-  {
-    key: 'favorites',
-    title: 'Favoritos',
-    subtitle: 'Mi lista personal de favoritos.',
-    ctaParams: { filter: 'favorites' },
-    emptyMessage: 'Inicia sesión para comenzar a guardar tus favoritos.',
-    requiresAuth: true,
-    skeletonItems: 3,
-    orderBy: 'latest',
+    highlightEndpoint: '/sites/highlights/top-rated',
+    highlightLimit: 3,
   },
   {
     key: 'recent',
@@ -47,6 +43,17 @@ const sectionsConfig = [
     emptyMessage: 'Pronto verás novedades aquí.',
     skeletonItems: 3,
     orderBy: 'latest',
+  },
+  {
+    key: 'favorites',
+    title: 'Favoritos',
+    subtitle: 'Mi lista personal de favoritos.',
+    ctaParams: { filter: 'favorites', favorites: '1' },
+    emptyMessage: 'Todavia no tienes sitios favoritos.',
+    requiresAuth: true,
+    skeletonItems: 3,
+    orderBy: 'latest',
+    filter: 'favorites',
   },
 ]
 
@@ -67,11 +74,14 @@ const visibleSections = computed(() =>
 )
 
 const heroCopy = {
-  eyebrow: 'Portal de sitios históricos',
-  title: 'Descubrí sitios históricos',
-  description:
-    'Explora nuestro catálogo de sitios históricos.',
-  hint: 'Tip: se puede buscar por nombre, ciudad, provincia o palabra clave.',
+  eyebrow: 'Portal público',
+  title: 'SITIOS HISTORICOS',
+  description: 'Explorá sitios históricos y descubrí las maravillas que guarda el pasado.',
+  hint: 'Tip: buscá por ciudad, por sitio o por palabra clave.',
+  backdrop:
+    'https://images.unsplash.com/photo-1577801599718-f4e3ad3fc794?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    // 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=2000&q=60',
+  scrollLabel: 'Ver destacados',
 }
 
 const buildCtaTo = (params = {}) => ({
@@ -135,18 +145,37 @@ const mapSiteToCard = (site) => ({
   image: resolveSiteImageSrc(site, GENERIC_SITE_IMAGE_URL),
   imageAlt: resolveSiteImageAlt(site),
   tags: Array.isArray(site.tags) ? site.tags.slice(0, 5) : [],
-  href: site.id ? { name: 'site-detail', params: { id: site.id } } : null,
+  href: site.id ? { name: 'site-detail', params: { id: site.id }, query: { from: 'home' } } : null,
+  is_favorite: site.is_favorite ?? site.isFavorite ?? false,
 })
 
 const fetchSitesForSection = async (sectionKey) => {
   const config = sectionsConfig.find((section) => section.key === sectionKey)
+  if (config?.highlightEndpoint) {
+    const limit = config.highlightLimit ?? config.skeletonItems ?? 3
+    const response = await fetch(
+      `${API_BASE_URL}${config.highlightEndpoint}?limit=${encodeURIComponent(limit)}`,
+      { credentials: 'include' },
+    )
+    if (!response.ok) {
+      throw new Error('No se pudieron cargar los sitios destacados.')
+    }
+    const payload = await response.json()
+    return Array.isArray(payload?.data) ? payload.data : []
+  }
+
   const perPage = config?.perPage ?? 100
   const params = new URLSearchParams({
     page: '1',
     per_page: String(perPage),
-    order_by: config?.orderBy || 'latest',
   })
-  const response = await fetch(`${API_BASE_URL}/sites?${params.toString()}`)
+  params.set('order_by', config?.orderBy || 'latest')
+  if (config?.filter) {
+    params.set('filter', config.filter)
+  }
+  const response = await fetch(`${API_BASE_URL}/sites?${params.toString()}`, {
+    credentials: 'include',
+  })
   if (!response.ok) {
     throw new Error('No se pudieron cargar los sitios.')
   }
@@ -165,6 +194,7 @@ const loadSection = async (sectionKey, { force = false } = {}) => {
 
   try {
     const rawItems = await fetchSitesForSection(sectionKey)
+    favoritesStore.hydrateFromSites(rawItems)
     state.items = rawItems.map(mapSiteToCard)
     state.loaded = true
   } catch (error) {
@@ -191,13 +221,31 @@ watch(
 )
 
 watch(
-  () => isAuthenticated.value,
+  isAuthenticated,
   (loggedIn) => {
     if (loggedIn) {
       loadSection('favorites', { force: true })
     }
   },
 )
+
+const stopFavoritesActionHook = favoritesStore.$onAction(({ name, after }) => {
+  if (name !== 'setFavorite') {
+    return
+  }
+  after(() => {
+    if (!isAuthenticated.value) {
+      return
+    }
+    loadSection('favorites', { force: true })
+  })
+})
+
+onBeforeUnmount(() => {
+  if (typeof stopFavoritesActionHook === 'function') {
+    stopFavoritesActionHook()
+  }
+})
 </script>
 
 <template>
@@ -207,12 +255,15 @@ watch(
       :title="heroCopy.title"
       :description="heroCopy.description"
       :hint="heroCopy.hint"
+      :background-image="heroCopy.backdrop"
+      :search-placeholder="heroCopy.searchPlaceholder"
+      :scroll-label="heroCopy.scrollLabel"
+      scroll-target="home-sections"
       variant="map"
-      cta-label="Buscar"
       @search="handleHeroSearch"
     />
 
-    <div class="home__sections">
+    <div id="home-sections" class="home__sections">
       <FeaturedSection
         v-for="section in visibleSections"
         :key="section.key"

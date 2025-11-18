@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
+import { useFavoritesStore } from '@/stores/favorites'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   site: {
@@ -47,6 +49,40 @@ const tags = computed(() => {
   if (!Array.isArray(siteTags)) return []
   return siteTags.slice(0, 5)
 })
+
+const favoritesStore = useFavoritesStore()
+const auth = useAuthStore()
+
+const siteId = computed(() => props.site?.id ?? null)
+
+const isFavorite = computed(() => {
+  if (!siteId.value) return false
+  return favoritesStore.isFavorite(siteId.value)
+})
+
+const isPending = computed(() => {
+  if (!siteId.value) return false
+  return favoritesStore.isPending(siteId.value)
+})
+
+const showFavoriteButton = computed(() => Boolean(siteId.value))
+
+const handleFavoriteClick = async (event) => {
+  event.preventDefault()
+  event.stopPropagation()
+  if (!siteId.value) return
+  if (isPending.value) return
+  if (!auth.isAuthenticated) {
+    const nextUrl = typeof window !== 'undefined' ? window.location.href : '/'
+    auth.requestLoginPrompt(nextUrl)
+    return
+  }
+  try {
+    await favoritesStore.toggleFavorite(siteId.value)
+  } catch (error) {
+    console.error('No se pudo actualizar el favorito', error)
+  }
+}
 </script>
 
 <template>
@@ -64,6 +100,22 @@ const tags = computed(() => {
         </svg>
         {{ ratingLabel }}
       </span>
+      <button
+        v-if="showFavoriteButton"
+        class="site-card__favorite"
+        type="button"
+        :class="{ 'site-card__favorite--active': isFavorite }"
+        :aria-pressed="isFavorite"
+        :disabled="isPending"
+        :title="isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'"
+        @click="handleFavoriteClick"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+          />
+        </svg>
+      </button>
     </div>
     <div class="site-card__body">
       <h3>{{ site.name }}</h3>

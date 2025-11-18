@@ -4,6 +4,9 @@ import MapView from '../views/MapView.vue'
 import SiteDetailView from '../views/SiteDetailView.vue'
 import SiteListView from '../views/SiteListView.vue'
 import SiteCreateView from '../views/SiteCreateView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import NotFoundView from '../views/NotFoundView.vue'
+import { refreshMaintenanceStatus } from '@/stores/maintenance'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -52,6 +55,11 @@ const router = createRouter({
       component: SiteDetailView,
     },
     {
+      path: '/perfil',
+      name: 'profile',
+      component: ProfileView,
+    },
+    {
       path: '/about',
       name: 'about',
       // route level code-splitting
@@ -59,7 +67,32 @@ const router = createRouter({
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/AboutView.vue'),
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
+    },
   ],
+})
+
+router.beforeEach(async (to, from, next) => {
+  if (to.path !== '/status') {
+    try {
+      await refreshMaintenanceStatus()
+    } catch (error) {
+      console.error('Error refreshing maintenance status', error)
+    }
+  }
+
+  if (to.path === '/status') {
+    if (from && from.name) {
+      next(false)
+      return
+    }
+    next({ path: '/' })
+    return
+  }
+  next()
 })
 
 export default router

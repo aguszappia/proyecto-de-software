@@ -200,6 +200,30 @@ def run():
             "status": ReviewStatus.PENDING,
             "rejection_reason": "Mensaje repetido con otros reportes.",
         },
+        {
+            "site_name": "Cabildo de Buenos Aires",
+            "user_email": "editor@example.com",
+            "rating": 4,
+            "comment": "La visita guiada fue excelente, vale la pena conocerlo.",
+            "status": ReviewStatus.APPROVED,
+            "rejection_reason": None,
+        },
+        {
+            "site_name": "Cabildo de Buenos Aires",
+            "user_email": "admin@example.com",
+            "rating": 2,
+            "comment": "Creo que podrían mejorar la señalización y la iluminación nocturna.",
+            "status": ReviewStatus.APPROVED,
+            "rejection_reason": None,
+        },
+        {
+            "site_name": "Puente Viejo",
+            "user_email": "user1@example.com",
+            "rating": 5,
+            "comment": "Perfecto para caminar al atardecer y disfrutar del paisaje.",
+            "status": ReviewStatus.APPROVED,
+            "rejection_reason": None,
+        },
     ]
 
     for payload in review_payloads:
@@ -258,7 +282,7 @@ def run():
             "name": "Reseñas habilitadas",
             "description": "Controla si el portal permite crear nuevas reseñas.",
             "enabled": True,
-            "message": "Las reseñas están disponibles.",
+            "message": "La creación de reseñas está deshabilitada temporalmente.\n\nEstamos trabajando para habilitarlas nuevamente pronto.",
         },
     ]
 

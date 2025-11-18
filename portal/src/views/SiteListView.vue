@@ -6,9 +6,13 @@ import 'leaflet/dist/leaflet.css'
 import SiteCard from '@/components/SiteCard.vue'
 import API_BASE_URL from '@/constants/api'
 import { resolveSiteImageAlt, resolveSiteImageSrc } from '@/siteMedia'
+import { useFavoritesStore } from '@/stores/favorites'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const favoritesStore = useFavoritesStore()
+const auth = useAuthStore()
 
 const PROVINCES = [
   'Buenos Aires',
@@ -48,7 +52,10 @@ const activeFilters = computed(() => ({
   city: route.query.city || '',
   province: route.query.province || '',
   conservation_status: route.query.conservation_status || '',
-  sort_by: ['created_at', 'name', 'city'].includes(route.query.sort_by)
+  favorites:
+    auth.isAuthenticated &&
+    ['1', 'true', 'yes', 'on'].includes(String(route.query.favorites || '').toLowerCase()),
+  sort_by: ['created_at', 'name', 'rating', 'visits'].includes(route.query.sort_by)
     ? route.query.sort_by
     : 'created_at',
   sort_dir: route.query.sort_dir === 'asc' ? 'asc' : 'desc',
@@ -66,12 +73,14 @@ const availableTags = ref([])
 const tagsDropdownOpen = ref(false)
 const tagsDropdownRef = ref(null)
 const showingMap = ref(route.query.view === 'map')
+const showAuthPrompt = ref(false)
 
 const formFilters = ref({
   q: '',
   city: '',
   province: '',
   conservation_status: '',
+  favorites: false,
   sort_by: 'created_at',
   sort_dir: 'desc',
   tags: [],
@@ -158,8 +167,9 @@ const buildQueryString = (filters) => {
   if (filters.province) params.set('province', filters.province)
   if (filters.conservation_status) params.set('conservation_status', filters.conservation_status)
   if (filters.q) params.set('q', filters.q)
-  params.set('sort_by', filters.sort_by || 'created_at')
-  params.set('sort_dir', filters.sort_dir || 'desc')
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
+  if (filters.favorites) params.set('favorites', '1')
   filters.tags?.forEach((tag) => {
     if (tag) params.append('tags', tag)
   })
@@ -174,7 +184,9 @@ watchEffect(async () => {
   error.value = null
   try {
     const query = buildQueryString(filters)
-    const response = await fetch(`${API_BASE_URL}/sites?${query}`)
+    const response = await fetch(`${API_BASE_URL}/sites?${query}`, {
+      credentials: 'include',
+    })
     if (!response.ok) {
       throw new Error(`Error ${response.status}`)
     }
@@ -184,6 +196,7 @@ watchEffect(async () => {
     const normalizedProvince = filters.province.trim().toLowerCase()
     const normalizedStatus = filters.conservation_status.trim().toLowerCase()
     const desiredTags = (filters.tags || []).map((tag) => tag.trim().toLowerCase()).filter(Boolean)
+    const favoritesOnly = filters.favorites && auth.isAuthenticated
     const rawItems = Array.isArray(payload?.data) ? payload.data : []
 
     const filteredItems = rawItems.filter((site) => {
@@ -215,11 +228,24 @@ watchEffect(async () => {
       const matchesTags =
         !desiredTags.length ||
         desiredTags.every((tag) => siteTags.includes(tag))
+      const siteFavoriteFlag =
+        site.is_favorite === true ||
+        site.isFavorite === true ||
+        favoritesStore.isFavorite(site.id)
+      const matchesFavorites = !favoritesOnly || siteFavoriteFlag
 
-      return matchesSearch && matchesCity && matchesProvince && matchesStatus && matchesTags
+      return (
+        matchesSearch &&
+        matchesCity &&
+        matchesProvince &&
+        matchesStatus &&
+        matchesTags &&
+        matchesFavorites
+      )
     })
 
-    sites.value = filteredItems.map((site) => ({
+    favoritesStore.hydrateFromSites(filteredItems)
+    const mappedItems = filteredItems.map((site) => ({
       ...site,
       state_of_conservation:
         site.state_of_conservation ??
@@ -229,12 +255,34 @@ watchEffect(async () => {
       category: site.category ?? site.category_name ?? site.categoryName ?? null,
       inaguration_year:
         site.inaguration_year ?? site.inauguration_year ?? site.inaugYear ?? null,
+      is_favorite: site.is_favorite ?? site.isFavorite ?? false,
     }))
+    sites.value = mappedItems
   } catch (err) {
     error.value = err.message || 'No se pudo obtener la información'
   } finally {
     loading.value = false
   }
+})
+
+const normalizeId = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const stopFavoritesActionHook = favoritesStore.$onAction(({ name, args, after }) => {
+  if (name !== 'setFavorite' && name !== 'toggleFavorite') {
+    return
+  }
+  after(() => {
+    if (!activeFilters.value.favorites) return
+    const [siteId] = args
+    const id = normalizeId(siteId)
+    if (!id || favoritesStore.isFavorite(id)) {
+      return
+    }
+    sites.value = sites.value.filter((site) => normalizeId(site.id) !== id)
+  })
 })
 
 const serializeFilters = (filters) => {
@@ -245,6 +293,7 @@ const serializeFilters = (filters) => {
   if (filters.conservation_status) query.conservation_status = filters.conservation_status
   if (filters.sort_by && filters.sort_by !== 'created_at') query.sort_by = filters.sort_by
   if (filters.sort_dir && filters.sort_dir !== 'desc') query.sort_dir = filters.sort_dir
+  if (filters.favorites) query.favorites = '1'
   if (filters.tags?.length) query.tags = filters.tags
   return query
 }
@@ -302,6 +351,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  if (typeof stopFavoritesActionHook === 'function') {
+    stopFavoritesActionHook()
+  }
 })
 
 watch(
@@ -419,6 +471,32 @@ const toggleMapMode = (enabled) => {
   synchronizeViewQuery(enabled ? 'map' : 'list')
 }
 
+const buildAbsoluteUrl = (routeLocation) => {
+  const resolved = router.resolve(routeLocation)
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin ? window.location.origin : ''
+  return `${origin}${resolved.href}`
+}
+
+const handleProposeSiteClick = () => {
+  const targetLocation = { name: 'site-create' }
+  if (auth.isAuthenticated) {
+    router.push(targetLocation)
+    return
+  }
+  showAuthPrompt.value = true
+}
+
+const handleAuthPromptClose = () => {
+  showAuthPrompt.value = false
+}
+
+const handleAuthPromptLogin = () => {
+  showAuthPrompt.value = false
+  const nextUrl = buildAbsoluteUrl({ name: 'site-create' })
+  auth.loginWithGoogle(nextUrl)
+}
+
 watch(
   mapSites,
   (value) => {
@@ -439,7 +517,9 @@ watch(
         Aplicá filtros avanzados para encontrar rápidamente los sitios que te interesan.
       </p>
       <div class="view-panel__actions">
-        <RouterLink class="primary-button" to="/sitios/nuevo">Proponer un sitio</RouterLink>
+        <button class="primary-button" type="button" @click="handleProposeSiteClick">
+          Proponer un sitio
+        </button>
       </div>
 
       <form class="filters-panel" @submit.prevent="handleFiltersSubmit">
@@ -467,7 +547,7 @@ watch(
           </label>
         </div>
 
-        <div class="filters-row">
+        <div class="filters-row filters-row--ordering">
           <label class="filter-group">
             <span>Estado de conservación</span>
             <select v-model="formFilters.conservation_status">
@@ -481,8 +561,9 @@ watch(
             <span>Ordenar por</span>
             <select v-model="formFilters.sort_by">
               <option value="created_at">Fecha de registro</option>
+              <option value="visits">Visitas</option>
+              <option value="rating">Puntuación</option>
               <option value="name">Nombre</option>
-              <option value="city">Ciudad</option>
             </select>
           </label>
           <label class="filter-group">
@@ -493,6 +574,8 @@ watch(
             </select>
           </label>
         </div>
+
+        
 
         <div class="filters-row filters-row--tags">
           <div class="filter-group filter-group--tags">
@@ -556,7 +639,22 @@ watch(
               </span>
             </div>
           </div>
+
         </div>
+
+                  <label
+            v-if="auth.isAuthenticated"
+            class="filter-group filter-group--favorites-checkbox"
+          >
+            <div class="filter-inline-checkbox">
+              <input
+                id="favorites-filter"
+                v-model="formFilters.favorites"
+                type="checkbox"
+              />
+              <span>Mis favoritos</span>
+            </div>
+          </label>
 
         <div class="filters-actions">
           <button type="submit" class="primary-button">Aplicar filtros</button>
@@ -662,4 +760,32 @@ watch(
       </template>
     </div>
   </section>
+
+  <div
+    v-if="showAuthPrompt"
+    class="public-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="auth-dialog-title"
+  >
+    <div class="public-modal__backdrop" @click="handleAuthPromptClose"></div>
+    <div class="public-modal__card" role="document">
+      <h2 id="auth-dialog-title">Iniciá sesión para continuar</h2>
+      <p>
+        Necesitás estar autenticado para proponer un nuevo sitio histórico en el portal público.
+      </p>
+      <div class="public-modal__actions">
+        <button class="public-modal__button" type="button" @click="handleAuthPromptClose">
+          Ahora no
+        </button>
+        <button
+          class="public-modal__button public-modal__button--primary"
+          type="button"
+          @click="handleAuthPromptLogin"
+        >
+          Ingresar con Google
+        </button>
+      </div>
+    </div>
+  </div>
 </template>

@@ -42,3 +42,10 @@ npm run build
 ```sh
 npm run lint
 ```
+## Configuración de variables de entorno para Google OAuth
+
+```bash
+export AUTHLIB_INSECURE_TRANSPORT=1
+export GOOGLE_CLIENT_ID="tu-client-id.apps.googleusercontent.com"
+export GOOGLE_CLIENT_SECRET="tu-secret"
+export GOOGLE_REDIRECT_URI="http://localhost:5050/api/auth/google/callback"

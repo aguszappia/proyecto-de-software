@@ -19,6 +19,10 @@ class SiteSchema(Schema):
     updated_at = fields.Method("get_updated_at")
     cover_image_url = fields.Method("get_cover_image_url")
     cover_image_title = fields.Method("get_cover_image_title")
+    is_favorite = fields.Bool(dump_default=False)
+    visits = fields.Int()
+    average_rating = fields.Float(allow_none=True)
+    total_reviews = fields.Int(allow_none=True)
 
     def _get_value(self, obj, attr, default=None):
         if isinstance(obj, dict):
@@ -93,3 +97,35 @@ class SiteCreateSchema(Schema):
 
 
 site_create_schema = SiteCreateSchema()
+
+
+class ReviewSchema(Schema):
+    id = fields.Int()
+    site_id = fields.Int()
+    user_id = fields.Int()
+    rating = fields.Int()
+    comment = fields.Str()
+    status = fields.Str()
+    rejection_reason = fields.Str(allow_none=True)
+    created_at = fields.Method("get_created_at")
+    updated_at = fields.Method("get_updated_at")
+    author_name = fields.Str(load_default=None)
+
+    def _format_datetime(self, value):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value
+        return value.isoformat()
+
+    def get_created_at(self, obj):
+        value = getattr(obj, "created_at", None)
+        return self._format_datetime(value)
+
+    def get_updated_at(self, obj):
+        value = getattr(obj, "updated_at", None)
+        return self._format_datetime(value)
+
+
+review_schema = ReviewSchema()
+review_list_schema = ReviewSchema(many=True)

@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import asc, desc, or_
+from sqlalchemy import asc, and_, desc, func, or_
 from sqlalchemy.orm import joinedload
 
 from src.core.database import db
 from src.core.pagination import Pagination
-from src.core.sites.models import Historic_Site, ReviewStatus, SiteReview
+from src.core.sites.models import Historic_Site, ReviewStatus, SiteImage, SiteReview
 from src.core.users.models import User
 
 MAX_REJECTION_LENGTH = 200
@@ -25,6 +25,8 @@ class ReviewPresenter:
     site_name: str
     user_email: Optional[str]
     user_name: str
+    site_cover_url: Optional[str] = None
+    site_cover_title: Optional[str] = None
 
     @property
     def user_display(self) -> str:
@@ -56,8 +58,14 @@ def _base_query():
             User.email.label("user_email"),
             User.first_name.label("user_first_name"),
             User.last_name.label("user_last_name"),
+            SiteImage.url.label("site_cover_url"),
+            SiteImage.title.label("site_cover_title"),
         )
         .join(Historic_Site, SiteReview.site_id == Historic_Site.id)
+        .outerjoin(
+            SiteImage,
+            and_(SiteImage.site_id == Historic_Site.id, SiteImage.is_cover.is_(True)),
+        )
         .outerjoin(User, User.id == SiteReview.user_id)
     )
 
@@ -117,7 +125,16 @@ def paginate_reviews(
     items = query.limit(per_page).offset((page - 1) * per_page).all()
 
     presenters: List[ReviewPresenter] = []
-    for review, site_id, site_name, user_email, first_name, last_name in items:
+    for (
+        review,
+        site_id,
+        site_name,
+        user_email,
+        first_name,
+        last_name,
+        cover_url,
+        cover_title,
+    ) in items:
         full_name = " ".join(part for part in [first_name or "", last_name or ""] if part).strip()
         presenters.append(
             ReviewPresenter(
@@ -126,6 +143,8 @@ def paginate_reviews(
                 site_name=site_name,
                 user_email=user_email,
                 user_name=full_name,
+                site_cover_url=cover_url,
+                site_cover_title=cover_title,
             )
         )
 
@@ -134,12 +153,17 @@ def paginate_reviews(
 
 def get_review(review_id: int) -> Optional[SiteReview]:
     """Busco una reseña por id con el sitio asociado."""
-    return (
-        db.session.query(SiteReview)
+    row = (
+        db.session.query(SiteReview, User.first_name, User.last_name)
         .options(joinedload(SiteReview.site))
+        .outerjoin(User, User.id == SiteReview.user_id)
         .filter(SiteReview.id == review_id)
         .first()
     )
+    if not row:
+        return None
+    review, first_name, last_name = row
+    return _attach_author(review, first_name, last_name)
 
 
 def get_review_presenter(review_id: int) -> Optional[ReviewPresenter]:
@@ -147,7 +171,7 @@ def get_review_presenter(review_id: int) -> Optional[ReviewPresenter]:
     row = _base_query().filter(SiteReview.id == review_id).first()
     if not row:
         return None
-    review, site_id, site_name, user_email, first_name, last_name = row
+    review, site_id, site_name, user_email, first_name, last_name, cover_url, cover_title = row
     full_name = " ".join(part for part in [first_name or "", last_name or ""] if part).strip()
     return ReviewPresenter(
         review=review,
@@ -155,7 +179,121 @@ def get_review_presenter(review_id: int) -> Optional[ReviewPresenter]:
         site_name=site_name,
         user_email=user_email,
         user_name=full_name,
+        site_cover_url=cover_url,
+        site_cover_title=cover_title,
     )
+
+
+def _format_author_name(first_name: Optional[str], last_name: Optional[str]) -> str:
+    parts = [part.strip() for part in [first_name or "", last_name or ""] if part]
+    display = " ".join(parts).strip()
+    return display or "Visitante"
+
+
+def _attach_author(review: SiteReview, first_name: Optional[str], last_name: Optional[str]) -> SiteReview:
+    review.author_name = _format_author_name(first_name, last_name)
+    return review
+
+
+def list_public_reviews_for_site(site_id: int) -> List[SiteReview]:
+    """Devuelvo las reseñas aprobadas de un sitio para el portal público."""
+    reviews: List[SiteReview] = []
+    query = (
+        db.session.query(SiteReview, User.first_name, User.last_name)
+        .outerjoin(User, User.id == SiteReview.user_id)
+        .filter(
+            SiteReview.site_id == site_id,
+            SiteReview.status == ReviewStatus.APPROVED,
+        )
+        .order_by(SiteReview.created_at.desc())
+    )
+    for review, first_name, last_name in query.all():
+        reviews.append(_attach_author(review, first_name, last_name))
+    return reviews
+
+
+def get_public_review_stats(site_id: int) -> Dict[str, object]:
+    """Calculo cantidad y promedio sólo de reseñas aprobadas."""
+    avg_rating, total = (
+        db.session.query(func.avg(SiteReview.rating), func.count(SiteReview.id))
+        .filter(SiteReview.site_id == site_id, SiteReview.status == ReviewStatus.APPROVED)
+        .first()
+    )
+    average = float(avg_rating) if avg_rating is not None else None
+    return {
+        "average_rating": average,
+        "total_reviews": int(total or 0),
+    }
+
+
+def list_top_rated_sites(limit: int = 3) -> List[Dict[str, object]]:
+    """Obtengo sitios visibles ordenados por rating promedio (solo reseñas aprobadas)."""
+    query = (
+        db.session.query(
+            Historic_Site,
+            func.avg(SiteReview.rating).label("avg_rating"),
+            func.count(SiteReview.id).label("total_reviews"),
+        )
+        .outerjoin(
+            SiteReview,
+            and_(
+                SiteReview.site_id == Historic_Site.id,
+                SiteReview.status == ReviewStatus.APPROVED,
+            ),
+        )
+        .filter(Historic_Site.is_visible.is_(True))
+        .group_by(Historic_Site.id)
+        .order_by(func.avg(SiteReview.rating).desc(), Historic_Site.created_at.desc())
+        .limit(limit)
+    )
+
+    results: List[Dict[str, object]] = []
+    for site, avg_rating, total_reviews in query.all():
+        payload = site.to_dict()
+        payload["average_rating"] = float(avg_rating) if avg_rating is not None else None
+        payload["total_reviews"] = int(total_reviews or 0)
+        results.append(payload)
+    return results
+
+
+def find_review_by_user(site_id: int, user_id: int) -> Optional[SiteReview]:
+    """Busco la reseña existente para un usuario específico."""
+    row = (
+        db.session.query(SiteReview, User.first_name, User.last_name)
+        .outerjoin(User, User.id == SiteReview.user_id)
+        .filter(SiteReview.site_id == site_id, SiteReview.user_id == user_id)
+        .first()
+    )
+    if not row:
+        return None
+    review, first_name, last_name = row
+    return _attach_author(review, first_name, last_name)
+
+
+def create_site_review(*, site_id: int, user_id: int, rating: int, comment: str) -> SiteReview:
+    """Creo una reseña pendiente para el portal público."""
+    review = SiteReview(
+        site_id=site_id,
+        user_id=user_id,
+        rating=rating,
+        comment=comment.strip(),
+        status=ReviewStatus.PENDING,
+        rejection_reason=None,
+    )
+    db.session.add(review)
+    db.session.commit()
+    return review
+
+
+def update_site_review(review: SiteReview, *, rating: int, comment: str) -> SiteReview:
+    """Actualizo una reseña y la vuelvo a estado pendiente."""
+    review.rating = rating
+    review.comment = comment.strip()
+    review.status = ReviewStatus.PENDING
+    review.rejection_reason = None
+    db.session.add(review)
+    db.session.commit()
+    return review
 
 
 def approve_review(review: SiteReview):
@@ -198,3 +336,56 @@ def delete_review(review: SiteReview):
     """Elimino la reseña definitivamente."""
     db.session.delete(review)
     db.session.commit()
+
+
+def list_reviews_for_user(user_id: int) -> List[Dict[str, object]]:
+    """Devuelve las reseñas del usuario junto con datos básicos del sitio."""
+    query = (
+        db.session.query(
+            SiteReview,
+            Historic_Site,
+            User.first_name,
+            User.last_name,
+        )
+        .join(Historic_Site, SiteReview.site_id == Historic_Site.id)
+        .outerjoin(User, User.id == SiteReview.user_id)
+        .filter(SiteReview.user_id == user_id, Historic_Site.is_visible.is_(True))
+        .order_by(SiteReview.created_at.desc())
+    )
+    reviews: List[Dict[str, object]] = []
+    for review, site, first_name, last_name in query.all():
+        reviews.append(
+            {
+                "review": _attach_author(review, first_name, last_name),
+                "site": site,
+            }
+        )
+    return reviews
+
+def list_top_rated_sites(limit: int = 3) -> list[dict]:
+    """Obtengo los sitios visibles con mejor rating promedio (solo reseñas aprobadas)."""
+    query = (
+        db.session.query(
+            Historic_Site,
+            func.avg(SiteReview.rating).label("avg_rating"),
+            func.count(SiteReview.id).label("total_reviews"),
+        )
+        .outerjoin(
+            SiteReview,
+            and_(
+                SiteReview.site_id == Historic_Site.id,
+                SiteReview.status == ReviewStatus.APPROVED,
+            ),
+        )
+        .filter(Historic_Site.is_visible.is_(True))
+        .group_by(Historic_Site.id)
+        .order_by(func.avg(SiteReview.rating).desc(), Historic_Site.created_at.desc())
+        .limit(limit)
+    )
+    results = []
+    for site, avg_rating, total_reviews in query.all():
+        payload = site.to_dict()
+        payload["average_rating"] = float(avg_rating) if avg_rating is not None else None
+        payload["total_reviews"] = int(total_reviews or 0)
+        results.append(payload)
+    return results

@@ -1,8 +1,10 @@
 <script setup>
 import { reactive, ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import API_BASE_URL from '@/constants/api'
+import { useAuthStore } from '@/stores/auth'
 
 const defaultCoords = { lat: -34.6037, long: -58.3816 }
 
@@ -45,6 +47,9 @@ const categories = [
   { label: 'Otro', value: 'Otro' },
 ]
 
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
 const form = reactive({
   name: '',
   short_description: '',
@@ -60,17 +65,40 @@ const form = reactive({
   tags: [],
 })
 
+const coverImageInputId = 'site-cover-image'
 const submitting = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 const validationErrors = ref({})
+const coverImageFile = ref(null)
+const coverImagePreview = ref('')
+const coverImageError = ref('')
 
 const mapElement = ref(null)
 const availableTags = ref([])
 const tagsDropdownOpen = ref(false)
 const tagsDropdownRef = ref(null)
+const coverImageInput = ref(null)
 let mapInstance = null
 let markerInstance = null
+const auth = useAuthStore()
+const route = useRoute()
+const scrollToTop = () => {
+  if (typeof window !== 'undefined' && window.scrollTo) {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+const buildNextUrl = () => {
+  if (typeof window === 'undefined') {
+    return '/sitios/nuevo'
+  }
+  const origin = window.location.origin
+  const nextPath = route.fullPath || '/sitios/nuevo'
+  return `${origin}${nextPath}`
+}
+const handleLoginForProposal = () => {
+  auth.loginWithGoogle(buildNextUrl())
+}
 
 const ensureMarker = (lat, lng) => {
   if (!mapInstance) {
@@ -130,6 +158,46 @@ const handleClickOutside = (event) => {
   }
 }
 
+const revokeImagePreview = () => {
+  if (coverImagePreview.value) {
+    URL.revokeObjectURL(coverImagePreview.value)
+    coverImagePreview.value = ''
+  }
+}
+
+const clearImageSelection = ({ preserveError = false } = {}) => {
+  coverImageFile.value = null
+  if (!preserveError) {
+    coverImageError.value = ''
+  }
+  revokeImagePreview()
+  if (coverImageInput.value) {
+    coverImageInput.value.value = ''
+  }
+}
+
+const handleImageChange = (event) => {
+  coverImageError.value = ''
+  const [file] = event.target?.files || []
+  if (!file) {
+    clearImageSelection()
+    return
+  }
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    coverImageError.value = 'El archivo debe ser JPG, PNG o WEBP.'
+    clearImageSelection({ preserveError: true })
+    return
+  }
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    coverImageError.value = 'La imagen no puede superar los 5 MB.'
+    clearImageSelection({ preserveError: true })
+    return
+  }
+  coverImageFile.value = file
+  revokeImagePreview()
+  coverImagePreview.value = URL.createObjectURL(file)
+}
+
 onMounted(() => {
   if (!mapElement.value) {
     return
@@ -153,6 +221,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  clearImageSelection()
 })
 
 const fieldLabels = {
@@ -167,6 +236,7 @@ const fieldLabels = {
   lat: 'Latitud',
   long: 'Longitud',
   tags: 'Etiquetas',
+  cover_image: 'Imagen representativa',
 }
 
 const resetMessages = () => {
@@ -177,8 +247,19 @@ const resetMessages = () => {
 
 const handleSubmit = async () => {
   resetMessages()
+  if (!auth.isAuthenticated) {
+    errorMessage.value = 'Necesitás iniciar sesión para proponer un sitio.'
+    scrollToTop()
+    return
+  }
   if (!form.lat || !form.long) {
     validationErrors.value = { general: ['Seleccioná la ubicación en el mapa.'] }
+    scrollToTop()
+    return
+  }
+  if (!coverImageFile.value) {
+    validationErrors.value = { cover_image: ['Subí al menos una imagen del sitio.'] }
+    scrollToTop()
     return
   }
 
@@ -199,12 +280,22 @@ const handleSubmit = async () => {
 
   submitting.value = true
   try {
+    const formData = new FormData()
+    Object.entries(payload).forEach(([key, value]) => {
+      if (key === 'tags') {
+        return
+      }
+      if (value === null || value === undefined || value === '') {
+        return
+      }
+      formData.append(key, value)
+    })
+    payload.tags.forEach((tag) => formData.append('tags[]', tag))
+    formData.append('cover_image', coverImageFile.value)
+
     const response = await fetch(`${API_BASE_URL}/sites/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: formData,
     })
 
     if (response.status === 201) {
@@ -222,6 +313,7 @@ const handleSubmit = async () => {
       form.lat = ''
       form.long = ''
       form.tags = []
+      clearImageSelection()
       if (markerInstance && mapInstance) {
         mapInstance.removeLayer(markerInstance)
         markerInstance = null
@@ -240,8 +332,10 @@ const handleSubmit = async () => {
     }
     errorMessage.value =
       payloadError?.error?.message || `No se pudo enviar la propuesta (error ${response.status}).`
+    scrollToTop()
   } catch (err) {
     errorMessage.value = 'No se pudo conectar con el servidor. Intentá más tarde.'
+    scrollToTop()
   } finally {
     submitting.value = false
   }
@@ -259,7 +353,27 @@ const handleSubmit = async () => {
       </p>
     </div>
 
-    <div class="view-panel__card create-form">
+    <div
+      v-if="auth.loadingUser"
+      class="view-panel__card view-panel__card--centered"
+    >
+      <p>Estamos verificando tu sesión…</p>
+    </div>
+
+    <div
+      v-else-if="!auth.isAuthenticated"
+      class="view-panel__card view-panel__card--centered"
+    >
+      <h2>Iniciá sesión para proponer un sitio</h2>
+      <p>
+        Para proteger el contenido del portal necesitamos que te autentiques antes de enviar una propuesta.
+      </p>
+      <button class="primary-button" type="button" @click="handleLoginForProposal">
+        Ingresar con Google
+      </button>
+    </div>
+
+    <div v-else class="view-panel__card create-form">
       <div v-if="successMessage" class="alert alert--success">
         {{ successMessage }}
       </div>
@@ -402,6 +516,35 @@ const handleSubmit = async () => {
               </span>
             </div>
             <small>Usamos estas etiquetas para agrupar sitios similares.</small>
+          </div>
+        </div>
+
+        <div class="media-panel">
+          <div>
+            <p class="media-panel__kicker">Imagen representativa</p>
+            <h2>Subí una foto del sitio</h2>
+            <p>La usamos como portada mientras revisamos tu propuesta.</p>
+          </div>
+          <div class="media-panel__body">
+            <input
+              :id="coverImageInputId"
+              ref="coverImageInput"
+              class="media-panel__input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              @change="handleImageChange"
+            />
+            <label class="media-upload" :for="coverImageInputId">
+              <span>Seleccionar imagen</span>
+            </label>
+            <div v-if="coverImagePreview" class="media-preview">
+              <img :src="coverImagePreview" alt="Previsualización de la imagen seleccionada" />
+              <button type="button" class="secondary-button" @click="clearImageSelection">
+                Quitar imagen
+              </button>
+            </div>
+            <p class="media-hint">Formatos admitidos: JPG, PNG o WEBP. Tamaño máximo 5 MB.</p>
+            <p v-if="coverImageError" class="media-error">{{ coverImageError }}</p>
           </div>
         </div>
 
