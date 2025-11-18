@@ -21,6 +21,13 @@ class Config:
     API_TOKEN_TTL_SECONDS = int(environ.get("API_TOKEN_TTL_SECONDS", 60 * 60 * 24))
     API_TOKEN_SALT = environ.get("API_TOKEN_SALT", "public-api-token")
 
+    # Configuración base para JWT (se complementa en create_app)
+    JWT_SECRET_KEY = environ.get("JWT_SECRET_KEY")
+    JWT_COOKIE_SECURE = environ.get("JWT_COOKIE_SECURE", "true").strip().lower() == "true"
+    JWT_COOKIE_SAMESITE = environ.get("JWT_COOKIE_SAMESITE", "Lax")
+    JWT_COOKIE_CSRF_PROTECT = environ.get("JWT_COOKIE_CSRF_PROTECT", "false").strip().lower() == "true"
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(environ.get("JWT_ACCESS_TOKEN_EXPIRES", 60 * 60)))
+
     CORS_RESOURCES = [
         r"/api/*"
     ]
