@@ -33,7 +33,7 @@ const sectionsConfig = [
     skeletonItems: 3,
     orderBy: 'rating-5-1',
     highlightEndpoint: '/sites/highlights/top-rated',
-    highlightLimit: 3,
+    highlightLimit: 4,
   },
   {
     key: 'recent',
@@ -149,6 +149,20 @@ const mapSiteToCard = (site) => ({
   is_favorite: site.is_favorite ?? site.isFavorite ?? false,
 })
 
+const resolveNumericRating = (site) => {
+  const candidates = [
+    site.rating,
+    site.average_rating,
+    site.averageRating,
+    site.score,
+  ]
+  for (const value of candidates) {
+    const number = typeof value === 'string' ? Number.parseFloat(value) : value
+    if (Number.isFinite(number)) return number
+  }
+  return null
+}
+
 const fetchSitesForSection = async (sectionKey) => {
   const config = sectionsConfig.find((section) => section.key === sectionKey)
   if (config?.highlightEndpoint) {
@@ -194,6 +208,9 @@ const loadSection = async (sectionKey, { force = false } = {}) => {
 
   try {
     const rawItems = await fetchSitesForSection(sectionKey)
+    if (sectionKey === 'topRated') {
+      rawItems.sort((a, b) => (resolveNumericRating(b) ?? 0) - (resolveNumericRating(a) ?? 0))
+    }
     favoritesStore.hydrateFromSites(rawItems)
     state.items = rawItems.map(mapSiteToCard)
     state.loaded = true
