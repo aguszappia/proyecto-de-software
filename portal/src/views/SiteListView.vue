@@ -575,6 +575,8 @@ watch(
           </label>
         </div>
 
+        
+
         <div class="filters-row filters-row--tags">
           <div class="filter-group filter-group--tags">
             <span>Tags</span>
@@ -637,7 +639,10 @@ watch(
               </span>
             </div>
           </div>
-          <label
+
+        </div>
+
+                  <label
             v-if="auth.isAuthenticated"
             class="filter-group filter-group--favorites-checkbox"
           >
@@ -647,10 +652,9 @@ watch(
                 v-model="formFilters.favorites"
                 type="checkbox"
               />
-              <span>Favoritos</span>
+              <span>Mis favoritos</span>
             </div>
           </label>
-        </div>
 
         <div class="filters-actions">
           <button type="submit" class="primary-button">Aplicar filtros</button>
