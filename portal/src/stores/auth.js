@@ -17,7 +17,7 @@ export const useAuthStore = defineStore('auth', {
     async fetchCurrentUser() {
       this.loadingUser = true
       try {
-        const response = await axios.get(`${API_BASE_URL}/me`, {
+        const response = await axios.get(`${API_BASE_URL}/auth/jwt/me`, {
           withCredentials: true,
         })
         this.user = response.data?.data || null
@@ -53,7 +53,7 @@ export const useAuthStore = defineStore('auth', {
     async logout() {
       try {
         await axios.post(
-          `${API_BASE_URL}/auth/logout`,
+          `${API_BASE_URL}/auth/jwt/logout`,
           {},
           {
             withCredentials: true,

@@ -3,6 +3,7 @@
 from flask import Flask, request, url_for, redirect, session, g
 from flask import render_template, flash
 from flask_session import Session
+from flask_jwt_extended import JWTManager
 from src.core import database
 from src.web.config import config
 from src.web.controllers import register_controllers
@@ -26,8 +27,8 @@ from src.core.users.service import get_user
 from src.core.permissions import models as permissions_models  # noqa: F401
 from src.core.permissions import service as permissions_service
 from src.web.api.sites import bp as sites_api_bp, auth_bp as public_auth_bp
-from src.web.api.auth_session import session_api_bp
 from src.web.api.auth_oauth import public_oauth_bp
+from src.web.api.auth_jwt import jwt_api_bp
 from src.web.oauth import oauth
 
 
@@ -35,6 +36,17 @@ def create_app(env="development", static_folder="../../static"):
     """Armo la app con configuración, blueprints, seeds y middlewares."""
     app = Flask(__name__, static_folder=static_folder)
     app.config.from_object(config[env])
+
+    # Configuración base para JWT via cookies
+    if not app.config.get("JWT_SECRET_KEY"):
+        app.config["JWT_SECRET_KEY"] = app.config.get("SECRET_KEY")
+    app.config.setdefault("JWT_TOKEN_LOCATION", ["cookies"])
+    if env == "development":
+        app.config["JWT_COOKIE_SECURE"] = False
+    else:
+        app.config.setdefault("JWT_COOKIE_SECURE", True)
+    app.config.setdefault("JWT_COOKIE_SAMESITE", "Lax")
+    app.config.setdefault("JWT_COOKIE_CSRF_PROTECT", False)
 
     # Inicializar base de datos
     database.init_db(app)
@@ -50,6 +62,7 @@ def create_app(env="development", static_folder="../../static"):
         },
     )
     CORS(app, supports_credentials=True)
+    JWTManager(app)
 
     @app.route("/")
     def home():
@@ -101,7 +114,7 @@ def create_app(env="development", static_folder="../../static"):
 
     app.register_blueprint(public_auth_bp)
     app.register_blueprint(public_oauth_bp)
-    app.register_blueprint(session_api_bp)
+    app.register_blueprint(jwt_api_bp)
     app.register_blueprint(sites_api_bp)
 
     Session(app)  # inicializa Flask-Session

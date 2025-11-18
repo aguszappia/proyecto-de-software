@@ -2,8 +2,9 @@ from __future__ import annotations
 import unicodedata
 from typing import Dict, List, Optional
 
-from flask import Blueprint, jsonify, request, session
-from itsdangerous import BadSignature, SignatureExpired
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended.exceptions import JWTExtendedException, NoAuthorizationError
 from marshmallow import ValidationError
 from sqlalchemy import func, inspect, or_, text
 from src.core.sites.reviews_service import list_top_rated_sites
@@ -35,42 +36,6 @@ from src.core.security.passwords import verify_password
 from src.core.users import UserRole
 from src.core.users import service as users_service
 from src.core.sites.validators import clean_str, safe_float, safe_int
-from src.web.api.sites_helpers import (
-    CATEGORY_ALIASES,
-    DEFAULT_PER_PAGE,
-    MAX_PER_PAGE,
-    STATUS_ALIASES,
-    VALID_ORDER_CHOICES,
-    _apply_filters,
-    _auth_error_response,
-    _ensure_visits_column,
-    _error_response,
-    _extract_site_payload,
-    _filter_by_tags,
-    _filter_visible,
-    _format_user_display,
-    _get_token_serializer,
-    _get_token_ttl,
-    _get_site_or_404,
-    _handle_query_error,
-    _increment_site_visit,
-    _invalid_data_response,
-    _issue_api_token,
-    _normalize_text,
-    _paginate,
-    _parse_category,
-    _parse_float_arg,
-    _parse_int_arg,
-    _parse_state_of_conservation,
-    _parse_tags,
-    _require_api_user,
-    _serialize_flag_state,
-    _sort_sites,
-    _validate_review_payload,
-    AuthError,
-    QueryParamError,
-    TOKEN_SALT_FALLBACK,
-)
 from src.web.controllers.featureflags import (
     ADMIN_MAINTENANCE_FLAG_KEY,
     DEFAULT_FLAG_MESSAGES,
@@ -103,7 +68,6 @@ VALID_ORDER_CHOICES = {
     "name-az",
     "name-za",
 }
-TOKEN_SALT_FALLBACK = "public-api-token"
 REVIEW_MIN_SCORE = 1
 REVIEW_MAX_SCORE = 5
 REVIEW_MIN_LENGTH = 20
@@ -376,51 +340,35 @@ def _paginate(items: List[Dict[str, Any]], page: int, per_page: int) -> Dict[str
     }
 
 
-def _get_token_serializer() -> URLSafeTimedSerializer:
-    secret_key = current_app.config.get("SECRET_KEY")
-    if not secret_key:
-        raise RuntimeError("SECRET_KEY no configurada para emitir tokens.")
-    salt = current_app.config.get("API_TOKEN_SALT") or TOKEN_SALT_FALLBACK
-    return URLSafeTimedSerializer(secret_key=secret_key, salt=salt)
-
-
-def _issue_api_token(user_id: int) -> str:
-    serializer = _get_token_serializer()
-    return serializer.dumps({"user_id": int(user_id)})
-
-
-def _get_token_ttl() -> int:
-    return current_app.config.get("API_TOKEN_TTL_SECONDS", 60 * 60 * 24)
-
-
 def _require_api_user(optional: bool = False):
-    session_user_id = session.get("user_id")
-    session_role = session.get("user_role")
-    if session_user_id and session_role == UserRole.PUBLIC.value:
-        user = users_service.get_user(session_user_id)
-        if user and user.is_active:
-            return user
-
-    auth_header = request.headers.get("Authorization", "").strip()
-    if not auth_header:
+    try:
+        verify_jwt_in_request(optional=optional)
+    except NoAuthorizationError as error:
         if optional:
             return None
-        raise AuthError("Missing Authorization header.")
-    parts = auth_header.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise AuthError("Authorization header must be 'Bearer <token>'.")
-    token = parts[1].strip()
-    serializer = _get_token_serializer()
-    try:
-        payload = serializer.loads(token, max_age=_get_token_ttl())
-    except SignatureExpired:
-        raise AuthError("Token expired.")
-    except BadSignature:
-        raise AuthError("Invalid token.")
+        raise AuthError(str(error) or "Missing access token.")
+    except JWTExtendedException as error:
+        if optional:
+            return None
+        raise AuthError(str(error) or "Invalid access token.")
 
-    user_id = payload.get("user_id")
+    identity = get_jwt_identity()
+    if not identity:
+        if optional:
+            return None
+        raise AuthError("Invalid user.")
+
+    try:
+        user_id = int(identity)
+    except (TypeError, ValueError):
+        if optional:
+            return None
+        raise AuthError("Invalid user.")
+
     user = users_service.get_user(user_id)
     if not user or not user.is_active or user.role != UserRole.PUBLIC.value:
+        if optional:
+            return None
         raise AuthError("Invalid user.")
     return user
 
