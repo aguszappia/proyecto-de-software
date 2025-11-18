@@ -32,8 +32,6 @@ const sectionsConfig = [
     emptyMessage: 'Aún no hay calificaciones cargadas.',
     skeletonItems: 3,
     orderBy: 'rating-5-1',
-    highlightEndpoint: '/sites/highlights/top-rated',
-    highlightLimit: 4,
   },
   {
     key: 'recent',
