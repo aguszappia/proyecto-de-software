@@ -1188,6 +1188,21 @@ body {
   .featured__slot {
     flex: 0 0 100%;
   }
+
+  .featured__pagination {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .featured__pagination .secondary-button {
+    width: 100%;
+  }
+
+  .featured__pagination-info {
+    width: 100%;
+    display: block;
+  }
 }
 
 .featured__arrow {

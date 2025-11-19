@@ -45,10 +45,16 @@ const normalizeSite = (payload) => {
     payload.coverImageUrl ||
     (typeof payload.cover_image === 'string' ? payload.cover_image : payload.cover_image?.url)
   if (coverImageSrc) {
-    galleryImages.unshift({
-      src: coverImageSrc,
-      alt: payload.cover_image_title || payload.name || 'Sitio histórico',
-    })
+    const coverIndex = galleryImages.findIndex((image) => image?.src === coverImageSrc)
+    if (coverIndex >= 0) {
+      const [existingCover] = galleryImages.splice(coverIndex, 1)
+      galleryImages.unshift(existingCover)
+    } else {
+      galleryImages.unshift({
+        src: coverImageSrc,
+        alt: payload.cover_image_title || payload.name || 'Sitio histórico',
+      })
+    }
   }
 
   return {
