@@ -85,6 +85,7 @@ export const useFavoritesStore = defineStore('favorites', {
         }
         const csrfToken = resolveCsrfToken()
         if (csrfToken) {
+          headers['X-CSRF-TOKEN'] = csrfToken
           headers['X-CSRFToken'] = csrfToken
         }
         if (shouldFavorite) {

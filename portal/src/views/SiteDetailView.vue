@@ -372,6 +372,7 @@ const handleReviewSubmit = async () => {
     }
     const csrfToken = resolveCsrfToken()
     if (csrfToken) {
+      headers['X-CSRF-TOKEN'] = csrfToken
       headers['X-CSRFToken'] = csrfToken
     }
     const reviewId = userReview.value?.id
@@ -433,6 +434,7 @@ const performReviewDelete = async () => {
     }
     const csrfToken = resolveCsrfToken()
     if (csrfToken) {
+      headers['X-CSRF-TOKEN'] = csrfToken
       headers['X-CSRFToken'] = csrfToken
     }
     const response = await fetch(

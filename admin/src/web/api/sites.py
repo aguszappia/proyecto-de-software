@@ -107,6 +107,19 @@ class AuthError(RuntimeError):
         super().__init__(message)
 
 
+def _get_site_or_404(site_id: int):
+    """
+    Devuelve el sitio solo si existe y está visible para el portal público.
+    Retorna None cuando no corresponde mostrarlo.
+    """
+    site = get_site(site_id)
+    if not site:
+        return None
+    if not site.get("is_visible", False):
+        return None
+    return site
+
+
 def _serialize_flag_state(
     flag,
     *,
