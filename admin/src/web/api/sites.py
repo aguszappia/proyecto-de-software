@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 import unicodedata
 from typing import Dict, List, Optional
 
@@ -58,6 +59,8 @@ from src.web.controllers.sites import images_helpers
 
 DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 100
+DEFAULT_REVIEWS_PER_PAGE = 25
+MAX_REVIEWS_PER_PAGE = 25
 VALID_ORDER_CHOICES = {
     "rating-5-1",
     "rating-1-5",
@@ -704,8 +707,21 @@ def list_site_reviews(site_id: int):
         site = _get_site_or_404(site_id)
         if not site:
             return _error_response(404, "not_found", "Site not found")
+
+        page = _parse_int_arg("page", default=1, minimum=1) or 1
+        per_page = _parse_int_arg(
+            "per_page",
+            default=DEFAULT_REVIEWS_PER_PAGE,
+            minimum=1,
+            maximum=MAX_REVIEWS_PER_PAGE,
+        ) or DEFAULT_REVIEWS_PER_PAGE
+
         user = _require_api_user(optional=True)
-        approved_reviews = list_public_reviews_for_site(site_id)
+        approved_reviews, total_reviews, current_page = list_public_reviews_for_site(
+            site_id,
+            page=page,
+            per_page=per_page,
+        )
         stats = get_public_review_stats(site_id)
         reviews_payload = review_list_schema.dump(approved_reviews)
         user_review_payload = None
@@ -713,11 +729,18 @@ def list_site_reviews(site_id: int):
             user_review = find_review_by_user(site_id, user.id)
             if user_review:
                 user_review_payload = review_schema.dump(user_review)
+        total_pages = max(1, math.ceil(total_reviews / per_page)) if per_page else 1
         payload = {
             "data": {
                 "reviews": reviews_payload,
                 "stats": stats,
                 "user_review": user_review_payload,
+                "pagination": {
+                    "page": current_page,
+                    "per_page": per_page,
+                    "total": total_reviews,
+                    "pages": total_pages,
+                },
             }
         }
         return jsonify(payload), 200
