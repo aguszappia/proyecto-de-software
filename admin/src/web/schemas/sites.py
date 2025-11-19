@@ -23,6 +23,7 @@ class SiteSchema(Schema):
     visits = fields.Int()
     average_rating = fields.Float(allow_none=True)
     total_reviews = fields.Int(allow_none=True)
+    images = fields.Method("get_images")
 
     def _get_value(self, obj, attr, default=None):
         if isinstance(obj, dict):
@@ -75,6 +76,48 @@ class SiteSchema(Schema):
 
     def get_cover_image_title(self, obj):
         return self._get_value(obj, "cover_image_title")
+
+    def get_images(self, obj):
+        images = self._get_value(obj, "images") or []
+        serialized = []
+        for entry in images:
+            if entry is None:
+                continue
+            if isinstance(entry, dict):
+                url = entry.get("src") or entry.get("url") or entry.get("image_url")
+                if not url:
+                    continue
+                title = entry.get("title") or entry.get("alt")
+                serialized.append(
+                    {
+                        "id": entry.get("id"),
+                        "url": url,
+                        "src": url,
+                        "title": title,
+                        "alt": entry.get("alt") or title,
+                        "description": entry.get("description"),
+                        "order_index": entry.get("order_index"),
+                        "is_cover": entry.get("is_cover", False),
+                    },
+                )
+                continue
+            url = getattr(entry, "url", None)
+            if not url:
+                continue
+            title = getattr(entry, "title", None)
+            serialized.append(
+                {
+                    "id": getattr(entry, "id", None),
+                    "url": url,
+                    "src": url,
+                    "title": title,
+                    "alt": title,
+                    "description": getattr(entry, "description", None),
+                    "order_index": getattr(entry, "order_index", None),
+                    "is_cover": getattr(entry, "is_cover", False),
+                },
+            )
+        return serialized
 
 
 site_schema = SiteSchema(many=True)
