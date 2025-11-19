@@ -47,6 +47,16 @@ const CONSERVATION_STATUSES = [
   'Malo',
 ]
 
+const SITES_PER_PAGE = 20
+
+const toPositiveInt = (value, fallback) => {
+  const parsed = Number.parseInt(value ?? '', 10)
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed
+  }
+  return fallback
+}
+
 const activeFilters = computed(() => ({
   q: route.query.q || route.query.search || '',
   city: route.query.city || '',
@@ -64,6 +74,8 @@ const activeFilters = computed(() => ({
     : route.query.tags
       ? [route.query.tags]
       : [],
+  page: toPositiveInt(route.query.page, 1),
+  per_page: toPositiveInt(route.query.per_page, SITES_PER_PAGE),
 }))
 
 const sites = ref([])
@@ -74,6 +86,12 @@ const tagsDropdownOpen = ref(false)
 const tagsDropdownRef = ref(null)
 const showingMap = ref(route.query.view === 'map')
 const showAuthPrompt = ref(false)
+const pagination = ref({
+  page: 1,
+  per_page: SITES_PER_PAGE,
+  total: 0,
+  pages: 1,
+})
 
 const formFilters = ref({
   q: '',
@@ -84,14 +102,22 @@ const formFilters = ref({
   sort_by: 'created_at',
   sort_dir: 'desc',
   tags: [],
+  page: 1,
 })
 
 watch(
   activeFilters,
   (value) => {
     formFilters.value = {
-      ...value,
+      q: value.q || '',
+      city: value.city || '',
+      province: value.province || '',
+      conservation_status: value.conservation_status || '',
+      favorites: value.favorites || false,
+      sort_by: value.sort_by,
+      sort_dir: value.sort_dir,
       tags: [...value.tags],
+      page: value.page || 1,
     }
   },
   { immediate: true },
@@ -161,6 +187,23 @@ const preparedSites = computed(() =>
   })),
 )
 
+const paginationRangeLabel = computed(() => {
+  const total = pagination.value.total || 0
+  if (!total) {
+    return 'Sin resultados'
+  }
+  const perPage = pagination.value.per_page || SITES_PER_PAGE
+  const currentPage = pagination.value.page || 1
+  const start = (currentPage - 1) * perPage + 1
+  const end = Math.min(total, start + perPage - 1)
+  return `Mostrando ${start} – ${end} de ${total}`
+})
+
+const canGoPrevPage = computed(() => (pagination.value.page || 1) > 1)
+const canGoNextPage = computed(
+  () => (pagination.value.page || 1) < (pagination.value.pages || 1),
+)
+
 const buildQueryString = (filters) => {
   const params = new URLSearchParams()
   if (filters.city) params.set('city', filters.city)
@@ -173,8 +216,9 @@ const buildQueryString = (filters) => {
   filters.tags?.forEach((tag) => {
     if (tag) params.append('tags', tag)
   })
-  params.set('page', '1')
-  params.set('per_page', '20')
+  const resolvedPage = toPositiveInt(filters.page, 1)
+  params.set('page', String(resolvedPage))
+  params.set('per_page', String(filters.per_page || SITES_PER_PAGE))
   return params.toString()
 }
 
@@ -277,8 +321,52 @@ watchEffect(async () => {
       is_favorite: site.is_favorite ?? site.isFavorite ?? false,
     }))
     sites.value = mappedItems
+
+    const meta = payload?.meta || {}
+    const totalItemsRaw = Number(meta.total)
+    const resolvedTotal = Number.isFinite(totalItemsRaw) ? totalItemsRaw : rawItems.length
+    const perPageRaw = Number(meta.per_page)
+    const resolvedPerPage =
+      Number.isFinite(perPageRaw) && perPageRaw > 0 ? perPageRaw : filters.per_page || SITES_PER_PAGE
+    const metaPagesRaw = Number(meta.pages)
+    const resolvedPages =
+      Number.isFinite(metaPagesRaw) && metaPagesRaw > 0
+        ? metaPagesRaw
+        : Math.max(1, Math.ceil((resolvedTotal || 0) / resolvedPerPage))
+    const metaPageRaw = Number(meta.page)
+    const currentPage =
+      Number.isFinite(metaPageRaw) && metaPageRaw > 0 ? metaPageRaw : filters.page || 1
+
+    if (currentPage > resolvedPages) {
+      const targetPage = Math.max(1, resolvedPages)
+      const nextQuery = serializeFilters(activeFilters.value, {
+        includePage: true,
+        page: targetPage,
+      })
+      if (route.query.view === 'map') {
+        nextQuery.view = 'map'
+      }
+      router.push({
+        name: 'sites',
+        query: nextQuery,
+      })
+      return
+    }
+
+    pagination.value = {
+      page: currentPage,
+      per_page: resolvedPerPage,
+      total: resolvedTotal,
+      pages: resolvedPages,
+    }
   } catch (err) {
     error.value = err.message || 'No se pudo obtener la información'
+    pagination.value = {
+      page: 1,
+      per_page: SITES_PER_PAGE,
+      total: 0,
+      pages: 1,
+    }
   } finally {
     loading.value = false
   }
@@ -304,7 +392,7 @@ const stopFavoritesActionHook = favoritesStore.$onAction(({ name, args, after })
   })
 })
 
-const serializeFilters = (filters) => {
+const serializeFilters = (filters, options = {}) => {
   const query = {}
   if (filters.q) query.q = filters.q
   if (filters.city) query.city = filters.city
@@ -314,11 +402,15 @@ const serializeFilters = (filters) => {
   if (filters.sort_dir && filters.sort_dir !== 'desc') query.sort_dir = filters.sort_dir
   if (filters.favorites) query.favorites = '1'
   if (filters.tags?.length) query.tags = filters.tags
+  const resolvedPage = options.page ?? filters.page ?? 1
+  if (options.includePage || resolvedPage > 1) {
+    query.page = String(resolvedPage)
+  }
   return query
 }
 
 const handleFiltersSubmit = () => {
-  const nextQuery = serializeFilters(formFilters.value)
+  const nextQuery = serializeFilters(formFilters.value, { includePage: true, page: 1 })
   if (showingMap.value) {
     nextQuery.view = 'map'
   }
@@ -329,7 +421,21 @@ const handleFiltersSubmit = () => {
 }
 
 const handleFiltersReset = () => {
-  const query = showingMap.value ? { view: 'map' } : {}
+  const baseQuery = serializeFilters(
+    {
+      q: '',
+      city: '',
+      province: '',
+      conservation_status: '',
+      favorites: false,
+      sort_by: 'created_at',
+      sort_dir: 'desc',
+      tags: [],
+      page: 1,
+    },
+    { includePage: true, page: 1 },
+  )
+  const query = showingMap.value ? { ...baseQuery, view: 'map' } : baseQuery
   router.push({ name: 'sites', query })
 }
 
@@ -514,6 +620,33 @@ const handleAuthPromptLogin = () => {
   showAuthPrompt.value = false
   const nextUrl = buildAbsoluteUrl({ name: 'site-create' })
   auth.loginWithGoogle(nextUrl)
+}
+
+const goToPage = (targetPage) => {
+  const totalPages = pagination.value.pages || 1
+  const safeTarget = Math.min(Math.max(1, targetPage), totalPages)
+  if (safeTarget === (pagination.value.page || 1)) {
+    return
+  }
+  const nextQuery = serializeFilters(activeFilters.value, {
+    includePage: true,
+    page: safeTarget,
+  })
+  if (showingMap.value || route.query.view === 'map') {
+    nextQuery.view = 'map'
+  }
+  router.push({
+    name: 'sites',
+    query: nextQuery,
+  })
+}
+
+const handlePrevPage = () => {
+  goToPage((pagination.value.page || 1) - 1)
+}
+
+const handleNextPage = () => {
+  goToPage((pagination.value.page || 1) + 1)
 }
 
 watch(
@@ -780,6 +913,30 @@ watch(
               :key="site.id || site.name"
               :site="site"
             />
+          </div>
+          <div
+            v-if="!showingMap && pagination.total > pagination.per_page"
+            class="listing__pagination"
+          >
+            <button
+              class="secondary-button"
+              type="button"
+              :disabled="!canGoPrevPage || loading"
+              @click="handlePrevPage"
+            >
+              Anterior
+            </button>
+            <span class="listing__pagination-info">
+              {{ paginationRangeLabel }} (página {{ pagination.page }} de {{ pagination.pages }})
+            </span>
+            <button
+              class="secondary-button"
+              type="button"
+              :disabled="!canGoNextPage || loading"
+              @click="handleNextPage"
+            >
+              Siguiente
+            </button>
           </div>
         </template>
       </template>
