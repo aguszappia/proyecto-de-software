@@ -92,6 +92,18 @@ def _ensure_visits_column():
     _VISITS_COLUMN_CHECKED = True
 
 
+def _increment_site_visit(site):
+    """Suma una visita al sitio de forma tolerante a fallas."""
+    try:
+        current = getattr(site, "visits", 0) or 0
+        site.visits = current + 1
+        db.session.add(site)
+        db.session.commit()
+    except Exception:
+        # No interrumpimos la experiencia del usuario por fallar en analytics.
+        db.session.rollback()
+
+
 class QueryParamError(ValueError):
     """Error amigable para indicar problemas con parámetros de query."""
 
