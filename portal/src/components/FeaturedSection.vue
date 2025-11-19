@@ -215,6 +215,10 @@ const goToNextPage = () => {
       </button>
     </div>
 
+    <p v-else class="featured__empty">
+      {{ emptyMessage }}
+    </p>
+
     <div v-if="showRemotePagination" class="featured__pagination">
       <button
         class="secondary-button"
@@ -236,9 +240,5 @@ const goToNextPage = () => {
         Siguientes
       </button>
     </div>
-
-    <p v-else class="featured__empty">
-      {{ emptyMessage }}
-    </p>
   </section>
 </template>
