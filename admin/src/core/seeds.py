@@ -4,6 +4,7 @@ from src.core.database import db
 from src.core.users import UserRole
 from src.core.users import service as user_service
 from src.core.sites import service as sites_service
+from src.core.sites import tags_service
 from src.core.sites.models import Historic_Site, ReviewStatus, SiteReview
 from src.core.flags import service as flags_service
 from src.core.permissions import service as permissions_service
@@ -102,6 +103,76 @@ def run():
 
     print(f"Seeds de usuarios cargada")
 
+    # Seeds de etiquetas iniciales
+    default_tags = [
+        "Patrimonio",
+        "Colonial",
+        "Moderno",
+        "Religioso",
+        "Cultural",
+        "Arqueológico",
+        "Rupestre",
+        "Originario",
+        "Histórico",
+        "Turístico",
+        "Museo",
+        "Monumento",
+        "Natural",
+        "Cívico",
+        "Ingeniería",
+        "Jesuita",
+        "UNESCO",
+        "Identidad",
+        "Urbano",
+        "Piedra",
+        "Monumental",
+        "Ceremonial",
+        "Educativo",
+        "Fotografía",
+        "Emblemático",
+        "Público",
+        "Mirador",
+        "Verde",
+        "Conservación",
+        "Rural",
+    ]
+
+    existing_tag_names = {tag["name"].lower() for tag in tags_service.list_tags()}
+    for tag_name in default_tags:
+        normalized = tag_name.strip()
+        if not normalized:
+            continue
+        lowered = normalized.lower()
+        if lowered in existing_tag_names:
+            print(f"[SEED WARN] etiqueta {normalized} ya existe")
+            continue
+        success, tag, errors = tags_service.create_tag(normalized)
+        if success:
+            existing_tag_names.add(lowered)
+            print(f"[SEED OK] etiqueta {tag.name}")
+        else:
+            print(f"[SEED ERROR] etiqueta {normalized}: {errors}")
+
+    tag_lookup = {tag["name"].lower(): tag["id"] for tag in tags_service.list_tags()}
+
+    def resolve_tag_ids(tag_names):
+        resolved = []
+        if not tag_names:
+            return resolved
+        for raw_name in tag_names:
+            normalized = (raw_name or "").strip()
+            if not normalized:
+                continue
+            lookup_key = normalized.lower()
+            tag_id = tag_lookup.get(lookup_key)
+            if tag_id is None:
+                print(f"[SEED WARN] etiqueta {normalized} no existe, no se asignará al sitio.")
+                continue
+            if tag_id not in resolved:
+                resolved.append(tag_id)
+        return resolved
+    print(f"Seeds de etiquetas cargada")
+    
     # Seeds de sitios históricos 
     historic_sites = [
         {
@@ -120,6 +191,7 @@ def run():
             "inaguration_year": 1725,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Histórico", "Colonial", "Patrimonio"],
         },
         {
             "name": "Puente Viejo",
@@ -137,6 +209,7 @@ def run():
             "inaguration_year": 1890,
             "category": "Infraestructura",
             "is_visible": True,
+            "tag_names": ["Ingeniería", "Piedra", "Histórico", "Emblemático"],
         },
         {
             "name": "Sitio Arqueológico Las Piedras",
@@ -150,6 +223,7 @@ def run():
             "inaguration_year": 1200,
             "category": "Sitio arqueológico",
             "is_visible": False,
+            "tag_names": ["Arqueológico", "Originario", "Rupestre", "Ceremonial"],
         },
         {
             "name": "Casa Rosada",
@@ -167,6 +241,7 @@ def run():
             "inaguration_year": 1898,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Patrimonio", "Histórico", "Urbano", "Emblemático"],
         },
         {
             "name": "Cabildo de Córdoba",
@@ -184,6 +259,7 @@ def run():
             "inaguration_year": 1610,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Colonial", "Histórico", "Patrimonio"],
         },
         {
             "name": "Ruinas de San Ignacio Miní",
@@ -218,6 +294,7 @@ def run():
             "inaguration_year": 1610,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Jesuita", "Patrimonio", "Cultural"],
         },
         {
             "name": "Puente Viejo de Luján",
@@ -235,6 +312,7 @@ def run():
             "inaguration_year": 1772,
             "category": "Infraestructura",
             "is_visible": True,
+            "tag_names": ["Ingeniería", "Piedra", "Histórico"],
         },
         {
             "name": "Basílica de Luján",
@@ -252,6 +330,7 @@ def run():
             "inaguration_year": 1910,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Religioso", "Monumental", "Patrimonio"],
         },
         {
             "name": "Parque Nacional Iguazú – Sector Histórico",
@@ -269,6 +348,7 @@ def run():
             "inaguration_year": 1934,
             "category": "Otro",
             "is_visible": True,
+            "tag_names": ["Natural", "Turístico", "Patrimonio"],
         },
         {
             "name": "Cabildo de Salta",
@@ -286,6 +366,7 @@ def run():
             "inaguration_year": 1789,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Colonial", "Histórico", "Cultural"],
         },
         {
             "name": "Convento San Francisco",
@@ -303,6 +384,7 @@ def run():
             "inaguration_year": 1625,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Colonial", "Religioso", "Patrimonio"],
         },
         {
             "name": "Estancia Santa Catalina",
@@ -320,6 +402,7 @@ def run():
             "inaguration_year": 1750,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Jesuita", "Colonial", "Patrimonio"],
         },
         {
             "name": "Casa Histórica de Tucumán",
@@ -337,6 +420,7 @@ def run():
             "inaguration_year": 1760,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Patrimonio", "Histórico", "Identidad"],
         },
         {
             "name": "Molino Forclaz",
@@ -354,6 +438,7 @@ def run():
             "inaguration_year": 1888,
             "category": "Infraestructura",
             "is_visible": True,
+            "tag_names": ["Ingeniería", "Patrimonio", "Rural"],
         },
         {
             "name": "Faro del Fin del Mundo",
@@ -371,6 +456,7 @@ def run():
             "inaguration_year": 1884,
             "category": "Infraestructura",
             "is_visible": True,
+            "tag_names": ["Emblemático", "Patrimonio", "Turístico"],
         },
         {
             "name": "Palacio Barolo",
@@ -388,6 +474,7 @@ def run():
             "inaguration_year": 1923,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Urbano", "Monumental", "Moderno"],
         },
         {
             "name": "Teatro Colón",
@@ -405,6 +492,7 @@ def run():
             "inaguration_year": 1908,
             "category": "Arquitectura",
             "is_visible": True,
+            "tag_names": ["Cultural", "Monumental", "Emblemático"],
         },
         {
             "name": "Monumento a la Bandera",
@@ -422,6 +510,7 @@ def run():
             "inaguration_year": 1957,
             "category": "Otro",
             "is_visible": True,
+            "tag_names": ["Monumento", "Identidad", "Patrimonio"],
         },
         {
             "name": "Estación Retiro – Mitre",
@@ -439,6 +528,7 @@ def run():
             "inaguration_year": 1915,
             "category": "Infraestructura",
             "is_visible": True,
+            "tag_names": ["Urbano", "Ingeniería", "Histórico"],
         },
         {
             "name": "Paseo del Buen Pastor",
@@ -456,6 +546,7 @@ def run():
             "inaguration_year": 1906,
             "category": "Otro",
             "is_visible": True,
+            "tag_names": ["Urbano", "Cultural", "Público"],
         },
         {
             "name": "Museo del Fin del Mundo",
@@ -473,6 +564,7 @@ def run():
             "inaguration_year": 1903,
             "category": "Otro",
             "is_visible": True,
+            "tag_names": ["Museo", "Histórico", "Cultural"],
         },
         {
             "name": "Fuerte del Carmen",
@@ -509,6 +601,7 @@ def run():
             "inaguration_year": 1100,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Arqueológico", "Originario", "Patrimonio"],
         },
         {
             "name": "Ruinas de Quilmes",
@@ -526,6 +619,7 @@ def run():
             "inaguration_year": 850,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Arqueológico", "Originario", "Patrimonio"],
         },
         {
             "name": "Cuevas de las Manos",
@@ -543,6 +637,7 @@ def run():
             "inaguration_year": 0,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Rupestre", "Arqueológico", "Patrimonio"],
         },
         {
             "name": "Cerro El Sombrero – Sitio Ceremonial",
@@ -560,6 +655,7 @@ def run():
             "inaguration_year": 1000,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Ceremonial", "Arqueológico", "Originario"],
         },
         {
             "name": "Pueblo Viejo de La Candelaria",
@@ -577,6 +673,7 @@ def run():
             "inaguration_year": 1200,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Arqueológico", "Originario"],
         },
         {
             "name": "Complejo Arqueológico Los Amarillos",
@@ -594,6 +691,7 @@ def run():
             "inaguration_year": 1000,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Arqueológico", "Originario"],
         },
         {
             "name": "Alero Charcamata",
@@ -611,6 +709,7 @@ def run():
             "inaguration_year": 0,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Rupestre", "Arqueológico", "Natural"],
         },
         {
             "name": "Agua de la Cueva",
@@ -628,6 +727,7 @@ def run():
             "inaguration_year": 0,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Arqueológico", "Rupestre"],
         },
         {
             "name": "Shincal de Quimivil",
@@ -645,6 +745,7 @@ def run():
             "inaguration_year": 1470,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Arqueológico", "Ceremonial", "Patrimonio"],
         },
         {
             "name": "Petroglifos de La Tunita",
@@ -662,6 +763,7 @@ def run():
             "inaguration_year": 0,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Rupestre", "Arqueológico"],
         },
 
 
@@ -681,8 +783,14 @@ def run():
             "inaguration_year": 0,
             "category": "Sitio arqueológico",
             "is_visible": True,
+            "tag_names": ["Natural", "Arqueológico", "Turístico"],
         },
     ]
+
+    for site in historic_sites:
+        tag_names = site.pop("tag_names", None)
+        if tag_names:
+            site["tag_ids"] = resolve_tag_ids(tag_names)
 
     existing_names = {site.get("name") for site in sites_service.list_sites()} if hasattr(sites_service, "list_sites") else set()
 

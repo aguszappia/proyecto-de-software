@@ -71,6 +71,13 @@ const normalizeSite = (payload) => {
     longitude: typeof payload.long === 'number' ? payload.long : payload.longitude ?? null,
     updatedAt: payload.updated_at || payload.inserted_at || null,
     images: galleryImages,
+    category: payload.category || payload.site_category || null,
+    inaugurationYear:
+      payload.inaguration_year ??
+      payload.inauguration_year ??
+      payload.inaugurationYear ??
+      payload.year_of_inauguration ??
+      null,
     isFavorite: payload.is_favorite ?? payload.isFavorite ?? false,
   }
 }
@@ -664,6 +671,15 @@ const locationLabel = computed(() => {
   return city || province || 'Ubicación pendiente'
 })
 
+const categoryLabel = computed(() => site.value?.category || '')
+const inaugurationYearLabel = computed(() => {
+  const raw = site.value?.inaugurationYear
+  if (raw === undefined || raw === null || raw === '') {
+    return ''
+  }
+  return raw
+})
+
 const hasDescription = computed(
   () => Boolean(site.value?.shortDescription) || Boolean(site.value?.fullDescription),
 )
@@ -797,6 +813,16 @@ const handleRetry = () => {
           <p class="view-panel__subtitle">Sitio seleccionado</p>
           <h1>{{ site.name }}</h1>
           <p class="site-detail__location">{{ locationLabel }}</p>
+          <div v-if="categoryLabel || inaugurationYearLabel" class="site-detail__secondary-meta">
+            <p v-if="categoryLabel">
+              <strong>Categoría:</strong>
+              {{ categoryLabel }}
+            </p>
+            <p v-if="inaugurationYearLabel">
+              <strong>Año de inauguración:</strong>
+              {{ inaugurationYearLabel }}
+            </p>
+          </div>
           <button
             v-if="site.id"
             class="detail-favorite-icon"
