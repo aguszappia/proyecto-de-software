@@ -748,16 +748,22 @@ watch(
                 :lat-lng="[site.latitude, site.longitude]"
               >
                 <l-popup>
-                  <strong>{{ site.name }}</strong>
-                  <p>{{ site.city ? `${site.city}, ${site.province}` : site.province }}</p>
-                  <p v-if="site.summary">{{ site.summary }}</p>
-                  <RouterLink
-                    v-if="site.id"
-                    class="map-popup__link"
-                    :to="{ name: 'site-detail', params: { id: site.id } }"
-                  >
-                    Ver detalle
-                  </RouterLink>
+                  <div class="map-popup">
+                    <p class="map-popup__name">{{ site.name }}</p>
+                    <p v-if="site.city || site.province" class="map-popup__location">
+                      {{ [site.city, site.province].filter(Boolean).join(', ') }}
+                    </p>
+                    <p v-if="site.summary" class="map-popup__summary">
+                      {{ site.summary }}
+                    </p>
+                    <RouterLink
+                      v-if="site.id"
+                      class="map-popup__link"
+                      :to="{ name: 'site-detail', params: { id: site.id } }"
+                    >
+                      Ver detalle
+                    </RouterLink>
+                  </div>
                 </l-popup>
               </l-marker>
             </l-map>
