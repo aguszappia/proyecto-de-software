@@ -32,11 +32,21 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  refreshing: {
+    type: Boolean,
+    default: false,
+  },
   skeletonItems: {
     type: Number,
     default: 3,
   },
+  pagination: {
+    type: Object,
+    default: null,
+  },
 })
+
+const emit = defineEmits(['request-prev-page', 'request-next-page'])
 
 const ITEMS_PER_PAGE = 3
 const PLACEHOLDER_COUNT = ITEMS_PER_PAGE
@@ -44,7 +54,9 @@ const currentPage = ref(0)
 const isMobile = ref(false)
 let mediaQuery
 
-const showSkeletons = computed(() => props.loading)
+const showSkeletons = computed(
+  () => props.loading && (!props.items || props.items.length === 0),
+)
 const hasItems = computed(() => props.items && props.items.length > 0)
 const totalPages = computed(() =>
   !props.items || props.items.length === 0 ? 0 : Math.ceil(props.items.length / ITEMS_PER_PAGE),
@@ -54,6 +66,35 @@ const showPrevButton = computed(() => !isMobile.value && needsCarousel.value && 
 const showNextButton = computed(
   () => !isMobile.value && needsCarousel.value && currentPage.value < totalPages.value - 1,
 )
+
+const showRemotePagination = computed(() => {
+  const data = props.pagination
+  return Boolean(data && data.pages && data.pages > 1)
+})
+
+const canRemotePrev = computed(() => {
+  if (!showRemotePagination.value) {
+    return false
+  }
+  return (props.pagination?.page || 1) > 1
+})
+
+const canRemoteNext = computed(() => {
+  if (!showRemotePagination.value) {
+    return false
+  }
+  return (props.pagination?.page || 1) < (props.pagination?.pages || 1)
+})
+
+const paginationLabel = computed(() => {
+  if (!showRemotePagination.value) {
+    return ''
+  }
+  return (
+    props.pagination?.label ||
+    `Página ${props.pagination?.page || 1} de ${props.pagination?.pages || 1}`
+  )
+})
 
 const pageItems = computed(() => {
   const items = props.items || []
@@ -136,7 +177,11 @@ const goToNextPage = () => {
       <article v-for="index in skeletonItems" :key="index" class="featured__skeleton" />
     </div>
 
-    <div v-else-if="hasItems" class="featured__grid-wrapper">
+    <div
+      v-else-if="hasItems"
+      class="featured__grid-wrapper"
+      :class="{ 'featured__grid-wrapper--refreshing': refreshing }"
+    >
       <button
         v-if="showPrevButton"
         type="button"
@@ -156,6 +201,9 @@ const goToNextPage = () => {
           <div v-else class="site-card site-card--placeholder"></div>
         </div>
       </div>
+      <div v-if="refreshing" class="featured__overlay" aria-live="polite">
+        Actualizando…
+      </div>
       <button
         v-if="showNextButton"
         type="button"
@@ -170,5 +218,27 @@ const goToNextPage = () => {
     <p v-else class="featured__empty">
       {{ emptyMessage }}
     </p>
+
+    <div v-if="showRemotePagination" class="featured__pagination">
+      <button
+        class="secondary-button"
+        type="button"
+        :disabled="!canRemotePrev || loading"
+        @click="emit('request-prev-page')"
+      >
+        Anteriores
+      </button>
+      <span class="featured__pagination-info">
+        {{ paginationLabel }}
+      </span>
+      <button
+        class="secondary-button"
+        type="button"
+        :disabled="!canRemoteNext || loading"
+        @click="emit('request-next-page')"
+      >
+        Siguientes
+      </button>
+    </div>
   </section>
 </template>

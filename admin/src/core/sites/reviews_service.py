@@ -12,8 +12,10 @@ from src.core.database import db
 from src.core.pagination import Pagination
 from src.core.sites.models import Historic_Site, ReviewStatus, SiteImage, SiteReview
 from src.core.users.models import User
+import math
 
 MAX_REJECTION_LENGTH = 200
+MAX_PUBLIC_REVIEWS_PER_PAGE = 25
 
 
 @dataclass
@@ -195,9 +197,15 @@ def _attach_author(review: SiteReview, first_name: Optional[str], last_name: Opt
     return review
 
 
-def list_public_reviews_for_site(site_id: int) -> List[SiteReview]:
-    """Devuelvo las reseñas aprobadas de un sitio para el portal público."""
-    reviews: List[SiteReview] = []
+def list_public_reviews_for_site(
+    site_id: int,
+    *,
+    page: int = 1,
+    per_page: int = MAX_PUBLIC_REVIEWS_PER_PAGE,
+) -> Tuple[List[SiteReview], int, int]:
+    """Devuelvo las reseñas aprobadas de un sitio con paginación para el portal público."""
+
+    clean_per_page = max(1, min(per_page, MAX_PUBLIC_REVIEWS_PER_PAGE))
     query = (
         db.session.query(SiteReview, User.first_name, User.last_name)
         .outerjoin(User, User.id == SiteReview.user_id)
@@ -207,9 +215,18 @@ def list_public_reviews_for_site(site_id: int) -> List[SiteReview]:
         )
         .order_by(SiteReview.created_at.desc())
     )
-    for review, first_name, last_name in query.all():
+    total = query.order_by(None).count()
+    total_pages = max(1, math.ceil(total / clean_per_page)) if total else 1
+    clean_page = max(1, min(page, total_pages))
+    rows = (
+        query.limit(clean_per_page)
+        .offset((clean_page - 1) * clean_per_page)
+        .all()
+    )
+    reviews: List[SiteReview] = []
+    for review, first_name, last_name in rows:
         reviews.append(_attach_author(review, first_name, last_name))
-    return reviews
+    return reviews, total, clean_page
 
 
 def get_public_review_stats(site_id: int) -> Dict[str, object]:

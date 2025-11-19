@@ -12,6 +12,8 @@ const router = useRouter()
 const auth = useAuthStore()
 const favoritesStore = useFavoritesStore()
 
+const SECTION_PAGE_SIZE = 20
+
 const isAuthenticated = computed(() => auth.isAuthenticated)
 
 const sectionsConfig = [
@@ -23,6 +25,7 @@ const sectionsConfig = [
     emptyMessage: 'Todavía no registramos sitios populares aquí.',
     skeletonItems: 3,
     orderBy: 'visits',
+    perPage: SECTION_PAGE_SIZE,
   },
   {
     key: 'topRated',
@@ -32,6 +35,7 @@ const sectionsConfig = [
     emptyMessage: 'Aún no hay calificaciones cargadas.',
     skeletonItems: 3,
     orderBy: 'rating-5-1',
+    perPage: SECTION_PAGE_SIZE,
   },
   {
     key: 'recent',
@@ -41,6 +45,7 @@ const sectionsConfig = [
     emptyMessage: 'Pronto verás novedades aquí.',
     skeletonItems: 3,
     orderBy: 'latest',
+    perPage: SECTION_PAGE_SIZE,
   },
   {
     key: 'favorites',
@@ -52,6 +57,7 @@ const sectionsConfig = [
     skeletonItems: 3,
     orderBy: 'latest',
     filter: 'favorites',
+    perPage: SECTION_PAGE_SIZE,
   },
 ]
 
@@ -60,8 +66,15 @@ const sectionsState = reactive(
     acc[config.key] = {
       items: [],
       loading: false,
+      refreshing: false,
       loaded: false,
       error: null,
+      pagination: {
+        page: 1,
+        per_page: config?.perPage ?? SECTION_PAGE_SIZE,
+        total: 0,
+        pages: 1,
+      },
     }
     return acc
   }, {}),
@@ -161,10 +174,14 @@ const resolveNumericRating = (site) => {
   return null
 }
 
-const fetchSitesForSection = async (sectionKey) => {
+const fetchSitesForSection = async (sectionKey, { page, perPage } = {}) => {
   const config = sectionsConfig.find((section) => section.key === sectionKey)
+  if (!config) {
+    return { items: [], meta: { page: 1, per_page: perPage || SECTION_PAGE_SIZE, total: 0, pages: 1 } }
+  }
+
   if (config?.highlightEndpoint) {
-    const limit = config.highlightLimit ?? config.skeletonItems ?? 3
+    const limit = config.highlightLimit ?? config.skeletonItems ?? perPage ?? SECTION_PAGE_SIZE
     const response = await fetch(
       `${API_BASE_URL}${config.highlightEndpoint}?limit=${encodeURIComponent(limit)}`,
       { credentials: 'include' },
@@ -173,13 +190,22 @@ const fetchSitesForSection = async (sectionKey) => {
       throw new Error('No se pudieron cargar los sitios destacados.')
     }
     const payload = await response.json()
-    return Array.isArray(payload?.data) ? payload.data : []
+    const data = Array.isArray(payload?.data) ? payload.data : []
+    return {
+      items: data,
+      meta: {
+        page: 1,
+        per_page: limit,
+        total: data.length,
+        pages: 1,
+      },
+    }
   }
 
-  const perPage = config?.perPage ?? 100
+  const resolvedPerPage = perPage ?? config?.perPage ?? SECTION_PAGE_SIZE
   const params = new URLSearchParams({
-    page: '1',
-    per_page: String(perPage),
+    page: String(page ?? 1),
+    per_page: String(resolvedPerPage),
   })
   params.set('order_by', config?.orderBy || 'latest')
   if (config?.filter) {
@@ -192,32 +218,119 @@ const fetchSitesForSection = async (sectionKey) => {
     throw new Error('No se pudieron cargar los sitios.')
   }
   const payload = await response.json()
-  return Array.isArray(payload?.data) ? payload.data : []
+  const items = Array.isArray(payload?.data) ? payload.data : []
+  const meta = payload?.meta || {}
+  const totalRaw = Number(meta.total)
+  const perPageRaw = Number(meta.per_page)
+  const pagesRaw = Number(meta.pages)
+  const pageRaw = Number(meta.page)
+  const resolvedTotal = Number.isFinite(totalRaw) && totalRaw >= 0 ? totalRaw : items.length
+  const resolvedPerPageMeta =
+    Number.isFinite(perPageRaw) && perPageRaw > 0 ? perPageRaw : resolvedPerPage
+  const resolvedPage = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : page ?? 1
+  const resolvedPages =
+    Number.isFinite(pagesRaw) && pagesRaw > 0
+      ? pagesRaw
+      : Math.max(1, Math.ceil(resolvedTotal / resolvedPerPageMeta || 1))
+  return {
+    items,
+    meta: {
+      page: resolvedPage,
+      per_page: resolvedPerPageMeta,
+      total: resolvedTotal,
+      pages: resolvedPages,
+    },
+  }
 }
 
-const loadSection = async (sectionKey, { force = false } = {}) => {
+const loadSection = async (sectionKey, { force = false, page } = {}) => {
   const state = sectionsState[sectionKey]
-  if (!state || (!force && (state.loading || state.loaded))) {
+  const config = sectionsConfig.find((section) => section.key === sectionKey)
+  if (!state || !config) {
+    return
+  }
+  const targetPage = page ?? state.pagination.page ?? 1
+  if (!force && state.loaded && state.pagination.page === targetPage) {
+    return
+  }
+  if (state.loading || state.refreshing) {
     return
   }
 
-  state.loading = true
+  const isInitialLoad = !state.loaded
+  state.loading = isInitialLoad
+  state.refreshing = !isInitialLoad
   state.error = null
 
   try {
-    const rawItems = await fetchSitesForSection(sectionKey)
+    const { items: rawItems, meta } = await fetchSitesForSection(sectionKey, {
+      page: targetPage,
+      perPage: state.pagination.per_page ?? config.perPage ?? SECTION_PAGE_SIZE,
+    })
     if (sectionKey === 'topRated') {
       rawItems.sort((a, b) => (resolveNumericRating(b) ?? 0) - (resolveNumericRating(a) ?? 0))
     }
     favoritesStore.hydrateFromSites(rawItems)
     state.items = rawItems.map(mapSiteToCard)
     state.loaded = true
+    const nextMeta = {
+      page: meta?.page ?? targetPage,
+      per_page: meta?.per_page ?? state.pagination.per_page ?? config.perPage ?? SECTION_PAGE_SIZE,
+      total: meta?.total ?? rawItems.length,
+      pages: meta?.pages ?? 1,
+    }
+    state.pagination = nextMeta
   } catch (error) {
     state.items = []
     state.error = error.message || 'Hubo un inconveniente al cargar esta sección.'
   } finally {
     state.loading = false
+    state.refreshing = false
   }
+}
+
+const resolveSectionPagination = (sectionKey) => {
+  const state = sectionsState[sectionKey]
+  if (!state || !state.pagination) {
+    return null
+  }
+  const { page = 1, per_page: perPage = SECTION_PAGE_SIZE, total = state.items.length, pages = 1 } =
+    state.pagination
+  if (!pages || pages <= 1) {
+    return null
+  }
+  const start = (page - 1) * perPage + 1
+  const end = Math.min(total, start + (state.items.length || perPage) - 1)
+  return {
+    page,
+    pages,
+    label: `Mostrando ${start} – ${end} de ${total}`,
+  }
+}
+
+const handleSectionPrevPage = (sectionKey) => {
+  const state = sectionsState[sectionKey]
+  if (!state || state.loading) {
+    return
+  }
+  const currentPage = state.pagination?.page || 1
+  if (currentPage <= 1) {
+    return
+  }
+  loadSection(sectionKey, { force: true, page: currentPage - 1 })
+}
+
+const handleSectionNextPage = (sectionKey) => {
+  const state = sectionsState[sectionKey]
+  if (!state || state.loading) {
+    return
+  }
+  const currentPage = state.pagination?.page || 1
+  const totalPages = state.pagination?.pages || 1
+  if (currentPage >= totalPages) {
+    return
+  }
+  loadSection(sectionKey, { force: true, page: currentPage + 1 })
 }
 
 const handleHeroSearch = (term) => {
@@ -239,20 +352,22 @@ watch(
   isAuthenticated,
   (loggedIn) => {
     if (loggedIn) {
-      loadSection('favorites', { force: true })
+      loadSection('favorites', { force: true, page: 1 })
     }
   },
 )
 
 const stopFavoritesActionHook = favoritesStore.$onAction(({ name, after }) => {
-  if (name !== 'setFavorite') {
+  if (name !== 'setFavorite' && name !== 'toggleFavorite') {
     return
   }
   after(() => {
     if (!isAuthenticated.value) {
       return
     }
-    loadSection('favorites', { force: true })
+    const state = sectionsState.favorites
+    const currentPage = state?.pagination?.page || 1
+    loadSection('favorites', { force: true, page: currentPage })
   })
 })
 
@@ -286,10 +401,14 @@ onBeforeUnmount(() => {
         :subtitle="section.subtitle"
         :items="sectionsState[section.key]?.items"
         :loading="sectionsState[section.key]?.loading"
+        :refreshing="sectionsState[section.key]?.refreshing"
         :cta-label="section.ctaLabel || 'Ver todos'"
         :cta-to="buildCtaTo(section.ctaParams)"
         :empty-message="section.emptyMessage"
         :skeleton-items="section.skeletonItems || 3"
+        :pagination="resolveSectionPagination(section.key)"
+        @request-prev-page="handleSectionPrevPage(section.key)"
+        @request-next-page="handleSectionNextPage(section.key)"
       />
     </div>
   </section>

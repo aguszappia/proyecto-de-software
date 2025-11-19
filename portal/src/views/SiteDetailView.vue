@@ -102,6 +102,21 @@ const backButtonLabel = computed(() => {
 const REVIEW_MIN_LENGTH = 20
 const REVIEW_MAX_LENGTH = 1000
 const REVIEW_SCORE_OPTIONS = [1, 2, 3, 4, 5]
+const REVIEWS_PER_PAGE = 25
+
+const reviewPagination = ref({
+  page: 1,
+  per_page: REVIEWS_PER_PAGE,
+  total: 0,
+})
+
+const reviewsTotalPages = computed(() => {
+  const perPage = reviewPagination.value.per_page || REVIEWS_PER_PAGE
+  if (!perPage) {
+    return 1
+  }
+  return Math.max(1, Math.ceil((reviewPagination.value.total || 0) / perPage))
+})
 
 const normalizeReviewStatus = (value) => {
   if (!value) return ''
@@ -199,10 +214,19 @@ watch(
   { immediate: true },
 )
 
-const formattedAverage = computed(() => {
+const averageRatingValue = computed(() => {
   const value = reviewStats.value.average
   if (typeof value === 'number' && Number.isFinite(value)) {
-    return value.toFixed(1)
+    const maxScore = REVIEW_SCORE_OPTIONS[REVIEW_SCORE_OPTIONS.length - 1]
+    const minScore = REVIEW_SCORE_OPTIONS[0]
+    return Math.min(maxScore, Math.max(minScore, value))
+  }
+  return 0
+})
+
+const formattedAverage = computed(() => {
+  if (averageRatingValue.value > 0) {
+    return averageRatingValue.value.toFixed(1)
   }
   return null
 })
@@ -246,12 +270,18 @@ const handleReviewLogin = () => {
   auth.requestLoginPrompt(nextUrl)
 }
 
-const fetchSiteReviews = async (siteId) => {
+const fetchSiteReviews = async (siteId, { page } = {}) => {
   if (!siteId) return
   reviewsLoading.value = true
   reviewsError.value = ''
+  const targetPage = Math.max(1, page ?? reviewPagination.value.page ?? 1)
+  const perPage = reviewPagination.value.per_page || REVIEWS_PER_PAGE
   try {
-    const response = await fetch(`${API_BASE_URL}/sites/${siteId}/reviews`, {
+    const params = new URLSearchParams({
+      page: String(targetPage),
+      per_page: String(perPage),
+    })
+    const response = await fetch(`${API_BASE_URL}/sites/${siteId}/reviews?${params.toString()}`, {
       credentials: 'include',
       headers: {
         Accept: 'application/json',
@@ -291,6 +321,21 @@ const fetchSiteReviews = async (siteId) => {
       total: typeof parsedTotal === 'number' ? parsedTotal : normalizedList.length,
     }
 
+    const paginationMeta = data.pagination || {}
+    const resolvedTotal =
+      Number(paginationMeta.total) ||
+      statsSource.total_reviews ||
+      statsSource.count ||
+      data.total_reviews ||
+      payload?.total_reviews ||
+      normalizedList.length ||
+      0
+    reviewPagination.value = {
+      page: Number(paginationMeta.page) || targetPage,
+      per_page: Number(paginationMeta.per_page) || perPage,
+      total: Number.isFinite(resolvedTotal) ? Number(resolvedTotal) : 0,
+    }
+
     const userEntry =
       data.user_review || data.userReview || payload?.user_review || payload?.userReview || null
 
@@ -310,9 +355,31 @@ const fetchSiteReviews = async (siteId) => {
 const handleReviewRetry = () => {
   const currentId = route.params.id
   if (currentId) {
-    fetchSiteReviews(currentId)
+    fetchSiteReviews(currentId, { page: reviewPagination.value.page || 1 })
   }
 }
+
+const goToReviewsPage = (page) => {
+  if (!site.value?.id || reviewsLoading.value) {
+    return
+  }
+  const totalPages = reviewsTotalPages.value || 1
+  const target = Math.min(Math.max(1, page), totalPages)
+  fetchSiteReviews(site.value.id, { page: target })
+}
+
+const handleReviewsPrevPage = () => {
+  goToReviewsPage((reviewPagination.value.page || 1) - 1)
+}
+
+const handleReviewsNextPage = () => {
+  goToReviewsPage((reviewPagination.value.page || 1) + 1)
+}
+
+const canNavigateReviewsPrev = computed(() => (reviewPagination.value.page || 1) > 1)
+const canNavigateReviewsNext = computed(
+  () => (reviewPagination.value.page || 1) < reviewsTotalPages.value,
+)
 
 const validateReviewForm = () => {
   const errors = {}
@@ -411,7 +478,7 @@ const handleReviewSubmit = async () => {
       : 'Gracias por compartir tu reseña. La publicaremos cuando sea aprobada.'
     reviewMessage.value = successMessage
     reviewMessageType.value = 'success'
-    await fetchSiteReviews(site.value.id)
+    await fetchSiteReviews(site.value.id, { page: reviewPagination.value.page || 1 })
   } catch (error) {
     console.error('Error al guardar reseña', error)
     if (!reviewMessage.value) {
@@ -454,7 +521,7 @@ const performReviewDelete = async () => {
     }
     reviewMessage.value = 'Eliminamos tu reseña.'
     reviewMessageType.value = 'success'
-    await fetchSiteReviews(site.value.id)
+    await fetchSiteReviews(site.value.id, { page: reviewPagination.value.page || 1 })
   } catch (error) {
     console.error('Error al eliminar reseña', error)
     reviewMessage.value = 'No pudimos eliminar la reseña. Intentá nuevamente.'
@@ -526,7 +593,12 @@ watch(
   () => route.params.id,
   (newId) => {
     if (newId) {
-      fetchSiteReviews(newId)
+      reviewPagination.value = {
+        page: 1,
+        per_page: REVIEWS_PER_PAGE,
+        total: 0,
+      }
+      fetchSiteReviews(newId, { page: 1 })
     }
   },
   { immediate: true },
@@ -536,7 +608,7 @@ watch(
   () => auth.isAuthenticated,
   () => {
     if (site.value?.id) {
-      fetchSiteReviews(site.value.id)
+      fetchSiteReviews(site.value.id, { page: reviewPagination.value.page || 1 })
     }
   },
 )
@@ -808,12 +880,31 @@ const handleRetry = () => {
             <p class="view-panel__subtitle">Reseñas</p>
             <h2>Experiencias de la comunidad</h2>
           </div>
-          <div class="reviews-summary">
-            <p v-if="formattedAverage" class="reviews-summary__average">
+        <div class="reviews-summary" aria-label="Calificación promedio">
+          <template v-if="formattedAverage">
+            <p class="reviews-summary__average">
               {{ formattedAverage }}
               <span>promedio</span>
             </p>
-          </div>
+            <div class="reviews-summary__stars" aria-hidden="true">
+              <span
+                v-for="score in REVIEW_SCORE_OPTIONS"
+                :key="`average-star-${score}`"
+                class="review-star"
+                :class="{ 'review-star--filled': score <= Math.round(averageRatingValue) }"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                  />
+                </svg>
+              </span>
+            </div>
+          </template>
+          <p class="reviews-summary__total">
+            {{ reviewStats.total }} reseña{{ reviewStats.total === 1 ? '' : 's' }}
+          </p>
+        </div>
         </header>
 
         <div v-if="reviewsLoading" class="reviews-empty">
@@ -859,6 +950,32 @@ const handleRetry = () => {
         <p v-else class="reviews-empty">
           Aún no hay reseñas aprobadas para mostrar.
         </p>
+        <div
+          v-if="hasReviews && reviewsTotalPages > 1"
+          class="reviews-pagination"
+          role="navigation"
+          aria-label="Paginación de reseñas"
+        >
+          <button
+            class="secondary-button"
+            type="button"
+            :disabled="!canNavigateReviewsPrev || reviewsLoading"
+            @click="handleReviewsPrevPage"
+          >
+            Reseñas anteriores
+          </button>
+          <span class="reviews-pagination__status">
+            Página {{ reviewPagination.page }} de {{ reviewsTotalPages }}
+          </span>
+          <button
+            class="secondary-button"
+            type="button"
+            :disabled="!canNavigateReviewsNext || reviewsLoading"
+            @click="handleReviewsNextPage"
+          >
+            Reseñas siguientes
+          </button>
+        </div>
 
         <div class="review-separator" aria-hidden="true"></div>
 
