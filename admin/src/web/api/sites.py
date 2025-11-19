@@ -254,6 +254,21 @@ def _filter_by_tags(items: Iterable[Dict[str, Any]], tags: Sequence[str]) -> Lis
     return filtered
 
 
+def _filter_by_any_text(items: Iterable[Dict[str, Any]], fields: Sequence[str], needle: str) -> List[Dict[str, Any]]:
+    """Filtra si el texto aparece en alguno de los campos indicados."""
+    needle_cf = _normalize_text(needle)
+    needle_compact = needle_cf.replace(" ", "")
+    results: List[Dict[str, Any]] = []
+    for item in items:
+        for field in fields:
+            value = _normalize_text(item.get(field) or "")
+            compact = value.replace(" ", "")
+            if needle_cf in value or (needle_compact and needle_compact in compact):
+                results.append(item)
+                break
+    return results
+
+
 def _sort_sites(items: List[Dict[str, Any]], order_by: str) -> List[Dict[str, Any]]:
     if order_by not in VALID_ORDER_CHOICES:
         raise QueryParamError(
@@ -342,7 +357,7 @@ def _apply_filters(
     if description:
         filtered = _filter_by_description(filtered, description)
     if city:
-        filtered = _filter_exact(filtered, "city", city)
+        filtered = _filter_by_text(filtered, "city", city)
     if province:
         filtered = _filter_exact(filtered, "province", province)
     if tags:
@@ -609,6 +624,13 @@ def index():
             province=_normalize_text(province) if province else "",
             tags=[_normalize_text(tag) for tag in tags],
         )
+        if city and not filtered_sites:
+            # Fallback de coincidencia parcial más laxo por ciudad.
+            filtered_sites = _filter_by_any_text(
+                _filter_visible(base_sites),
+                fields=["city"],
+                needle=_normalize_text(city),
+            )
         for site in filtered_sites:
             site_id = site.get("id")
             if site_id:

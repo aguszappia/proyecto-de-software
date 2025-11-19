@@ -192,12 +192,22 @@ watchEffect(async () => {
     }
     const payload = await response.json()
     const normalizedSearch = (filters.q || '').toString().trim().toLowerCase()
+    const compactSearch = normalizedSearch.replace(/\s+/g, '')
     const normalizedCity = filters.city.trim().toLowerCase()
+    const compactCity = normalizedCity.replace(/\s+/g, '')
     const normalizedProvince = filters.province.trim().toLowerCase()
+    const compactProvince = normalizedProvince.replace(/\s+/g, '')
     const normalizedStatus = filters.conservation_status.trim().toLowerCase()
     const desiredTags = (filters.tags || []).map((tag) => tag.trim().toLowerCase()).filter(Boolean)
     const favoritesOnly = filters.favorites && auth.isAuthenticated
     const rawItems = Array.isArray(payload?.data) ? payload.data : []
+
+    const matchesText = (value) => {
+      const text = (value || '').toString().toLowerCase()
+      const compact = text.replace(/\s+/g, '')
+      if (!normalizedSearch) return true
+      return text.includes(normalizedSearch) || (!!compactSearch && compact.includes(compactSearch))
+    }
 
     const filteredItems = rawItems.filter((site) => {
       const shortDescription =
@@ -216,14 +226,23 @@ watchEffect(async () => {
 
       const matchesSearch =
         !normalizedSearch ||
-        [site.name, site.city, site.province, shortDescription, fullDescription].some(
-          (value) => typeof value === 'string' && value.toLowerCase().includes(normalizedSearch),
+        [site.name, site.city, site.province, shortDescription, fullDescription].some((value) =>
+          matchesText(value),
         )
 
+      const siteCity = (site.city || '').toString().toLowerCase()
+      const siteCityCompact = siteCity.replace(/\s+/g, '')
       const matchesCity =
-        !normalizedCity || (site.city || '').toString().toLowerCase() === normalizedCity
+        !normalizedCity ||
+        siteCity.includes(normalizedCity) ||
+        (!!compactCity && siteCityCompact.includes(compactCity))
+
+      const siteProvince = (site.province || '').toString().toLowerCase()
+      const siteProvinceCompact = siteProvince.replace(/\s+/g, '')
       const matchesProvince =
-        !normalizedProvince || (site.province || '').toString().toLowerCase() === normalizedProvince
+        !normalizedProvince ||
+        siteProvince.includes(normalizedProvince) ||
+        (!!compactProvince && siteProvinceCompact.includes(compactProvince))
       const matchesStatus = !normalizedStatus || siteStatus === normalizedStatus
       const matchesTags =
         !desiredTags.length ||
