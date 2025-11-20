@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import SiteCard from '@/components/SiteCard.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -18,14 +18,20 @@ const userReviews = ref([])
 const userReviewsLoading = ref(false)
 const userReviewsError = ref('')
 let suppressFavoriteWatch = false
-const FAVORITES_PER_PAGE = 3
-const favoritesPage = ref(0)
-const favoritesIsMobile = ref(false)
-const REVIEWS_PER_PAGE = 1
-const reviewsPage = ref(0)
-const reviewsIsMobile = ref(false)
-let favoritesMediaQuery
-let favoritesMediaHandler
+const FAVORITES_PAGE_SIZE = 25
+const REVIEWS_PAGE_SIZE = 25
+const favoritesPagination = ref({
+  page: 1,
+  per_page: FAVORITES_PAGE_SIZE,
+  total: 0,
+  pages: 1,
+})
+const reviewsPagination = ref({
+  page: 1,
+  per_page: REVIEWS_PAGE_SIZE,
+  total: 0,
+  pages: 1,
+})
 
 const GENERIC_SITE_IMAGE_URL =
   'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=60'
@@ -127,11 +133,22 @@ const handleProfileLogin = () => {
   auth.loginWithGoogle(resolvedProfileRoute.value)
 }
 
-const loadFavoriteSites = async () => {
+const goToFavoritesPage = (targetPage) => {
+  const safePage = Math.max(1, Math.min(targetPage, favoritesPagination.value.pages || targetPage))
+  loadFavoriteSites(safePage)
+}
+
+const loadFavoriteSites = async (page = 1) => {
   if (!auth.isAuthenticated) {
     favoriteSites.value = []
     favoritesError.value = ''
     favoritesLoading.value = false
+    favoritesPagination.value = {
+      page: 1,
+      per_page: FAVORITES_PAGE_SIZE,
+      total: 0,
+      pages: 1,
+    }
     return
   }
 
@@ -139,8 +156,8 @@ const loadFavoriteSites = async () => {
   favoritesError.value = ''
   const params = new URLSearchParams({
     filter: 'favorites',
-    per_page: '50',
-    page: '1',
+    per_page: String(FAVORITES_PAGE_SIZE),
+    page: String(page),
     order_by: 'latest',
   })
 
@@ -153,6 +170,13 @@ const loadFavoriteSites = async () => {
     }
     const payload = await response.json()
     const items = Array.isArray(payload?.data) ? payload.data : []
+    const meta = payload?.meta || {}
+    favoritesPagination.value = {
+      page: Number(meta.page) || page,
+      per_page: Number(meta.per_page) || FAVORITES_PAGE_SIZE,
+      total: Number(meta.total) || items.length,
+      pages: Number(meta.pages) || Math.max(1, Math.ceil((Number(meta.total) || items.length) / FAVORITES_PAGE_SIZE)),
+    }
     suppressFavoriteWatch = true
     favoritesStore.hydrateFromSites(items)
     favoriteSites.value = items.map(normalizeFavoriteSite)
@@ -168,80 +192,57 @@ const favoriteCards = computed(() =>
   favoriteSites.value.filter((site) => favoritesStore.isFavorite(site.id)),
 )
 
-const favoriteTotalPages = computed(() =>
-  favoriteCards.value.length ? Math.ceil(favoriteCards.value.length / FAVORITES_PER_PAGE) : 0,
+const favoriteCanPrev = computed(() => (favoritesPagination.value.page || 1) > 1)
+const favoriteCanNext = computed(
+  () => (favoritesPagination.value.page || 1) < (favoritesPagination.value.pages || 1),
 )
-const favoriteNeedsCarousel = computed(
-  () => !favoritesIsMobile.value && favoriteTotalPages.value > 1,
-)
-const favoriteShowPrev = computed(
-  () => favoriteNeedsCarousel.value && favoritesPage.value > 0,
-)
-const favoriteShowNext = computed(
-  () => favoriteNeedsCarousel.value && favoritesPage.value < favoriteTotalPages.value - 1,
-)
-const favoritePageItems = computed(() => {
-  const start = favoritesPage.value * FAVORITES_PER_PAGE
-  return favoriteCards.value.slice(start, start + FAVORITES_PER_PAGE)
+const favoritePaginationLabel = computed(() => {
+  const total = favoritesPagination.value.total || 0
+  if (!total) return 'Sin favoritos'
+  const page = favoritesPagination.value.page || 1
+  const pages = favoritesPagination.value.pages || 1
+  return `Mostrando ${page} de ${pages}`
 })
-const favoriteVisibleCards = computed(() =>
-  favoritesIsMobile.value ? favoriteCards.value : favoritePageItems.value,
-)
 
-const reviewsTotalPages = computed(() =>
-  userReviewList.value.length ? Math.ceil(userReviewList.value.length / REVIEWS_PER_PAGE) : 0,
+const reviewsCanPrev = computed(() => (reviewsPagination.value.page || 1) > 1)
+const reviewsCanNext = computed(
+  () => (reviewsPagination.value.page || 1) < (reviewsPagination.value.pages || 1),
 )
-const reviewsNeedsCarousel = computed(
-  () => !reviewsIsMobile.value && reviewsTotalPages.value > 1,
-)
-const reviewsShowPrev = computed(() => reviewsNeedsCarousel.value && reviewsPage.value > 0)
-const reviewsShowNext = computed(
-  () => reviewsNeedsCarousel.value && reviewsPage.value < reviewsTotalPages.value - 1,
-)
-const reviewsPageItems = computed(() => {
-  const start = reviewsPage.value * REVIEWS_PER_PAGE
-  return userReviewList.value.slice(start, start + REVIEWS_PER_PAGE)
+const reviewsPaginationLabel = computed(() => {
+  const total = reviewsPagination.value.total || 0
+  if (!total) return 'Sin reseñas'
+  const page = reviewsPagination.value.page || 1
+  const pages = reviewsPagination.value.pages || 1
+  return `Mostrando ${page} de ${pages}`
 })
-const reviewVisibleCards = computed(() =>
-  reviewsIsMobile.value ? userReviewList.value : reviewsPageItems.value,
-)
 
-const handleReviewsPrev = () => {
-  if (reviewsPage.value > 0) {
-    reviewsPage.value -= 1
-  }
+const goToReviewsPage = (targetPage) => {
+  const safePage = Math.max(1, Math.min(targetPage, reviewsPagination.value.pages || targetPage))
+  loadUserReviews(safePage)
 }
 
-const handleReviewsNext = () => {
-  if (reviewsPage.value < reviewsTotalPages.value - 1) {
-    reviewsPage.value += 1
-  }
-}
-
-const handleFavoritesPrev = () => {
-  if (favoritesPage.value > 0) {
-    favoritesPage.value -= 1
-  }
-}
-
-const handleFavoritesNext = () => {
-  if (favoritesPage.value < favoriteTotalPages.value - 1) {
-    favoritesPage.value += 1
-  }
-}
-
-const loadUserReviews = async () => {
+const loadUserReviews = async (page = 1) => {
   if (!auth.isAuthenticated) {
     userReviews.value = []
     userReviewsError.value = ''
     userReviewsLoading.value = false
+    reviewsPagination.value = {
+      page: 1,
+      per_page: REVIEWS_PAGE_SIZE,
+      total: 0,
+      pages: 1,
+    }
     return
   }
 
   userReviewsLoading.value = true
   userReviewsError.value = ''
   try {
-    const response = await fetch(`${API_BASE_URL}/me/reviews`, {
+    const params = new URLSearchParams({
+      page: String(page),
+      per_page: String(REVIEWS_PAGE_SIZE),
+    })
+    const response = await fetch(`${API_BASE_URL}/me/reviews?${params.toString()}`, {
       credentials: 'include',
       headers: {
         Accept: 'application/json',
@@ -257,6 +258,15 @@ const loadUserReviews = async () => {
       (Array.isArray(payload) && payload) ||
       []
     userReviews.value = rawList.map((entry) => normalizeUserReview(entry)).filter(Boolean)
+    const meta = payload?.meta || {}
+    reviewsPagination.value = {
+      page: Number(meta.page) || page,
+      per_page: Number(meta.per_page) || REVIEWS_PAGE_SIZE,
+      total: Number(meta.total) || rawList.length,
+      pages:
+        Number(meta.pages) ||
+        Math.max(1, Math.ceil((Number(meta.total) || rawList.length) / REVIEWS_PAGE_SIZE)),
+    }
   } catch (error) {
     console.error('Error al cargar reseñas del perfil', error)
     userReviewsError.value = error.message || 'No pudimos cargar tus reseñas.'
@@ -268,14 +278,34 @@ const loadUserReviews = async () => {
 
 const handleRefreshFavorites = () => {
   if (!favoritesLoading.value) {
-    loadFavoriteSites()
+    loadFavoriteSites(favoritesPagination.value.page || 1)
   }
 }
 
 const handleRefreshUserReviews = () => {
   if (!userReviewsLoading.value) {
-    loadUserReviews()
+    loadUserReviews(reviewsPagination.value.page || 1)
   }
+}
+
+const handleFavoritesPrev = () => {
+  if (!favoriteCanPrev.value) return
+  goToFavoritesPage((favoritesPagination.value.page || 1) - 1)
+}
+
+const handleFavoritesNext = () => {
+  if (!favoriteCanNext.value) return
+  goToFavoritesPage((favoritesPagination.value.page || 1) + 1)
+}
+
+const handleReviewsPrev = () => {
+  if (!reviewsCanPrev.value) return
+  goToReviewsPage((reviewsPagination.value.page || 1) - 1)
+}
+
+const handleReviewsNext = () => {
+  if (!reviewsCanNext.value) return
+  goToReviewsPage((reviewsPagination.value.page || 1) + 1)
 }
 
 watch(
@@ -287,6 +317,18 @@ watch(
     } else {
       favoriteSites.value = []
       userReviews.value = []
+      favoritesPagination.value = {
+        page: 1,
+        per_page: FAVORITES_PAGE_SIZE,
+        total: 0,
+        pages: 1,
+      }
+      reviewsPagination.value = {
+        page: 1,
+        per_page: REVIEWS_PAGE_SIZE,
+        total: 0,
+        pages: 1,
+      }
     }
   },
 )
@@ -295,31 +337,6 @@ onMounted(() => {
   if (auth.isAuthenticated) {
     loadFavoriteSites()
     loadUserReviews()
-  }
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    favoritesMediaQuery = window.matchMedia('(max-width: 640px)')
-    favoritesIsMobile.value = favoritesMediaQuery.matches
-    reviewsIsMobile.value = favoritesMediaQuery.matches
-    favoritesMediaHandler = (event) => {
-      favoritesIsMobile.value = event.matches
-      reviewsIsMobile.value = event.matches
-      favoritesPage.value = 0
-      reviewsPage.value = 0
-    }
-    if (favoritesMediaQuery.addEventListener) {
-      favoritesMediaQuery.addEventListener('change', favoritesMediaHandler)
-    } else if (favoritesMediaQuery.addListener) {
-      favoritesMediaQuery.addListener(favoritesMediaHandler)
-    }
-  }
-})
-
-onBeforeUnmount(() => {
-  if (!favoritesMediaQuery || !favoritesMediaHandler) return
-  if (favoritesMediaQuery.removeEventListener) {
-    favoritesMediaQuery.removeEventListener('change', favoritesMediaHandler)
-  } else if (favoritesMediaQuery.removeListener) {
-    favoritesMediaQuery.removeListener(favoritesMediaHandler)
   }
 })
 
@@ -334,20 +351,6 @@ watch(
         favoritesStore.isFavorite(site.id),
       )
     }
-  },
-)
-
-watch(
-  () => favoriteCards.value.length,
-  () => {
-    favoritesPage.value = 0
-  },
-)
-
-watch(
-  () => userReviewList.value.length,
-  () => {
-    reviewsPage.value = 0
   },
 )
 </script>
@@ -402,19 +405,10 @@ watch(
       <div v-else-if="favoriteCards.length === 0" class="profile-favorites__empty">
         Todavía no marcaste sitios como favoritos.
       </div>
-      <div v-else class="featured__grid-wrapper profile-favorites__carousel">
-        <button
-          v-if="favoriteShowPrev"
-          type="button"
-          class="featured__arrow featured__arrow--left"
-          @click="handleFavoritesPrev"
-          aria-label="Ver favoritos anteriores"
-        >
-          ‹
-        </button>
+      <div v-else>
         <div class="featured__grid">
           <div
-            v-for="(site, index) in favoriteVisibleCards"
+            v-for="(site, index) in favoriteCards"
             :key="site?.id ?? `favorite-slot-${index}`"
             class="featured__slot"
           >
@@ -422,15 +416,27 @@ watch(
             <div v-else class="site-card site-card--placeholder"></div>
           </div>
         </div>
-        <button
-          v-if="favoriteShowNext"
-          type="button"
-          class="featured__arrow featured__arrow--right"
-          @click="handleFavoritesNext"
-          aria-label="Ver más favoritos"
-        >
-          ›
-        </button>
+        <div class="profile-pagination" role="navigation" aria-label="Paginación de favoritos">
+          <button
+            class="secondary-button"
+            type="button"
+            :disabled="favoritesLoading || !favoriteCanPrev"
+            @click="handleFavoritesPrev"
+          >
+            Anterior
+          </button>
+          <span class="profile-pagination__info">
+            {{ favoritePaginationLabel }} (página {{ favoritesPagination.page }} de {{ favoritesPagination.pages }})
+          </span>
+          <button
+            class="secondary-button"
+            type="button"
+            :disabled="favoritesLoading || !favoriteCanNext"
+            @click="handleFavoritesNext"
+          >
+            Siguiente
+          </button>
+        </div>
       </div>
     </div>
 
@@ -457,19 +463,10 @@ watch(
       <div v-else-if="userReviewList.length === 0" class="profile-favorites__empty">
         Todavía no escribiste reseñas. Compartí tu experiencia en la ficha de cada sitio y aparecerán acá.
       </div>
-      <div v-else class="profile-reviews__carousel">
-        <button
-          v-if="reviewsShowPrev"
-          type="button"
-          class="featured__arrow featured__arrow--left"
-          @click="handleReviewsPrev"
-          aria-label="Ver reseñas anteriores"
-        >
-          ‹
-        </button>
+      <div v-else class="profile-reviews__list-wrapper">
         <ul class="review-list profile-reviews__list">
           <li
-            v-for="(review, index) in reviewVisibleCards"
+            v-for="(review, index) in userReviewList"
             :key="review.id || `my-review-${index}`"
             class="review-card profile-review-card"
           >
@@ -522,15 +519,27 @@ watch(
             </p>
           </li>
         </ul>
-        <button
-          v-if="reviewsShowNext"
-          type="button"
-          class="featured__arrow featured__arrow--right"
-          @click="handleReviewsNext"
-          aria-label="Ver más reseñas"
-        >
-          ›
-        </button>
+        <div class="profile-pagination" role="navigation" aria-label="Paginación de reseñas">
+          <button
+            class="secondary-button"
+            type="button"
+            :disabled="userReviewsLoading || !reviewsCanPrev"
+            @click="handleReviewsPrev"
+          >
+            Anterior
+          </button>
+          <span class="profile-pagination__info">
+            {{ reviewsPaginationLabel }} (página {{ reviewsPagination.page }} de {{ reviewsPagination.pages }})
+          </span>
+          <button
+            class="secondary-button"
+            type="button"
+            :disabled="userReviewsLoading || !reviewsCanNext"
+            @click="handleReviewsNext"
+          >
+            Siguiente
+          </button>
+        </div>
       </div>
     </div>
   </section>

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from minio.error import S3Error
 
 from src.core.sites.images_service import (
@@ -77,6 +77,7 @@ def upload(site_id: int):
             title=title,
             description=description or None,
             make_cover=make_cover,
+            performed_by=session.get("user_id"),
         )
         flash("Imagen agregada correctamente.", "success")
     except SiteImageError as error:
@@ -122,6 +123,7 @@ def update(site_id: int, image_id: int):
             description=description or None,
             new_object_name=new_object_name,
             new_url=new_url,
+            performed_by=session.get("user_id"),
         )
         flash("Cambios guardados correctamente.", "success")
         if new_object_name and old_object_name:
@@ -139,7 +141,7 @@ def update(site_id: int, image_id: int):
 @require_permissions("site_update")
 def set_cover(site_id: int, image_id: int):
     get_image_or_404(site_id, image_id)
-    updated = mark_as_cover(image_id)
+    updated = mark_as_cover(image_id, performed_by=session.get("user_id"))
     if updated:
         flash("Actualizaste la portada correctamente.", "success")
     else:
@@ -157,7 +159,7 @@ def delete(site_id: int, image_id: int):
         flash("No podés eliminar la portada. Elegí otra portada antes.", "error")
         return _redirect(site_id)
     try:
-        delete_site_image(image_id)
+        delete_site_image(image_id, performed_by=session.get("user_id"))
         flash("Imagen eliminada correctamente.", "success")
         delete_storage_object(image.object_name)
     except SiteImageError as error:
@@ -176,7 +178,7 @@ def move(site_id: int, image_id: int):
         flash("Acción no válida para ordenar las imágenes.", "error")
         return _redirect(site_id)
     get_image_or_404(site_id, image_id)
-    moved = move_site_image(image_id, direction)
+    moved = move_site_image(image_id, direction, performed_by=session.get("user_id"))
     if moved:
         flash("Orden actualizado.", "success")
     else:

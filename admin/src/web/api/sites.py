@@ -1023,9 +1023,11 @@ def list_my_reviews():
     """Devuelve las reseñas creadas por el usuario autenticado."""
     try:
         user = _require_api_user()
-        reviews = list_reviews_for_user(user.id)
+        page = _parse_int_arg("page", default=1, minimum=1) or 1
+        per_page = _parse_int_arg("per_page", default=25, minimum=1, maximum=25) or 25
+        reviews = list_reviews_for_user(user.id, page=page, per_page=per_page)
         payload: List[Dict[str, Optional[object]]] = []
-        for item in reviews:
+        for item in reviews.items:
             review = item.get("review")
             site = item.get("site")
             serialized = review_schema.dump(review)
@@ -1038,7 +1040,17 @@ def list_my_reviews():
                 "cover_image_title": getattr(site, "cover_image_title", None),
             }
             payload.append(serialized)
-        return jsonify({"data": payload}), 200
+        return jsonify(
+            {
+                "data": payload,
+                "meta": {
+                    "page": reviews.page,
+                    "per_page": reviews.per_page,
+                    "total": reviews.total,
+                    "pages": reviews.pages,
+                },
+            }
+        ), 200
     except AuthError as error:
         return _auth_error_response(str(error))
     except Exception:

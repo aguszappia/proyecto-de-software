@@ -7,6 +7,7 @@ from typing import List, Optional
 from sqlalchemy import func
 
 from src.core.database import db
+from src.core.sites.history_service import record_event
 from src.core.sites.models import SiteImage
 
 MAX_IMAGES_PER_SITE = 10
@@ -48,6 +49,7 @@ def create_image(
     title: str,
     description: Optional[str] = None,
     make_cover: bool = False,
+    performed_by: Optional[int] = None,
 ) -> SiteImage:
     """Agrego una nueva imagen respetando max y la portada."""
     current_total = count_images(site_id)
@@ -76,6 +78,12 @@ def create_image(
         _clear_cover_flags(site_id, keep_id=image.id)
         image.is_cover = True
     db.session.commit()
+    record_event(
+        site_id=site_id,
+        user_id=performed_by,
+        action_type="Cambio de imágenes",
+        details=f"Imagen agregada: {object_name}",
+    )
     return image
 
 
@@ -86,6 +94,7 @@ def update_image(
     description: Optional[str] = None,
     new_object_name: Optional[str] = None,
     new_url: Optional[str] = None,
+    performed_by: Optional[int] = None,
 ) -> Optional[SiteImage]:
     """Actualizo los metadatos de una imagen y reemplazo archivo si corresponde."""
     image = get_image(image_id)
@@ -97,10 +106,16 @@ def update_image(
         image.object_name = new_object_name
         image.url = new_url
     db.session.commit()
+    record_event(
+        site_id=image.site_id,
+        user_id=performed_by,
+        action_type="Cambio de imágenes",
+        details="Imagen editada",
+    )
     return image
 
 
-def mark_as_cover(image_id: int) -> Optional[SiteImage]:
+def mark_as_cover(image_id: int, *, performed_by: Optional[int] = None) -> Optional[SiteImage]:
     """Marco una imagen como portada única para su sitio."""
     image = get_image(image_id)
     if not image:
@@ -108,10 +123,16 @@ def mark_as_cover(image_id: int) -> Optional[SiteImage]:
     _clear_cover_flags(image.site_id, keep_id=image.id)
     image.is_cover = True
     db.session.commit()
+    record_event(
+        site_id=image.site_id,
+        user_id=performed_by,
+        action_type="Cambio de imágenes",
+        details="Portada actualizada",
+    )
     return image
 
 
-def delete_image(image_id: int) -> bool:
+def delete_image(image_id: int, *, performed_by: Optional[int] = None) -> bool:
     """Elimino una imagen si no es la portada."""
     image = get_image(image_id)
     if not image:
@@ -125,10 +146,16 @@ def delete_image(image_id: int) -> bool:
     db.session.flush()
     _resequence_orders(site_id) # reordeno imágenes restantes
     db.session.commit()
+    record_event(
+        site_id=site_id,
+        user_id=performed_by,
+        action_type="Cambio de imágenes",
+        details="Imagen eliminada",
+    )
     return True
 
 
-def move_image(image_id: int, direction: str) -> Optional[SiteImage]:
+def move_image(image_id: int, direction: str, *, performed_by: Optional[int] = None) -> Optional[SiteImage]:
     """Desplazo una imagen hacia arriba o abajo en el orden."""
     image = get_image(image_id)
     if not image:
@@ -161,6 +188,12 @@ def move_image(image_id: int, direction: str) -> Optional[SiteImage]:
 
     image.order_index = target_order
     db.session.commit()
+    record_event(
+        site_id=image.site_id,
+        user_id=performed_by,
+        action_type="Cambio de imágenes",
+        details="Orden de imágenes actualizado",
+    )
     return image
 
 

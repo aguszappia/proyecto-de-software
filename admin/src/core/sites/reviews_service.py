@@ -355,8 +355,8 @@ def delete_review(review: SiteReview):
     db.session.commit()
 
 
-def list_reviews_for_user(user_id: int) -> List[Dict[str, object]]:
-    """Devuelve las reseñas del usuario junto con datos básicos del sitio."""
+def list_reviews_for_user(user_id: int, *, page: int = 1, per_page: int = 25) -> Pagination[Dict[str, object]]:
+    """Devuelve las reseñas del usuario junto con datos básicos del sitio (paginadas)."""
     query = (
         db.session.query(
             SiteReview,
@@ -369,15 +369,26 @@ def list_reviews_for_user(user_id: int) -> List[Dict[str, object]]:
         .filter(SiteReview.user_id == user_id, Historic_Site.is_visible.is_(True))
         .order_by(SiteReview.created_at.desc())
     )
+
+    total = query.count()
+    clean_page = max(1, int(page or 1))
+    clean_per_page = max(1, min(int(per_page or 25), 25))
+
+    items = (
+        query.limit(clean_per_page)
+        .offset((clean_page - 1) * clean_per_page)
+        .all()
+    )
+
     reviews: List[Dict[str, object]] = []
-    for review, site, first_name, last_name in query.all():
+    for review, site, first_name, last_name in items:
         reviews.append(
             {
                 "review": _attach_author(review, first_name, last_name),
                 "site": site,
             }
         )
-    return reviews
+    return Pagination(reviews, total, clean_page, clean_per_page)
 
 def list_top_rated_sites(limit: int = 3) -> list[dict]:
     """Obtengo los sitios visibles con mejor rating promedio (solo reseñas aprobadas)."""
