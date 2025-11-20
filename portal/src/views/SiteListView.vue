@@ -69,11 +69,12 @@ const activeFilters = computed(() => ({
     ? route.query.sort_by
     : 'created_at',
   sort_dir: route.query.sort_dir === 'asc' ? 'asc' : 'desc',
-  tags: Array.isArray(route.query.tags)
-    ? route.query.tags.filter(Boolean)
-    : route.query.tags
-      ? [route.query.tags]
-      : [],
+  tags: (route.query.tags || '')
+    .toString()
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean),
+  tags_mode: route.query.tags_mode === 'all' ? 'all' : 'any',
   page: toPositiveInt(route.query.page, 1),
   per_page: toPositiveInt(route.query.per_page, SITES_PER_PAGE),
 }))
@@ -102,13 +103,22 @@ const formFilters = ref({
   sort_by: 'created_at',
   sort_dir: 'desc',
   tags: [],
+  tags_mode: 'any',
   page: 1,
 })
+
+const ensureValidTagsMode = (target) => {
+  const totalTags = Array.isArray(target.tags) ? target.tags.length : 0
+  if (totalTags < 2) {
+    target.tags_mode = 'any'
+  }
+  return target
+}
 
 watch(
   activeFilters,
   (value) => {
-    formFilters.value = {
+    formFilters.value = ensureValidTagsMode({
       q: value.q || '',
       city: value.city || '',
       province: value.province || '',
@@ -117,8 +127,9 @@ watch(
       sort_by: value.sort_by,
       sort_dir: value.sort_dir,
       tags: [...value.tags],
+      tags_mode: value.tags_mode || 'any',
       page: value.page || 1,
-    }
+    })
   },
   { immediate: true },
 )
@@ -213,9 +224,15 @@ const buildQueryString = (filters) => {
   if (filters.sort_by) params.set('sort_by', filters.sort_by)
   if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
   if (filters.favorites) params.set('favorites', '1')
-  filters.tags?.forEach((tag) => {
-    if (tag) params.append('tags', tag)
-  })
+  if (filters.tags_mode === 'all' && (filters.tags?.length ?? 0) >= 2) {
+    params.set('tags_mode', 'all')
+  }
+  if (filters.tags?.length) {
+    const compiledTags = filters.tags.filter(Boolean).join(',')
+    if (compiledTags) {
+      params.set('tags', compiledTags)
+    }
+  }
   const resolvedPage = toPositiveInt(filters.page, 1)
   params.set('page', String(resolvedPage))
   params.set('per_page', String(filters.per_page || SITES_PER_PAGE))
@@ -243,6 +260,7 @@ watchEffect(async () => {
     const compactProvince = normalizedProvince.replace(/\s+/g, '')
     const normalizedStatus = filters.conservation_status.trim().toLowerCase()
     const desiredTags = (filters.tags || []).map((tag) => tag.trim().toLowerCase()).filter(Boolean)
+    const requireAllTags = filters.tags_mode === 'all' && desiredTags.length >= 2
     const favoritesOnly = filters.favorites && auth.isAuthenticated
     const rawItems = Array.isArray(payload?.data) ? payload.data : []
 
@@ -290,7 +308,9 @@ watchEffect(async () => {
       const matchesStatus = !normalizedStatus || siteStatus === normalizedStatus
       const matchesTags =
         !desiredTags.length ||
-        desiredTags.every((tag) => siteTags.includes(tag))
+        (requireAllTags
+          ? desiredTags.every((tag) => siteTags.includes(tag))
+          : desiredTags.some((tag) => siteTags.includes(tag)))
       const siteFavoriteFlag =
         site.is_favorite === true ||
         site.isFavorite === true ||
@@ -401,7 +421,15 @@ const serializeFilters = (filters, options = {}) => {
   if (filters.sort_by && filters.sort_by !== 'created_at') query.sort_by = filters.sort_by
   if (filters.sort_dir && filters.sort_dir !== 'desc') query.sort_dir = filters.sort_dir
   if (filters.favorites) query.favorites = '1'
-  if (filters.tags?.length) query.tags = filters.tags
+  if (filters.tags?.length) {
+    const joined = filters.tags.filter(Boolean).join(',')
+    if (joined) {
+      query.tags = joined
+    }
+  }
+  if (filters.tags_mode === 'all' && (filters.tags?.length ?? 0) >= 2) {
+    query.tags_mode = 'all'
+  }
   const resolvedPage = options.page ?? filters.page ?? 1
   if (options.includePage || resolvedPage > 1) {
     query.page = String(resolvedPage)
@@ -431,6 +459,7 @@ const handleFiltersReset = () => {
       sort_by: 'created_at',
       sort_dir: 'desc',
       tags: [],
+      tags_mode: 'any',
       page: 1,
     },
     { includePage: true, page: 1 },
@@ -447,6 +476,7 @@ const toggleTag = (tag) => {
     current.add(tag)
   }
   formFilters.value.tags = Array.from(current)
+  ensureValidTagsMode(formFilters.value)
 }
 
 const toggleTagDropdown = () => {
@@ -731,7 +761,21 @@ watch(
 
         <div class="filters-row filters-row--tags">
           <div class="filter-group filter-group--tags">
-            <span>Tags</span>
+            <div class="filter-group__label-row">
+              <span>Tags</span>
+              <label
+                v-if="formFilters.tags.length >= 2"
+                class="filter-inline-checkbox tag-mode-toggle"
+              >
+                <input
+                  type="checkbox"
+                  v-model="formFilters.tags_mode"
+                  true-value="all"
+                  false-value="any"
+                />
+                <span>Cumplir con todas las etiquetas seleccionadas</span>
+              </label>
+            </div>
             <div class="tag-dropdown" ref="tagsDropdownRef">
               <button
                 type="button"
@@ -791,22 +835,20 @@ watch(
               </span>
             </div>
           </div>
-
         </div>
-
-                  <label
-            v-if="auth.isAuthenticated"
-            class="filter-group filter-group--favorites-checkbox"
-          >
-            <div class="filter-inline-checkbox">
-              <input
-                id="favorites-filter"
-                v-model="formFilters.favorites"
-                type="checkbox"
-              />
-              <span>Mis favoritos</span>
-            </div>
-          </label>
+        <label
+          v-if="auth.isAuthenticated"
+          class="filter-group filter-group--favorites-checkbox"
+        >
+          <div class="filter-inline-checkbox">
+            <input
+              id="favorites-filter"
+              v-model="formFilters.favorites"
+              type="checkbox"
+            />
+            <span>Mis favoritos</span>
+          </div>
+        </label>
 
         <div class="filters-actions">
           <button type="submit" class="primary-button">Aplicar filtros</button>

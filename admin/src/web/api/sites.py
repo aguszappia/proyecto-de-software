@@ -245,14 +245,21 @@ def _filter_exact(items: Iterable[Dict[str, Any]], field: str, expected: str) ->
     ]
 
 
-def _filter_by_tags(items: Iterable[Dict[str, Any]], tags: Sequence[str]) -> List[Dict[str, Any]]:
+def _filter_by_tags(
+    items: Iterable[Dict[str, Any]],
+    tags: Sequence[str],
+    *,
+    match_all: bool = True,
+) -> List[Dict[str, Any]]:
     if not tags:
         return list(items)
-    tag_set = [tag.casefold() for tag in tags]
+    normalized_filter_tags = {_normalize_text(tag) for tag in tags if tag}
     filtered: List[Dict[str, Any]] = []
     for item in items:
-        site_tags = {(tag or "").casefold() for tag in item.get("tags") or []}
-        if all(tag in site_tags for tag in tag_set):
+        site_tags = {_normalize_text(tag or "") for tag in item.get("tags") or []}
+        if match_all and normalized_filter_tags.issubset(site_tags):
+            filtered.append(item)
+        elif not match_all and normalized_filter_tags.intersection(site_tags):
             filtered.append(item)
     return filtered
 
@@ -353,6 +360,7 @@ def _apply_filters(
     city: str,
     province: str,
     tags: Sequence[str],
+    match_all_tags: bool = True,
 ) -> List[Dict[str, Any]]:
     filtered = _filter_visible(sites)
     if name:
@@ -364,7 +372,7 @@ def _apply_filters(
     if province:
         filtered = _filter_exact(filtered, "province", province)
     if tags:
-        filtered = _filter_by_tags(filtered, tags)
+        filtered = _filter_by_tags(filtered, tags, match_all=match_all_tags)
     return filtered
 
 
@@ -596,6 +604,8 @@ def index():
         tags_raw = request.args.get("tags") or ""
         tags = [tag.strip() for tag in tags_raw.split(",") if tag.strip()]
         filter_mode = clean_str(request.args.get("filter")) or ""
+        tags_mode = clean_str(request.args.get("tags_mode")) or ""
+        match_all_tags = tags_mode == "all"
         order_by = clean_str(request.args.get("order_by"))
         sort_by = clean_str(request.args.get("sort_by")) or ""
         sort_dir = clean_str(request.args.get("sort_dir")) or ""
@@ -626,6 +636,7 @@ def index():
             city=_normalize_text(city) if city else "",
             province=_normalize_text(province) if province else "",
             tags=[_normalize_text(tag) for tag in tags],
+            match_all_tags=match_all_tags,
         )
         if city and not filtered_sites:
             # Fallback de coincidencia parcial más laxo por ciudad.
