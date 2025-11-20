@@ -16,6 +16,7 @@ ACTIONS: List[str] = [
     "Edición",
     "Cambio de estado",
     "Cambio de tags",
+    "Cambio de imágenes",
     "Eliminación",
 ]
 
