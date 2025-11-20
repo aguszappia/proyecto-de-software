@@ -540,6 +540,47 @@ body {
   gap: 0.35rem;
 }
 
+.filter-group__label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-group__label-row .tag-mode-toggle {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  text-transform: none;
+}
+
+.filter-group__label-row .tag-mode-toggle span {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.75rem;
+}
+
+.filter-group__label-row > span {
+  white-space: nowrap;
+}
+
+.filter-group__label-row .tag-mode-toggle {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .filter-group__label-row {
+    flex-wrap: wrap;
+  }
+
+  .filter-group__label-row .tag-mode-toggle {
+    margin-left: 0;
+  }
+
+  .filter-group__label-row > span {
+    margin-right: auto;
+  }
+}
+
 .filter-group span {
   font-size: 0.85rem;
   font-weight: 600;
