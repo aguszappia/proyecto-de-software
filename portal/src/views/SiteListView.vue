@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LMap, LMarker, LPopup, LTileLayer } from '@vue-leaflet/vue-leaflet'
+import { LMap, LMarker, LPopup, LTileLayer, LCircle } from '@vue-leaflet/vue-leaflet'
 import 'leaflet/dist/leaflet.css'
 import SiteCard from '@/components/SiteCard.vue'
 import API_BASE_URL from '@/constants/api'
@@ -47,6 +47,11 @@ const CONSERVATION_STATUSES = [
   'Malo',
 ]
 
+const MAP_RADIUS_MIN = 1
+const MAP_RADIUS_MAX = 100
+const MAP_RADIUS_DEFAULT = 10
+const DEFAULT_MAP_CENTER = [-34.6037, -58.3816]
+
 const SITES_PER_PAGE = 20
 
 const toPositiveInt = (value, fallback) => {
@@ -77,6 +82,9 @@ const activeFilters = computed(() => ({
   tags_mode: route.query.tags_mode === 'all' ? 'all' : 'any',
   page: toPositiveInt(route.query.page, 1),
   per_page: toPositiveInt(route.query.per_page, SITES_PER_PAGE),
+  lat: Number.isFinite(Number(route.query.lat)) ? Number(route.query.lat) : null,
+  long: Number.isFinite(Number(route.query.long)) ? Number(route.query.long) : null,
+  radius: Number.isFinite(Number(route.query.radius)) ? Number(route.query.radius) : null,
 }))
 
 const sites = ref([])
@@ -87,6 +95,7 @@ const tagsDropdownOpen = ref(false)
 const tagsDropdownRef = ref(null)
 const showingMap = ref(route.query.view === 'map')
 const showAuthPrompt = ref(false)
+const mapSearchEnabled = ref(false)
 const pagination = ref({
   page: 1,
   per_page: SITES_PER_PAGE,
@@ -105,6 +114,9 @@ const formFilters = ref({
   tags: [],
   tags_mode: 'any',
   page: 1,
+  lat: null,
+  long: null,
+  radius: MAP_RADIUS_DEFAULT,
 })
 
 const ensureValidTagsMode = (target) => {
@@ -113,6 +125,13 @@ const ensureValidTagsMode = (target) => {
     target.tags_mode = 'any'
   }
   return target
+}
+
+const isMapFilterActive = (filters) => {
+  const lat = Number(filters.lat)
+  const lng = Number(filters.long)
+  const radius = Number(filters.radius)
+  return Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(radius) && radius > 0
 }
 
 watch(
@@ -129,7 +148,11 @@ watch(
       tags: [...value.tags],
       tags_mode: value.tags_mode || 'any',
       page: value.page || 1,
+      lat: value.lat,
+      long: value.long,
+      radius: value.radius || MAP_RADIUS_DEFAULT,
     })
+    mapSearchEnabled.value = isMapFilterActive(value)
   },
   { immediate: true },
 )
@@ -169,6 +192,45 @@ const formatUpdatedAtLabel = (value) => {
     day: 'numeric',
     month: 'long',
   })
+}
+
+const mapFilterActive = computed(() => isMapFilterActive(formFilters.value))
+const mapSearchCenter = computed(() =>
+  mapFilterActive.value
+    ? [Number(formFilters.value.lat), Number(formFilters.value.long)]
+    : DEFAULT_MAP_CENTER,
+)
+const mapSearchRadiusMeters = computed(() =>
+  (Number(formFilters.value.radius) || MAP_RADIUS_DEFAULT) * 1000,
+)
+
+const handleMapClickForSearch = (event) => {
+  if (!event?.latlng) return
+  const { lat, lng } = event.latlng
+  formFilters.value.lat = Number(lat.toFixed(6))
+  formFilters.value.long = Number(lng.toFixed(6))
+  if (!formFilters.value.radius || !Number.isFinite(Number(formFilters.value.radius))) {
+    formFilters.value.radius = MAP_RADIUS_DEFAULT
+  }
+  mapSearchEnabled.value = true
+}
+
+const clearMapSearch = () => {
+  formFilters.value.lat = null
+  formFilters.value.long = null
+  formFilters.value.radius = MAP_RADIUS_DEFAULT
+  mapSearchEnabled.value = false
+}
+
+const toggleMapSearch = (enabled) => {
+  if (enabled) {
+    mapSearchEnabled.value = true
+    formFilters.value.lat = DEFAULT_MAP_CENTER[0]
+    formFilters.value.long = DEFAULT_MAP_CENTER[1]
+    formFilters.value.radius = formFilters.value.radius || MAP_RADIUS_DEFAULT
+  } else {
+    clearMapSearch()
+  }
 }
 
 const preparedSites = computed(() =>
@@ -226,6 +288,11 @@ const buildQueryString = (filters) => {
   if (filters.favorites) params.set('favorites', '1')
   if (filters.tags_mode === 'all' && (filters.tags?.length ?? 0) >= 2) {
     params.set('tags_mode', 'all')
+  }
+  if (isMapFilterActive(filters)) {
+    params.set('lat', String(filters.lat))
+    params.set('long', String(filters.long))
+    params.set('radius', String(filters.radius))
   }
   if (filters.tags?.length) {
     const compiledTags = filters.tags.filter(Boolean).join(',')
@@ -430,6 +497,15 @@ const serializeFilters = (filters, options = {}) => {
   if (filters.tags_mode === 'all' && (filters.tags?.length ?? 0) >= 2) {
     query.tags_mode = 'all'
   }
+  if (isMapFilterActive(filters)) {
+    const safeRadius = Math.min(
+      MAP_RADIUS_MAX,
+      Math.max(MAP_RADIUS_MIN, Number(filters.radius)),
+    )
+    query.lat = String(Number(filters.lat))
+    query.long = String(Number(filters.long))
+    query.radius = String(safeRadius)
+  }
   const resolvedPage = options.page ?? filters.page ?? 1
   if (options.includePage || resolvedPage > 1) {
     query.page = String(resolvedPage)
@@ -438,7 +514,12 @@ const serializeFilters = (filters, options = {}) => {
 }
 
 const handleFiltersSubmit = () => {
-  const nextQuery = serializeFilters(formFilters.value, { includePage: true, page: 1 })
+  const prepared = { ...formFilters.value }
+  if (!mapSearchEnabled.value) {
+    prepared.lat = null
+    prepared.long = null
+  }
+  const nextQuery = serializeFilters(prepared, { includePage: true, page: 1 })
   if (showingMap.value) {
     nextQuery.view = 'map'
   }
@@ -461,10 +542,14 @@ const handleFiltersReset = () => {
       tags: [],
       tags_mode: 'any',
       page: 1,
+      lat: null,
+      long: null,
+      radius: MAP_RADIUS_DEFAULT,
     },
     { includePage: true, page: 1 },
   )
   const query = showingMap.value ? { ...baseQuery, view: 'map' } : baseQuery
+  mapSearchEnabled.value = false
   router.push({ name: 'sites', query })
 }
 
@@ -518,8 +603,6 @@ watch(
   },
   { immediate: true },
 )
-
-const DEFAULT_MAP_CENTER = [-34.6037, -58.3816]
 
 const loadAvailableTags = async () => {
   try {
@@ -836,6 +919,69 @@ watch(
             </div>
           </div>
         </div>
+        <div class="filters-row filters-row--map">
+          <div class="filter-group filter-group--map">
+            <div class="filter-group__label-row">
+              <span>Búsqueda por mapa</span>
+              <label class="filter-inline-checkbox">
+                <input
+                  type="checkbox"
+                  :checked="mapSearchEnabled"
+                  @change="toggleMapSearch($event.target.checked)"
+                />
+              </label>
+              <button
+                type="button"
+                class="secondary-button filter-inline-button"
+                :disabled="!mapFilterActive"
+                @click="clearMapSearch"
+              >
+                Limpiar mapa
+              </button>
+            </div>
+            <p class="filter-hint">
+              Hacé clic en el mapa para elegir el punto de referencia y ajustá el radio en kilómetros. El
+              listado se limitará a los sitios dentro de ese círculo.
+            </p>
+            <div v-if="mapSearchEnabled" class="map-search-panel">
+              <l-map
+                :zoom="formFilters.lat && formFilters.long ? 11 : 4"
+                :center="mapSearchCenter"
+                style="height: 260px; width: 100%;"
+                @click="handleMapClickForSearch"
+              >
+                <l-tile-layer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <l-circle
+                  v-if="mapFilterActive"
+                  :lat-lng="mapSearchCenter"
+                  :radius="mapSearchRadiusMeters"
+                  color="#2563eb"
+                  fill-color="#2563eb"
+                  :fill-opacity="0.12"
+                />
+                <l-marker v-if="mapFilterActive" :lat-lng="mapSearchCenter">
+                  <l-popup>Centro de la búsqueda</l-popup>
+                </l-marker>
+              </l-map>
+              <div class="map-radius-control">
+                <label for="radius-input">Radio (km)</label>
+                <input
+                  id="radius-input"
+                  v-model.number="formFilters.radius"
+                  type="range"
+                  :min="MAP_RADIUS_MIN"
+                  :max="MAP_RADIUS_MAX"
+                  :step="1"
+                />
+                <div class="map-radius-value">
+                  {{ Math.max(MAP_RADIUS_MIN, Math.min(formFilters.radius || MAP_RADIUS_DEFAULT, MAP_RADIUS_MAX)) }} km
+                </div>
+              </div>
+            </div>
+            <p v-else class="filter-hint map-search-placeholder">
+            </p>
+          </div>
+        </div>
         <label
           v-if="auth.isAuthenticated"
           class="filter-group filter-group--favorites-checkbox"
@@ -917,6 +1063,14 @@ watch(
               style="width: 100%; min-height: 320px;"
             >
               <l-tile-layer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <l-circle
+                v-if="mapFilterActive"
+                :lat-lng="mapSearchCenter"
+                :radius="mapSearchRadiusMeters"
+                color="#2563eb"
+                fill-color="#2563eb"
+                :fill-opacity="0.12"
+              />
               <l-marker
                 v-for="site in mapSites"
                 :key="site.id || site.name"
