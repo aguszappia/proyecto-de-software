@@ -128,6 +128,11 @@ const ensureValidTagsMode = (target) => {
 }
 
 const isMapFilterActive = (filters) => {
+  const hasLat = filters.lat !== null && filters.lat !== undefined && filters.lat !== ''
+  const hasLong = filters.long !== null && filters.long !== undefined && filters.long !== ''
+  if (!hasLat || !hasLong) {
+    return false
+  }
   const lat = Number(filters.lat)
   const lng = Number(filters.long)
   const radius = Number(filters.radius)
@@ -1006,7 +1011,7 @@ watch(
     </div>
 
     <div class="view-panel__card listing__placeholder">
-      <div v-if="!loading && !error && preparedSites.length" class="listing__header">
+      <div v-if="!error && preparedSites.length" class="listing__header">
         <div>
           <h2>{{ showingMap ? 'Mapa de sitios' : 'Resultados' }}</h2>
           <p class="listing__note">
