@@ -658,6 +658,7 @@ body {
 
 .filter-group--tags {
   position: relative;
+  z-index: 2000;
 }
 
 .tag-dropdown {
@@ -688,7 +689,7 @@ body {
   position: absolute;
   top: calc(100% + 0.5rem);
   left: 0;
-  z-index: 10;
+  z-index: 3000;
   width: min(320px, 90vw);
   max-height: 260px;
   overflow-y: auto;
