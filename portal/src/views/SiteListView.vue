@@ -525,6 +525,11 @@ const handleFiltersSubmit = () => {
     prepared.long = null
   }
   const nextQuery = serializeFilters(prepared, { includePage: true, page: 1 })
+  if (!mapSearchEnabled.value) {
+    nextQuery.lat = undefined
+    nextQuery.long = undefined
+    nextQuery.radius = undefined
+  }
   if (showingMap.value) {
     nextQuery.view = 'map'
   }
@@ -554,6 +559,9 @@ const handleFiltersReset = () => {
     { includePage: true, page: 1 },
   )
   const query = showingMap.value ? { ...baseQuery, view: 'map' } : baseQuery
+  query.lat = undefined
+  query.long = undefined
+  query.radius = undefined
   mapSearchEnabled.value = false
   router.push({ name: 'sites', query })
 }
