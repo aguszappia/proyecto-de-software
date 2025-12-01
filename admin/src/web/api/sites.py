@@ -597,6 +597,7 @@ def index():
     """Implementa el endpoint público GET /api/sites."""
     try:
         _ensure_visits_column()
+        search_query = clean_str(request.args.get("q")) or ""
         name = request.args.get("name")
         description = request.args.get("description")
         city = request.args.get("city")
@@ -638,6 +639,12 @@ def index():
             tags=[_normalize_text(tag) for tag in tags],
             match_all_tags=match_all_tags,
         )
+        if search_query:
+            filtered_sites = _filter_by_any_text(
+                filtered_sites,
+                fields=("name", "short_description", "full_description", "city", "province"),
+                needle=search_query,
+            )
         if city and not filtered_sites:
             # Fallback de coincidencia parcial más laxo por ciudad.
             filtered_sites = _filter_by_any_text(
